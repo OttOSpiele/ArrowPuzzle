@@ -3,6 +3,21 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class GameTest {
+ @Test fun touchPrefersRemovableArrowsInOverlappingRegions(){
+  val blocked=Arrow(0,2,4,2,Dir.RIGHT)
+  val free=Arrow(1,5,4,2,Dir.UP)
+  val level=Level(7,6,12,listOf(blocked,free))
+  assertEquals(setOf(1),level.dependencies.requiredRemovals[0])
+  val both=setOf(0,1)
+  // The blocked arrow is physically closer, but the free arrow wins.
+  assertEquals(1,ArrowTouch.select(level,both,3.75f,4f))
+  // A deliberate press right on the blocked arrow still works.
+  assertEquals(0,ArrowTouch.select(level,both,2f,4f))
+  // The free arrow benefits from an enlarged invisible region.
+  assertEquals(1,ArrowTouch.select(level,both,6.5f,4f))
+  assertNull(ArrowTouch.select(level,both,10f,10f))
+  assertEquals(0,ArrowTouch.select(level,setOf(0),3f,4f))
+ }
  @Test fun validGeneratedLevels() {
   for(stage in 1..6) for(seed in 0L..11L){
    val level=Generator().generate(stage,seed)
