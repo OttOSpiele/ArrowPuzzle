@@ -33,7 +33,7 @@ internal object LocalSave {
    val size=root.getInt("size")
    require(size in 10..80)
    val savedArrows=root.getJSONArray("arrows")
-   require(savedArrows.length() in 1..40)
+   require(savedArrows.length() in 1..60)
    val arrows=(0 until savedArrows.length()).map{index->
     val obj=savedArrows.getJSONObject(index)
     val bendArray=obj.getJSONArray("bends")
