@@ -9,6 +9,29 @@ class GameTest {
    assertNotNull(Rules.solve(level))
   }
  }
+ @Test fun patternGoalsChangeWithStage(){
+  assertEquals(PatternFamily.INTRO,PatternGoals.preferred(3))
+  assertEquals(PatternFamily.KEY_ARROW,PatternGoals.preferred(4))
+  assertEquals(PatternFamily.ALTERNATING_CHAIN,PatternGoals.preferred(9))
+  assertEquals(PatternFamily.BRANCH,PatternGoals.preferred(17))
+ }
+ @Test fun seededGenerationRemainsDeterministicAndSolvable(){
+  for(stage in listOf(2,5,12,19))for(seed in 0L..3L){
+   val first=Generator().generate(stage,seed)
+   val second=Generator().generate(stage,seed)
+   assertEquals(first.arrows,second.arrows)
+   assertNotNull(Rules.solve(first))
+   val metrics=PatternAnalysis.analyze(first)
+   assertTrue(metrics.initiallyFree>=1)
+  }
+ }
+ @Test fun patternGoalEvaluatorUsesObservedDependencies(){
+  val key=PatternMetrics(1,2,1,0,0)
+  assertTrue(PatternGoals.reached(PatternFamily.KEY_ARROW,key))
+  assertFalse(PatternGoals.reached(PatternFamily.BRANCH,key))
+  assertTrue(PatternGoals.reached(PatternFamily.ALTERNATING_CHAIN,
+   PatternMetrics(1,3,0,2,0)))
+ }
  @Test fun ageAppropriateStageProgression(){
   for(stage in 1..8)assertEquals(1,Progress(stage).required())
   for(stage in 9..16)assertEquals(2,Progress(stage).required())

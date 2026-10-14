@@ -140,31 +140,86 @@ object PatternAnalysis {
    outgoing.count{it.value.size>=2&&it.value.mapNotNull{n->byId[n]?.dir}.distinct().size>=2})
  }
 }
+enum class PatternFamily { INTRO, KEY_ARROW, ALTERNATING_CHAIN, BRANCH }
+
+/** A stage-specific preference, not a claim that a seed always yields a perfect pattern. */
+object PatternGoals {
+ fun preferred(stage:Int):PatternFamily=when {
+  stage<=3->PatternFamily.INTRO
+  stage<=8->PatternFamily.KEY_ARROW
+  stage<=16->PatternFamily.ALTERNATING_CHAIN
+  else->PatternFamily.BRANCH
+ }
+ fun reached(family:PatternFamily,m:PatternMetrics)=when(family){
+  PatternFamily.INTRO->true
+  PatternFamily.KEY_ARROW->m.keyArrows>=1
+  PatternFamily.ALTERNATING_CHAIN->m.longestChain>=3 && m.alternateDirectionEdges>=2
+  PatternFamily.BRANCH->m.branchArrows>=1
+ }
+ fun score(family:PatternFamily,m:PatternMetrics):Int=when(family){
+  PatternFamily.INTRO->m.longestChain.coerceAtMost(2)*2-m.keyArrows*4-m.branchArrows*4
+  PatternFamily.KEY_ARROW->m.keyArrows*20+m.longestChain*2-m.branchArrows*3
+  PatternFamily.ALTERNATING_CHAIN->m.alternateDirectionEdges*12+m.longestChain*8+m.keyArrows*2
+  PatternFamily.BRANCH->m.branchArrows*35+m.keyArrows*6+m.longestChain*4
+ }
+}
 class Generator{
  fun generate(stage:Int,seed:Long):Level{
-  val random=Random(seed);val size=15+stage.coerceAtMost(8)*2
-  val arrows=mutableListOf<Arrow>();val count=(stage+3).coerceAtMost(15)
+  val family=PatternGoals.preferred(stage)
+  val attempts=if(stage<=3)1 else 6
+  var best:Level?=null
+  var bestScore=Int.MIN_VALUE
+  for(attempt in 0 until attempts){
+   // Derived independently but deterministically, without using random global state.
+   val random=Random(seed+attempt*1000003L)
+   val level=makeCandidate(stage,seed,random)
+   val m=PatternAnalysis.analyze(level)
+   val score=PatternGoals.score(family,m)
+   if(score>bestScore){bestScore=score;best=level}
+   if(PatternGoals.reached(family,m))return level
+  }
+  return best?:error("Unable to construct a puzzle")
+ }
+ private fun makeCandidate(stage:Int,seed:Long,random:Random):Level{
+  val size=15+stage.coerceAtMost(8)*2
+  val arrows=mutableListOf<Arrow>()
+  val count=(stage+3).coerceAtMost(15)
+  val family=PatternGoals.preferred(stage)
   repeat(count){id->
-   var best:Arrow?=null;var score=-1
-   repeat(600){
-    val dir=Dir.entries.random(random);val length=random.nextInt(2,5)
+   var best:Arrow?=null
+   var bestScore=Int.MIN_VALUE
+   repeat(260){
+    val dir=Dir.entries.random(random)
+    val length=random.nextInt(2,5)
     val sx=random.nextInt(size);val sy=random.nextInt(size)
-    // The final segment always points in the declared exit direction.
     val a=if(stage>=2 && random.nextInt(100)<65){
-     val middleDir=if(dir.x!=0) if(random.nextBoolean())Dir.UP else Dir.DOWN else if(random.nextBoolean())Dir.LEFT else Dir.RIGHT
-     val firstLen=random.nextInt(2,5)
-     val turn=Pt(sx+firstLen*middleDir.x,sy+firstLen*middleDir.y)
+     val middleDir=if(dir.x!=0)if(random.nextBoolean())Dir.UP else Dir.DOWN
+      else if(random.nextBoolean())Dir.LEFT else Dir.RIGHT
+     val turn=Pt(sx+random.nextInt(2,5)*middleDir.x,
+      sy+random.nextInt(2,5)*middleDir.y)
      val tip=Pt(turn.x+(length-1)*dir.x,turn.y+(length-1)*dir.y)
      Arrow(id,sx,sy,length,dir,listOf(turn,tip))
-    } else Arrow(id,sx,sy,length,dir)
-    if(a.cells().size!=a.vertices().zipWithNext().sumOf{(p,q)->kotlin.math.abs(p.x-q.x)+kotlin.math.abs(p.y-q.y)}+1)return@repeat
-    if(a.cells().any{p->p.x !in 0 until size||p.y !in 0 until size||arrows.any{p in it.cells()}})return@repeat
+    }else Arrow(id,sx,sy,length,dir)
+    val cells=a.cells()
+    if(cells.size!=a.vertices().zipWithNext().sumOf{(p,q)->
+      kotlin.math.abs(p.x-q.x)+kotlin.math.abs(p.y-q.y)
+     }+1)return@repeat
+    if(cells.any{p->p.x !in 0 until size||p.y !in 0 until size||arrows.any{p in it.cells()}})return@repeat
     if(!Rules.free(a,arrows+a,size))return@repeat
-    val blocked=arrows.count{Rules.blockers(it,listOf(it,a),size).isNotEmpty()}
-    val s=blocked*10+random.nextInt(5) + if(a.bends.isNotEmpty()) 2 else 0
-    if(s>score){best=a;score=s}
+    val unlocked=arrows.filter{old->Rules.blockers(old,listOf(old,a),size).isNotEmpty()}
+    val different=unlocked.count{it.dir!=a.dir}
+    val branches=unlocked.map{it.dir}.distinct().size
+    val base=unlocked.size*12+random.nextInt(7)
+    val patternBonus=when(family){
+     PatternFamily.INTRO->-unlocked.size*6
+     PatternFamily.KEY_ARROW->if(unlocked.size>=2)35 else 0
+     PatternFamily.ALTERNATING_CHAIN->different*18
+     PatternFamily.BRANCH->if(branches>=2)45 else different*4
+    }
+    val score=base+patternBonus+(if(a.bends.isNotEmpty())2 else 0)
+    if(score>bestScore){best=a;bestScore=score}
    }
-   arrows.add(best?:error("No placement for arrow "+id))
+   arrows.add(best?:error("No placement for arrow $id"))
   }
   return Level(seed,stage,size,arrows).also{check(Rules.solve(it)!=null)}
  }
