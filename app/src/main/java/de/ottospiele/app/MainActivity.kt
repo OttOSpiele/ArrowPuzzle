@@ -24,7 +24,11 @@ import de.ottospiele.arrow.*
 import kotlin.math.abs
 import kotlin.random.Random
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import androidx.compose.ui.graphics.drawscope.DrawScope
+
+private data class Flight(val id:Int,val plan:MovePlan,val failed:Boolean,val step:Int=0)
 
 class MainActivity:ComponentActivity(){
  override fun onCreate(savedInstanceState:Bundle?){
@@ -41,32 +45,20 @@ class MainActivity:ComponentActivity(){
  var invalid by remember{mutableStateOf<Int?>(null)}
  var dialog by remember{mutableStateOf("")}
  var settings by remember{mutableStateOf(false)}
- var animId by remember{mutableStateOf<Int?>(null)}
- var animStep by remember{mutableIntStateOf(0)}
- var animPlan by remember{mutableStateOf<MovePlan?>(null)}
- var animFailed by remember{mutableStateOf(false)}
- var pulsePoint by remember{mutableStateOf<Pt?>(null)}
+ var concurrent by remember{mutableStateOf(true)}
+ var speed by remember{mutableIntStateOf(1)}
+ val flights=remember{mutableStateListOf<Flight>()}
+ val scope=rememberCoroutineScope()
+ val jobs=remember{mutableMapOf<Int,Job>()}
  var traveledCells by remember{mutableStateOf(emptySet<Pt>())}
  val occupiedEver=remember(game.level){game.level.arrows.flatMap{it.cells()}.toSet()}
- LaunchedEffect(animPlan){
-  val plan=animPlan?:return@LaunchedEffect
-  val total=plan.allowedSteps
-  for(step in 1..total){delay(58);animStep=step;pulsePoint=plan.travel.getOrNull(step-1)}
-  if(animFailed){
-   delay(130)
-   for(step in total-1 downTo 0){delay(30);animStep=step;pulsePoint=plan.travel.getOrNull(step-1)}
-   if(game.lost)dialog="Alle Herzen verbraucht"
-  }else{
-   delay(90)
-   traveledCells=traveledCells+plan.travel.filter{it.x in 0 until game.level.size && it.y in 0 until game.level.size}
-   game.tap(animId!!)
-   revision++
-   if(game.won)dialog="Gewonnen!"
-  }
-  animId=null;animPlan=null;animStep=0;pulsePoint=null
+ // 0 = already much faster than the old 58 ms per cell.
+ val stepDelay=when(speed){0->32L;1->20L;else->11L}
+ fun stopFlights(){
+  jobs.values.forEach{it.cancel()}
+  jobs.clear();flights.clear()
  }
-
- fun replace(stage:Int){game=fresh(stage,lives,hints);highlighted=null;invalid=null;animId=null;animPlan=null;traveledCells=emptySet();pulsePoint=null;revision++}
+ fun replace(stage:Int){stopFlights();game=fresh(stage,lives,hints);highlighted=null;invalid=null;traveledCells=emptySet();revision++}
  Column(
   Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4F2FD),Color(0xFFEDF4FF),Color(0xFFFFFBF5))))
    .padding(horizontal=20.dp,vertical=14.dp),
@@ -95,28 +87,58 @@ class MainActivity:ComponentActivity(){
     }
    }
   }
-  Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,invalid,animId,animPlan,animStep,animFailed,occupiedEver,traveledCells,pulsePoint,Modifier.weight(1f).fillMaxWidth()){
-   if(dialog.isEmpty() && animPlan==null){
-    val arrow=game.remaining.firstOrNull{a->a.id==it}?:return@Board
-    val plan=Rules.plan(arrow,game.level,game.remaining.map{a->a.id}.toSet())
-    animId=it;animPlan=plan;animStep=0;animFailed=!plan.canExit
-    invalid=null;highlighted=null;pulsePoint=null
-    if(!plan.canExit){game.tap(it);revision++}
+  Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,invalid,
+   flights.toList(),occupiedEver,traveledCells,Modifier.weight(1f).fillMaxWidth()){
+   if(dialog.isNotEmpty() || (!concurrent && flights.isNotEmpty()) || flights.any{f->f.id==it})return@Board
+   val arrow=game.remaining.firstOrNull{a->a.id==it}?:return@Board
+   val plan=Rules.plan(arrow,game.level,game.remaining.map{a->a.id}.toSet())
+   val failed=!plan.canExit
+   highlighted=null;invalid=null
+   // Apply success to game immediately: subsequently tapped arrows see updated blockers.
+   if(!failed){game.tap(it);revision++}
+   else{game.tap(it);revision++}
+   flights.add(Flight(it,plan,failed))
+   val levelAtStart=game.level
+   jobs[it]=scope.launch {
+    val duration=stepDelay
+    for(step in 1..plan.allowedSteps){
+     delay(duration)
+     val index=flights.indexOfFirst{f->f.id==it}
+     if(index<0)return@launch
+     flights[index]=flights[index].copy(step=step)
+    }
+    if(failed){
+     delay(75)
+     for(step in plan.allowedSteps-1 downTo 0){
+      delay((duration/2).coerceAtLeast(5L))
+      val index=flights.indexOfFirst{f->f.id==it}
+      if(index<0)return@launch
+      flights[index]=flights[index].copy(step=step)
+     }
+    }else{
+     traveledCells=traveledCells+plan.travel.filter{c->c.x in 0 until levelAtStart.size && c.y in 0 until levelAtStart.size}
+    }
+    flights.removeAll{f->f.id==it}
+    jobs.remove(it)
+    if(flights.isEmpty()){
+     if(game.won)dialog="Gewonnen!"
+     else if(game.lost)dialog="Alle Herzen verbraucht"
+    }
    }
   }
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
-   Button(onClick={highlighted=game.hint();invalid=null;revision++},enabled=game.hints!=0 && animPlan==null,
+   Button(onClick={highlighted=game.hint();invalid=null;revision++},enabled=game.hints!=0 && flights.isEmpty(),
     modifier=Modifier.weight(1f).height(52.dp),shape=RoundedCornerShape(18.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7264D6))){
     Text("💡  Tipp",fontWeight=FontWeight.SemiBold)
    }
-   FilledTonalButton(onClick={game.retry();revision++;highlighted=null;invalid=null},enabled=animPlan==null,
+   FilledTonalButton(onClick={game.retry();revision++;highlighted=null;invalid=null},enabled=flights.isEmpty(),
     modifier=Modifier.weight(1f).height(52.dp),shape=RoundedCornerShape(18.dp),
     colors=ButtonDefaults.filledTonalButtonColors(containerColor=Color.White,contentColor=Color(0xFF565E91))){
     Text("↻  Neustart",fontWeight=FontWeight.SemiBold)
    }
   }
-  TextButton(onClick={dialog="Anderes Rätsel?"},enabled=animPlan==null,modifier=Modifier.fillMaxWidth()){
+  TextButton(onClick={dialog="Anderes Rätsel?"},enabled=flights.isEmpty(),modifier=Modifier.fillMaxWidth()){
    Text("Anderes Rätsel  ·  eine Stufe leichter",color=Color(0xFF646998))
   }
  }
@@ -146,7 +168,18 @@ class MainActivity:ComponentActivity(){
    Row{listOf(3,5,10).forEach{n->TextButton(onClick={lives=n}){Text(if(lives==n)"[$n]"else"$n")}}}
    Text("Tipps pro Level")
    Row{listOf(0,1,3,5).forEach{n->TextButton(onClick={hints=n}){Text(if(hints==n)"[$n]"else"$n")}}}
-   Text("Einstellungen gelten für neue Rätsel.")
+   Text("Parallele Pfeile")
+   Row(verticalAlignment=Alignment.CenterVertically){
+    Text("Nächsten Pfeil sofort antippen",modifier=Modifier.weight(1f))
+    Switch(checked=concurrent,onCheckedChange={concurrent=it})
+   }
+   Text("Ausfahrgeschwindigkeit")
+   Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+    listOf("Ruhig","Flott","Turbo").forEachIndexed{index,label->
+     FilterChip(selected=speed==index,onClick={speed=index},label={Text(label)})
+    }
+   }
+   Text("Herzen und Tipps gelten ab dem nächsten Rätsel. Animationseinstellungen sofort.")
   }},
   confirmButton={TextButton(onClick={settings=false}){Text("OK")}}
  )
@@ -155,12 +188,11 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
  repeat(15){try{return Game(Generator().generate(stage,Random.nextLong()),lives,hints)}catch(_:Exception){}}
  error("Cannot generate a valid level")
 }
-@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,animId:Int?,plan:MovePlan?,animStep:Int,failed:Boolean,ever:Set<Pt>,traveled:Set<Pt>,pulse:Pt?,modifier:Modifier,onTap:(Int)->Unit){
+@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,onTap:(Int)->Unit){
  val arrows=level.arrows.filter{it.id in remaining}
  Canvas(modifier.background(Brush.verticalGradient(listOf(Color.White,Color(0xFFF9FBFF))),RoundedCornerShape(26.dp))
-  .pointerInput(level,remaining,animId){
+  .pointerInput(level,remaining,flights.map{it.id}){
    detectTapGestures{position->
-    if(animId!=null)return@detectTapGestures
     val cell=minOf(size.width.toFloat(),size.height.toFloat())/level.size
     val ox=(size.width-cell*level.size)/2f
     val oy=(size.height-cell*level.size)/2f
@@ -177,22 +209,24 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
   }.padding(8.dp)){
   val cell=minOf(size.width,size.height)/level.size
   val ox=(size.width-cell*level.size)/2f;val oy=(size.height-cell*level.size)/2f
-  val currentTrail=if(plan!=null)plan.travel.take(animStep.coerceAtMost(plan.travel.size)).filter{it.x in 0 until level.size && it.y in 0 until level.size}.toSet() else emptySet()
+  val currentTrail=flights.flatMap{f->f.plan.travel.take(f.step)}.filter{it.x in 0 until level.size && it.y in 0 until level.size}.toSet()
+  val pulse=flights.mapNotNull{f->f.plan.travel.getOrNull(f.step-1)}.toSet()
   (ever+traveled+currentTrail).forEach{p->
    val point=Offset(ox+(p.x+.5f)*cell,oy+(p.y+.5f)*cell)
-   if(p==pulse){
+   if(p in pulse){
     drawCircle(Color(0xFF9189EF).copy(alpha=.18f),radius=(cell*.42f).coerceAtLeast(4f),center=point)
     drawCircle(Color(0xFF9189EF).copy(alpha=.35f),radius=(cell*.25f).coerceAtLeast(2.5f),center=point)
    }
-   drawCircle(if(p==pulse)Color(0xFF6F63DE) else if(p in currentTrail)Color(0xFFB1B7F2) else Color(0xFFD9E0F2),
-    radius=(cell*(if(p==pulse).14f else .08f)).coerceAtLeast(1.3f),center=point)
+   drawCircle(if(p in pulse)Color(0xFF6F63DE) else if(p in currentTrail)Color(0xFFB1B7F2) else Color(0xFFD9E0F2),
+    radius=(cell*(if(p in pulse).14f else .08f)).coerceAtLeast(1.3f),center=point)
   }
-  arrows.forEach{a->
-   val points=if(a.id==animId&&plan!=null)plan.frame(animStep) else a.body()
+  val allVisible=arrows.map{it to (it.body() to false)}+flights.mapNotNull{f->level.arrows.firstOrNull{it.id==f.id}?.let{a->a to (f.plan.frame(f.step) to f.failed)}}
+  allVisible.forEach{(a,shape)->
+   val points=shape.first
    if(points.isEmpty())return@forEach
    val vertices=points.map{Offset(ox+(it.x+.5f)*cell,oy+(it.y+.5f)*cell)}
    val tip=vertices.last()
-   val color=if(a.id==animId)if(failed)Color(0xFFE85161)else Color(0xFF7468EB) else when(a.id){hinted->Color(0xFF21A679);invalid->Color(0xFFEF7658);else->Color(0xFF28385D)}
+   val color=if(flights.any{it.id==a.id})if(shape.second)Color(0xFFE85161)else Color(0xFF7468EB) else when(a.id){hinted->Color(0xFF21A679);invalid->Color(0xFFEF7658);else->Color(0xFF28385D)}
    val stroke=(cell*.20f).coerceAtLeast(2.5f);val wing=cell*.42f
    vertices.zipWithNext().forEach{(from,to)->drawLine(color,from,to,stroke,cap=StrokeCap.Round)}
    if(a.dir.x!=0){
