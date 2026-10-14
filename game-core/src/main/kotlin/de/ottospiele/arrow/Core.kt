@@ -244,12 +244,16 @@ object PatternConstruction {
    Arrow(arrow.id,base.x,base.y,arrow.length,direction(arrow.dir),
     arrow.bends.map(::transform))
   }
-  return PatternBlueprint(arrows,canonical.requiredEdges)
+  val candidate=Level(seed,stage,size,arrows)
+  val valid=try { Rules.solve(candidate)!=null && canonical.requiredEdges.all{(blocker,blocked)-> blocker in candidate.dependencies.requiredRemovals[blocked].orEmpty() } }catch(_:Exception){false}
+  return PatternBlueprint(if(valid)arrows else canonical.arrows,canonical.requiredEdges)
  }
 }
 
 class Generator{
  fun generate(stage:Int,seed:Long,aspect:Float=1f):Level{
+  val portrait=aspect<1f
+  val normalized=if(portrait)1f/aspect.coerceAtLeast(0.2f) else aspect
   val family=PatternGoals.preferred(stage)
   val attempts=if(stage<=3)1 else 24
   var best:Level?=null
@@ -259,13 +263,23 @@ class Generator{
    val random=Random(seed+attempt*1000003L)
    // Dense boards can reach a geometric placement dead end. Retry with an
    // independent deterministic stream instead of aborting the entire level.
-   val level=try{makeCandidate(stage,seed,random,aspect)}catch(_:IllegalStateException){continue}
+   val raw=try{makeCandidate(stage,seed,random,normalized)}catch(_:IllegalStateException){continue}
+   val level=if(portrait)rotatePortrait(raw) else raw
    val m=PatternAnalysis.analyze(level)
    val score=PatternGoals.score(family,m)
    if(score>bestScore){bestScore=score;best=level}
    if(PatternGoals.reached(family,m))return level
   }
   return best?:error("Unable to construct a puzzle")
+ }
+ private fun rotatePortrait(level:Level):Level{
+  fun turn(p:Pt)=Pt(level.height-1-p.y,p.x)
+  val arrows=level.arrows.map{a->
+   val p=turn(Pt(a.x,a.y))
+   val dir=Dir.entries.first{it.x==-a.dir.y && it.y==a.dir.x}
+   Arrow(a.id,p.x,p.y,a.length,dir,a.bends.map(::turn))
+  }
+  return Level(level.seed,level.stage,level.height,arrows,level.width)
  }
  private fun makeCandidate(stage:Int,seed:Long,random:Random,aspect:Float):Level{
   val size=BoardProfile.size(stage)
