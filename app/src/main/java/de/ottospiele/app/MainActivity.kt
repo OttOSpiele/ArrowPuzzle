@@ -48,6 +48,10 @@ class MainActivity:ComponentActivity(){
  var invalid by remember{mutableStateOf<Int?>(null)}
  var dialog by remember{mutableStateOf("")}
  var winScreen by remember{mutableStateOf(false)}
+ var defeatScreen by remember{mutableStateOf(false)}
+ var defeatMode by remember{mutableStateOf("choice")}
+ var defeatPrepared by remember{mutableStateOf<Game?>(null)}
+ var defeatAttempt by remember{mutableIntStateOf(0)}
  var nextGame by remember{mutableStateOf<Game?>(null)}
  var nextProgress by remember{mutableStateOf<Progress?>(null)}
  var prepareError by remember{mutableStateOf(false)}
@@ -82,6 +86,17 @@ class MainActivity:ComponentActivity(){
   }catch(_:Exception){prepareError=true}
  }
 
+ LaunchedEffect(defeatScreen,defeatMode,defeatAttempt){
+  if(!defeatScreen || defeatMode!="loading")return@LaunchedEffect
+  defeatPrepared=null
+  delay(350)
+  try{
+   val ready=withContext(Dispatchers.Default){fresh(progress.stage,lives,hints)}
+   defeatPrepared=ready
+   defeatMode="ready"
+  }catch(_:Exception){defeatMode="error"}
+ }
+
  if(winScreen){
   WinScreen(
    stage=progress.stage,
@@ -99,6 +114,35 @@ class MainActivity:ComponentActivity(){
      highlighted=null;invalid=null;traveledCells=emptySet();revision++
      winScreen=false
      nextGame=null;nextProgress=null
+    }
+   }
+  )
+ }else if(defeatScreen){
+  DefeatScreen(
+   stage=progress.stage,
+   mode=defeatMode,
+   onAgain={
+    stopFlights()
+    game.retry()
+    traveledCells=emptySet();highlighted=null;invalid=null;revision++
+    defeatScreen=false;defeatMode="choice";defeatPrepared=null
+   },
+   onNew={
+    defeatPrepared=null
+    defeatMode="loading"
+   },
+   onRetryGeneration={
+    defeatAttempt++
+    defeatMode="loading"
+   },
+   onContinue={
+    val ready=defeatPrepared
+    if(ready!=null){
+     stopFlights()
+     progress=progress.copy(done=0)
+     game=ready
+     traveledCells=emptySet();highlighted=null;invalid=null;revision++
+     defeatScreen=false;defeatMode="choice";defeatPrepared=null
     }
    }
   )
@@ -165,7 +209,7 @@ class MainActivity:ComponentActivity(){
     jobs.remove(it)
     if(flights.isEmpty()){
      if(game.won)winScreen=true
-     else if(game.lost)dialog="Alle Herzen verbraucht"
+     else if(game.lost){defeatMode="choice";defeatScreen=true}
     }
    }
   }
@@ -194,22 +238,6 @@ class MainActivity:ComponentActivity(){
    }
   }
  }
- if(!winScreen && dialog.isNotEmpty())AlertDialog(
-  onDismissRequest={},
-  title={Text(dialog)},
-  text={Text(when(dialog){
-   "Alle Herzen verbraucht"->"Nicht schlimm. Probiere dasselbe Rätsel erneut!"
-   else->"Ein neues, etwas leichteres Rätsel starten?"
-  })},
-  confirmButton={TextButton(onClick={
-   when(dialog){
-    "Alle Herzen verbraucht"->{game.retry();revision++;highlighted=null;invalid=null}
-    else->{game.retry();revision++;highlighted=null;invalid=null}
-   }
-   dialog=""
-  }){Text("Weiter")}},
-  dismissButton={}
- )
  if(settings)AlertDialog(
   onDismissRequest={settings=false},
   title={Text("Spieleinstellungen")},
@@ -234,6 +262,69 @@ class MainActivity:ComponentActivity(){
   confirmButton={TextButton(onClick={settings=false}){Text("OK")}}
  )
 }
+@Composable
+private fun DefeatScreen(
+ stage:Int,
+ mode:String,
+ onAgain:()->Unit,
+ onNew:()->Unit,
+ onRetryGeneration:()->Unit,
+ onContinue:()->Unit
+){
+ Column(
+  Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFFFEFF2),Color(0xFFF6F3FF),Color(0xFFEDF6FF))))
+   .padding(28.dp),
+  horizontalAlignment=Alignment.CenterHorizontally,
+  verticalArrangement=Arrangement.Center
+ ){
+  Text("♡  ✨  ♡",fontSize=47.sp,color=Color(0xFFE587A3))
+  Spacer(Modifier.height(20.dp))
+  Text("Fast geschafft!",fontSize=34.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF34345D))
+  Spacer(Modifier.height(12.dp))
+  Text("Jedes Rätsel ist eine neue Chance.",fontSize=18.sp,color=Color(0xFF706D98))
+  Spacer(Modifier.height(10.dp))
+  Text("Du bleibst auf Stufe $stage.",color=Color(0xFF767DA2))
+  Spacer(Modifier.height(44.dp))
+  when(mode){
+   "choice"->{
+    Button(onClick=onAgain,modifier=Modifier.fillMaxWidth().height(60.dp),
+     shape=RoundedCornerShape(20.dp),
+     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){
+     Text("↻  Nochmal versuchen",fontSize=19.sp,fontWeight=FontWeight.Bold)
+    }
+    Spacer(Modifier.height(14.dp))
+    FilledTonalButton(onClick=onNew,modifier=Modifier.fillMaxWidth().height(60.dp),
+     shape=RoundedCornerShape(20.dp)){
+     Text("Neues Rätsel",fontSize=19.sp,fontWeight=FontWeight.SemiBold)
+    }
+    Spacer(Modifier.height(15.dp))
+    Text("Neues Rätsel setzt deinen Stufenfortschritt auf 0.",
+     fontSize=13.sp,color=Color(0xFF7C80A1))
+   }
+   "loading"->{
+    CircularProgressIndicator(color=Color(0xFF2469D8))
+    Spacer(Modifier.height(18.dp))
+    Text("Ein neues Rätsel wird vorbereitet …",color=Color(0xFF666D96))
+   }
+   "ready"->{
+    Text("Dein neues Rätsel ist bereit!",fontWeight=FontWeight.SemiBold,color=Color(0xFF306E9B))
+    Spacer(Modifier.height(16.dp))
+    Button(onClick=onContinue,modifier=Modifier.fillMaxWidth().height(60.dp),
+     shape=RoundedCornerShape(20.dp),
+     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){
+     Text("Weiter  →",fontSize=20.sp,fontWeight=FontWeight.Bold)
+    }
+   }
+   else->{
+    Text("Das Rätsel konnte nicht vorbereitet werden.",color=Color(0xFFB14A64))
+    Spacer(Modifier.height(15.dp))
+    Button(onClick=onRetryGeneration){Text("Erneut versuchen")}
+    TextButton(onClick=onAgain){Text("Dasselbe Rätsel wiederholen")}
+   }
+  }
+ }
+}
+
 @Composable
 private fun WinScreen(
  stage:Int,
