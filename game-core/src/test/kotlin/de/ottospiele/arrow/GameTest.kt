@@ -11,14 +11,17 @@ class GameTest {
  }
  @Test fun compactBoardsAfterStageFive(){
   assertEquals(25,BoardProfile.size(5))
-  for(stage in 6..26)assertEquals(25,BoardProfile.size(stage))
-  assertTrue(BoardProfile.count(9)>BoardProfile.count(5))
-  assertEquals(24,BoardProfile.count(30))
+  for(stage in 6..15)assertEquals(25,BoardProfile.size(stage))
+  assertEquals(27,BoardProfile.size(16))
+  assertEquals(29,BoardProfile.size(26))
+  assertEquals(35,BoardProfile.size(100))
+  assertTrue(BoardProfile.count(12)>BoardProfile.count(6))
+  assertTrue(BoardProfile.count(18)>BoardProfile.count(16))
  }
  @Test fun compactBoardGenerationStaysSolvable(){
   for(stage in listOf(6,9,17,25))for(seed in 0L..2L){
    val level=Generator().generate(stage,seed)
-   assertEquals(25,level.size)
+   assertEquals(BoardProfile.size(stage),level.size)
    assertEquals(BoardProfile.count(stage),level.arrows.size)
    assertNotNull(Rules.solve(level))
   }
