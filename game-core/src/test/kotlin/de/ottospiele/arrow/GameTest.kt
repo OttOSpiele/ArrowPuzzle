@@ -21,4 +21,18 @@ class GameTest {
  @Test fun simplerLevelResetsProgress() {
   assertEquals(Progress(2,0),Progress(3,2).easier())
  }
+ @Test fun bentArrowCollisionUsesWholeMovingShape() {
+  val moving=Arrow(1,1,1,3,Dir.RIGHT,listOf(Pt(1,3),Pt(3,3)))
+  val blocker=Arrow(2,4,1,3,Dir.DOWN)
+  val level=Level(1,2,9,listOf(moving,blocker))
+  assertTrue(2 in Rules.blockers(moving,level.arrows,level.size))
+ }
+ @Test fun bendGeometryRemainsSolvable() {
+  for(stage in 2..5)for(seed in 10L..20L){
+   val level=Generator().generate(stage,seed)
+   assertNotNull(Rules.solve(level))
+   assertTrue(level.arrows.any{it.bends.isNotEmpty()})
+   assertTrue(PatternAnalysis.analyze(level).longestChain>=1)
+  }
+ }
 }

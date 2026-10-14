@@ -39,6 +39,40 @@ object Rules{
   return result
  }
 }
+/** Analyzes the actual collision-based dependency graph, rather than guessing from appearance. */
+data class PatternMetrics(
+ val initiallyFree:Int,
+ val longestChain:Int,
+ val keyArrows:Int,
+ val alternateDirectionEdges:Int,
+ val branchArrows:Int
+)
+object PatternAnalysis {
+ fun analyze(level:Level):PatternMetrics {
+  val edges=level.arrows.associate{blocked->
+   blocked.id to Rules.blockers(blocked,level.arrows,level.size)
+  }
+  val free=edges.values.count{it.isEmpty()}
+  val byId=level.arrows.associateBy{it.id}
+  val outgoing=mutableMapOf<Int,MutableSet<Int>>()
+  for((blocked,blockers) in edges)for(id in blockers)outgoing.getOrPut(id){mutableSetOf()}.add(blocked)
+  val memo=mutableMapOf<Int,Int>()
+  val visiting=mutableSetOf<Int>()
+  fun depth(id:Int):Int {
+   memo[id]?.let{return it}
+   if(!visiting.add(id))return 0
+   val result=1+(outgoing[id]?.maxOfOrNull{depth(it)}?:0)
+   visiting.remove(id);memo[id]=result
+   return result
+  }
+  val alternating=outgoing.entries.sumOf{(from,targets)->
+   targets.count{to->byId[from]?.dir!=byId[to]?.dir}
+  }
+  return PatternMetrics(free,level.arrows.maxOfOrNull{depth(it.id)}?:0,
+   outgoing.count{it.value.size>=2},alternating,
+   outgoing.count{it.value.size>=2&&it.value.mapNotNull{n->byId[n]?.dir}.distinct().size>=2})
+ }
+}
 class Generator{
  fun generate(stage:Int,seed:Long):Level{
   val random=Random(seed);val size=15+stage.coerceAtMost(8)*2
