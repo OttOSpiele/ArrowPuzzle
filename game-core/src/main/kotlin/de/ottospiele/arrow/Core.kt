@@ -200,7 +200,7 @@ object BoardProfile {
   (size(stage)/aspect.coerceIn(1f,1.65f)).toInt().coerceIn(11,size(stage))
  fun count(stage:Int):Int=when {
   stage<=5->stage.coerceAtLeast(1)+3
-  stage<=24->(8+(stage-5)).coerceAtMost(17)
+  stage<=24->(8+(stage-5)).coerceAtMost(20)
   else->(17+(stage-24)).coerceAtMost(40)
  }
 }
@@ -308,14 +308,18 @@ class Generator{
   for(id in arrows.size until count){
    var best:Arrow?=null
    var bestScore=Int.MIN_VALUE
-   repeat(if(stage<=5)260 else 560){
+   repeat(if(stage<=5)260 else if(stage>=18)1000 else 560){
     val dir=Dir.entries.random(random)
     val length=if(stage<=5)random.nextInt(2,5) else random.nextInt(3,if(stage>=10)7 else 6)
     val sx=if(stage<=5)random.nextInt(size) else random.nextInt(3,size-3)
     val sy=if(stage<=5)random.nextInt(height) else random.nextInt(2,height-2)
     // Progressively introduce multi-turn snakes while keeping their final
     // segment aligned with the arrow head's exit direction.
-    val shapeRoll=random.nextInt(100)
+    val shapeRoll=when {
+     stage>=24 && id in 3..5 -> random.nextInt(0,25)
+     stage>=12 && id in 3..6 -> random.nextInt(16,58)
+     else -> random.nextInt(100)
+    }
     val a=if(stage>=24 && shapeRoll<16){
      // Inward, spiral-like four-segment path (three corners).
      val side=if(dir.x!=0) (if(random.nextBoolean())Dir.UP else Dir.DOWN)
@@ -386,7 +390,9 @@ class Generator{
      val balance=(xLeast-xUsage+yLeast-yUsage)*3
      balance-isolationPenalty-borderPenalty
     }
-    val score=base+patternBonus+(if(a.bends.isNotEmpty())2 else 0)+layout
+    val shapeBonus=if(stage>=24 && a.bends.size==4)90 else if(stage>=12 && a.bends.size==3)38 else 0
+    val connectedBonus=if(unlocked.isNotEmpty())unlocked.size*10 else -12
+    val score=base+patternBonus+shapeBonus+connectedBonus+layout
     if(score>bestScore){best=a;bestScore=score}
    }
    arrows.add(best?:error("No placement for arrow $id"))
