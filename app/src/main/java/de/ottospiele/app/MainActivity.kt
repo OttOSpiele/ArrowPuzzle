@@ -43,7 +43,7 @@ class MainActivity:ComponentActivity(){
  val context=LocalContext.current
  val screenAspect=remember{
   val metrics=context.resources.displayMetrics
-  (metrics.widthPixels.toFloat()/metrics.heightPixels.coerceAtLeast(1)).coerceAtLeast(1f)
+  metrics.widthPixels.toFloat()/metrics.heightPixels.coerceAtLeast(1)
  }
  val saved=remember{LocalSave.read(context)}
  var progress by remember{mutableStateOf(saved?.progress?:Progress())}
