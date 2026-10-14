@@ -27,6 +27,8 @@ import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.drawscope.DrawScope
 
 private data class Flight(val id:Int,val plan:MovePlan,val failed:Boolean,val step:Int=0)
@@ -45,6 +47,11 @@ class MainActivity:ComponentActivity(){
  var highlighted by remember{mutableStateOf<Int?>(null)}
  var invalid by remember{mutableStateOf<Int?>(null)}
  var dialog by remember{mutableStateOf("")}
+ var winScreen by remember{mutableStateOf(false)}
+ var nextGame by remember{mutableStateOf<Game?>(null)}
+ var nextProgress by remember{mutableStateOf<Progress?>(null)}
+ var prepareError by remember{mutableStateOf(false)}
+ var preparationAttempt by remember{mutableIntStateOf(0)}
  var settings by remember{mutableStateOf(false)}
  var concurrent by remember{mutableStateOf(true)}
  var speed by remember{mutableIntStateOf(1)}
@@ -60,7 +67,42 @@ class MainActivity:ComponentActivity(){
   jobs.clear();flights.clear()
  }
  fun replace(stage:Int){stopFlights();game=fresh(stage,lives,hints);highlighted=null;invalid=null;traveledCells=emptySet();revision++}
- Column(
+ LaunchedEffect(winScreen,preparationAttempt){
+  if(!winScreen)return@LaunchedEffect
+  nextGame=null
+  nextProgress=null
+  prepareError=false
+  // Give the celebration a perceptible opening, even on fast hardware.
+  delay(450)
+  try {
+   val target=progress.win()
+   val ready=withContext(Dispatchers.Default){fresh(target.stage,lives,hints)}
+   nextProgress=target
+   nextGame=ready
+  }catch(_:Exception){prepareError=true}
+ }
+
+ if(winScreen){
+  WinScreen(
+   stage=progress.stage,
+   nextStage=nextProgress?.stage,
+   ready=nextGame!=null,
+   failed=prepareError,
+   onRetry={preparationAttempt++},
+   onContinue={
+    val next=nextGame
+    val nextP=nextProgress
+    if(next!=null && nextP!=null){
+     stopFlights()
+     progress=nextP
+     game=next
+     highlighted=null;invalid=null;traveledCells=emptySet();revision++
+     winScreen=false
+     nextGame=null;nextProgress=null
+    }
+   }
+  )
+ }else Column(
   Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4F2FD),Color(0xFFEDF4FF),Color(0xFFFFFBF5))))
    .padding(horizontal=20.dp,vertical=14.dp),
   verticalArrangement=Arrangement.spacedBy(14.dp)
@@ -122,7 +164,7 @@ class MainActivity:ComponentActivity(){
     flights.removeAll{f->f.id==it}
     jobs.remove(it)
     if(flights.isEmpty()){
-     if(game.won)dialog="Gewonnen!"
+     if(game.won)winScreen=true
      else if(game.lost)dialog="Alle Herzen verbraucht"
     }
    }
@@ -143,7 +185,7 @@ class MainActivity:ComponentActivity(){
    Text("Anderes Rätsel  ·  eine Stufe leichter",color=Color(0xFF646998))
   }
  }
- if(dialog.isNotEmpty())AlertDialog(
+ if(!winScreen && dialog.isNotEmpty())AlertDialog(
   onDismissRequest={},
   title={Text(dialog)},
   text={Text(when(dialog){
@@ -153,7 +195,6 @@ class MainActivity:ComponentActivity(){
   })},
   confirmButton={TextButton(onClick={
    when(dialog){
-    "Gewonnen!"->{progress=progress.win();replace(progress.stage)}
     "Alle Herzen verbraucht"->{game.retry();revision++;highlighted=null;invalid=null}
     else->{progress=progress.easier();replace(progress.stage)}
    }
@@ -185,6 +226,51 @@ class MainActivity:ComponentActivity(){
   confirmButton={TextButton(onClick={settings=false}){Text("OK")}}
  )
 }
+@Composable
+private fun WinScreen(
+ stage:Int,
+ nextStage:Int?,
+ ready:Boolean,
+ failed:Boolean,
+ onRetry:()->Unit,
+ onContinue:()->Unit
+){
+ Column(
+  Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFECEBFF),Color(0xFFF6FAFF),Color(0xFFFFF9EC))))
+   .padding(28.dp),
+  horizontalAlignment=Alignment.CenterHorizontally,
+  verticalArrangement=Arrangement.Center
+ ){
+  Text("✦  ✨  ✦",fontSize=48.sp,color=Color(0xFF7770D8))
+  Spacer(Modifier.height(22.dp))
+  Text("Großartig!",fontSize=36.sp,fontWeight=FontWeight.ExtraBold,color=Color(0xFF2D3568))
+  Spacer(Modifier.height(10.dp))
+  Text("Rätsel geschafft!",fontSize=21.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF615F9D))
+  Spacer(Modifier.height(12.dp))
+  Text("Stufe $stage gemeistert",color=Color(0xFF787FA4))
+  Spacer(Modifier.height(48.dp))
+  if(ready){
+   Text(if(nextStage!=null && nextStage>stage)"Neue Stufe freigeschaltet!" else "Dein nächstes Rätsel ist bereit!",
+    color=Color(0xFF3E699C),fontWeight=FontWeight.SemiBold)
+   Spacer(Modifier.height(16.dp))
+   Button(onClick=onContinue,
+    modifier=Modifier.fillMaxWidth().height(60.dp),
+    shape=RoundedCornerShape(20.dp),
+    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){
+    Text("Weiter  →",fontSize=20.sp,fontWeight=FontWeight.Bold,color=Color.White)
+   }
+  }else if(failed){
+   Text("Das neue Rätsel konnte nicht vorbereitet werden.",color=Color(0xFFB14A64))
+   Spacer(Modifier.height(12.dp))
+   OutlinedButton(onClick=onRetry){Text("Erneut versuchen")}
+  }else{
+   CircularProgressIndicator(color=Color(0xFF7468DD))
+   Spacer(Modifier.height(16.dp))
+   Text("Dein nächstes Rätsel entsteht …",color=Color(0xFF676D9A))
+  }
+ }
+}
+
 private fun fresh(stage:Int,lives:Int,hints:Int):Game{
  repeat(15){try{return Game(Generator().generate(stage,Random.nextLong()),lives,hints)}catch(_:Exception){}}
  error("Cannot generate a valid level")
