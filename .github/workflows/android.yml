@@ -10,6 +10,11 @@ on:
 permissions:
   contents: write
 
+# Prevent overlapping develop builds from racing on the rolling release tag.
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Test and build Android
