@@ -41,11 +41,15 @@ class MainActivity:ComponentActivity(){
 }
 @Composable fun Puzzle(){
  val context=LocalContext.current
+ val screenAspect=remember{
+  val metrics=context.resources.displayMetrics
+  (metrics.widthPixels.toFloat()/metrics.heightPixels.coerceAtLeast(1)).coerceAtLeast(1f)
+ }
  val saved=remember{LocalSave.read(context)}
  var progress by remember{mutableStateOf(saved?.progress?:Progress())}
  var lives by remember{mutableIntStateOf(saved?.lifeSetting?:5)}
  var hints by remember{mutableIntStateOf(saved?.hintSetting?:3)}
- var game by remember{mutableStateOf(saved?.game?:fresh(1,5,3))}
+ var game by remember{mutableStateOf(saved?.game?:fresh(1,5,3,screenAspect))}
  var revision by remember{mutableIntStateOf(0)}
  var highlighted by remember{mutableStateOf<Int?>(null)}
  var invalid by remember{mutableStateOf<Int?>(null)}
@@ -76,7 +80,7 @@ class MainActivity:ComponentActivity(){
   jobs.values.forEach{it.cancel()}
   jobs.clear();flights.clear()
  }
- fun replace(stage:Int){stopFlights();game=fresh(stage,lives,hints);highlighted=null;invalid=null;traveledCells=emptySet();revision++}
+ fun replace(stage:Int){stopFlights();game=fresh(stage,lives,hints,screenAspect);highlighted=null;invalid=null;traveledCells=emptySet();revision++}
  LaunchedEffect(winScreen,preparationAttempt){
   if(!winScreen)return@LaunchedEffect
   nextGame=null
@@ -86,7 +90,7 @@ class MainActivity:ComponentActivity(){
   delay(450)
   try {
    val target=progress.win()
-   val ready=withContext(Dispatchers.Default){fresh(target.stage,lives,hints)}
+   val ready=withContext(Dispatchers.Default){fresh(target.stage,lives,hints,screenAspect)}
    nextProgress=target
    nextGame=ready
   }catch(_:Exception){prepareError=true}
@@ -97,7 +101,7 @@ class MainActivity:ComponentActivity(){
   defeatPrepared=null
   delay(350)
   try{
-   val ready=withContext(Dispatchers.Default){fresh(progress.stage,lives,hints)}
+   val ready=withContext(Dispatchers.Default){fresh(progress.stage,lives,hints,screenAspect)}
    defeatPrepared=ready
    defeatMode="ready"
   }catch(_:Exception){defeatMode="error"}
@@ -385,8 +389,8 @@ private fun WinScreen(
  }
 }
 
-private fun fresh(stage:Int,lives:Int,hints:Int):Game{
- repeat(15){try{return Game(Generator().generate(stage,Random.nextLong()),lives,hints)}catch(_:Exception){}}
+private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
+ repeat(15){try{return Game(Generator().generate(stage,Random.nextLong(),aspect),lives,hints)}catch(_:Exception){}}
  error("Cannot generate a valid level")
 }
 @Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,onTap:(Int)->Unit){
@@ -395,16 +399,16 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
   .pointerInput(level,remaining,flights.map{it.id}){
    detectTapGestures{position->
     val sx=size.width.toFloat()/level.size
-    val sy=size.height.toFloat()/level.size
+    val sy=size.height.toFloat()/level.height
     val x=position.x/sx-.5f
     val y=position.y/sy-.5f
     ArrowTouch.select(level,remaining,x,y)?.let(onTap)
    }
   }){
-  val sx=size.width/level.size;val sy=size.height/level.size
+  val sx=size.width/level.width;val sy=size.height/level.height
   val cell=minOf(sx,sy)
   val ox=0f;val oy=0f
-  val currentTrail=flights.flatMap{f->f.plan.travel.take(f.step)}.filter{it.x in 0 until level.size && it.y in 0 until level.size}.toSet()
+  val currentTrail=flights.flatMap{f->f.plan.travel.take(f.step)}.filter{it.x in 0 until level.size && it.y in 0 until level.height}.toSet()
   // Visible afterglow over several steps, also including just-vacated tail cells.
   val glow=mutableMapOf<Pt,Float>()
   flights.forEach{f->
@@ -417,7 +421,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
      .forEach{p->glow[p]=maxOf(glow[p]?:0f,strength)}
    }
   }
-  for(y in 0 until level.size)for(x in 0 until level.size){
+  for(y in 0 until level.height)for(x in 0 until level.width){
    drawCircle(Color(0xFFCED7ED),radius=(cell*.115f).coerceAtLeast(1.65f),
     center=Offset(ox+(x+.5f)*sx,oy+(y+.5f)*sy))
   }
