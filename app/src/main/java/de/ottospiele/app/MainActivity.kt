@@ -169,38 +169,46 @@ class MainActivity:ComponentActivity(){
     }
    }
   }
-  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
-   Button(onClick={highlighted=game.hint();invalid=null;revision++},enabled=game.hints!=0 && !game.lost && !game.won,
-    modifier=Modifier.weight(1f).height(52.dp),shape=RoundedCornerShape(18.dp),
-    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7264D6))){
-    Text("💡  Tipp",fontWeight=FontWeight.SemiBold)
-   }
-   FilledTonalButton(onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
-    modifier=Modifier.weight(1f).height(52.dp),shape=RoundedCornerShape(18.dp),
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+   FilledTonalButton(
+    onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
+    modifier=Modifier.weight(1f).height(54.dp),shape=RoundedCornerShape(16.dp),
+    contentPadding=PaddingValues(horizontal=5.dp),
     colors=ButtonDefaults.filledTonalButtonColors(containerColor=Color.White,contentColor=Color(0xFF565E91))){
-    Text("↻  Neustart",fontWeight=FontWeight.SemiBold)
+    Text("↻ Neustart",fontWeight=FontWeight.SemiBold,fontSize=13.sp,maxLines=1)
    }
-  }
-  TextButton(onClick={stopFlights();dialog="Anderes Rätsel?"},modifier=Modifier.fillMaxWidth()){
-   Text("Anderes Rätsel  ·  eine Stufe leichter",color=Color(0xFF646998))
+   Button(
+    onClick={highlighted=game.hint();invalid=null;revision++},
+    enabled=game.hints!=0 && !game.lost && !game.won,
+    modifier=Modifier.weight(1f).height(54.dp),shape=RoundedCornerShape(16.dp),
+    contentPadding=PaddingValues(horizontal=5.dp),
+    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7264D6))){
+    Text("💡 Tipp",fontWeight=FontWeight.SemiBold,fontSize=13.sp,maxLines=1)
+   }
+   FilledTonalButton(
+    onClick={progress=progress.easier();replace(progress.stage);dialog=""},
+    modifier=Modifier.weight(1.15f).height(54.dp),shape=RoundedCornerShape(16.dp),
+    contentPadding=PaddingValues(horizontal=4.dp),
+    colors=ButtonDefaults.filledTonalButtonColors(containerColor=Color.White,contentColor=Color(0xFF565E91))){
+    Text("Stufe zurück",fontWeight=FontWeight.SemiBold,fontSize=12.sp,maxLines=1)
+   }
   }
  }
  if(!winScreen && dialog.isNotEmpty())AlertDialog(
   onDismissRequest={},
   title={Text(dialog)},
   text={Text(when(dialog){
-   "Gewonnen!"->"Toll gemacht! Noch ein Rätsel?"
    "Alle Herzen verbraucht"->"Nicht schlimm. Probiere dasselbe Rätsel erneut!"
    else->"Ein neues, etwas leichteres Rätsel starten?"
   })},
   confirmButton={TextButton(onClick={
    when(dialog){
     "Alle Herzen verbraucht"->{game.retry();revision++;highlighted=null;invalid=null}
-    else->{progress=progress.easier();replace(progress.stage)}
+    else->{game.retry();revision++;highlighted=null;invalid=null}
    }
    dialog=""
   }){Text("Weiter")}},
-  dismissButton={if(dialog=="Anderes Rätsel?")TextButton(onClick={dialog=""}){Text("Abbrechen")}}
+  dismissButton={}
  )
  if(settings)AlertDialog(
   onDismissRequest={settings=false},
