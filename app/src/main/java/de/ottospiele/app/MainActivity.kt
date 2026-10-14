@@ -405,21 +405,33 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
   val cell=minOf(sx,sy)
   val ox=0f;val oy=0f
   val currentTrail=flights.flatMap{f->f.plan.travel.take(f.step)}.filter{it.x in 0 until level.size && it.y in 0 until level.size}.toSet()
-  val pulse=flights.mapNotNull{f->f.plan.travel.getOrNull(f.step-1)}.toSet()
-  // Persistent board-wide dot lattice; visited cells are emphasized below.
+  // Visible afterglow over several steps, also including just-vacated tail cells.
+  val glow=mutableMapOf<Pt,Float>()
+  flights.forEach{f->
+   for(age in 0..5){
+    val step=f.step-age
+    if(step<=0)continue
+    val strength=1f-age/6f
+    listOfNotNull(f.plan.body.getOrNull(step-1),f.plan.travel.getOrNull(step-1))
+     .filter{it.x in 0 until level.size && it.y in 0 until level.size}
+     .forEach{p->glow[p]=maxOf(glow[p]?:0f,strength)}
+   }
+  }
   for(y in 0 until level.size)for(x in 0 until level.size){
-   val p=Pt(x,y)
    drawCircle(Color(0xFFCED7ED),radius=(cell*.115f).coerceAtLeast(1.65f),
     center=Offset(ox+(x+.5f)*sx,oy+(y+.5f)*sy))
   }
-  (ever+traveled+currentTrail).forEach{p->
+  (ever+traveled+currentTrail+glow.keys).forEach{p->
    val point=Offset(ox+(p.x+.5f)*sx,oy+(p.y+.5f)*sy)
-   if(p in pulse){
-    drawCircle(Color(0xFF9189EF).copy(alpha=.18f),radius=(cell*.42f).coerceAtLeast(4f),center=point)
-    drawCircle(Color(0xFF9189EF).copy(alpha=.35f),radius=(cell*.25f).coerceAtLeast(2.5f),center=point)
+   val power=glow[p]?:0f
+   if(power>0f){
+    drawCircle(Color(0xFF6956EF).copy(alpha=.32f*power),
+     radius=(cell*.80f).coerceAtLeast(7f),center=point)
+    drawCircle(Color(0xFF8B7DFB).copy(alpha=.60f*power),
+     radius=(cell*.43f).coerceAtLeast(4f),center=point)
    }
-   drawCircle(if(p in pulse)Color(0xFF6F63DE) else if(p in currentTrail)Color(0xFFB1B7F2) else Color(0xFFBFCBE7),
-    radius=(cell*(if(p in pulse).14f else .125f)).coerceAtLeast(1.65f),center=point)
+   drawCircle(if(power>0f)Color(0xFF4E3ED2) else if(p in currentTrail)Color(0xFFA4A8EE) else Color(0xFFBFCBE7),
+    radius=(cell*(if(power>0f).22f else .125f)).coerceAtLeast(1.65f),center=point)
   }
   val allVisible=arrows.filter{a->flights.none{f->f.id==a.id}}.map{it to (it.body() to false)}+flights.mapNotNull{f->level.arrows.firstOrNull{it.id==f.id}?.let{a->a to (f.plan.frame(f.step) to f.failed)}}
   allVisible.forEach{(a,shape)->
