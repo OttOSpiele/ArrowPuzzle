@@ -173,6 +173,31 @@ object BoardProfile {
   else->(8+(stage-5)*2).coerceAtMost(52)
  }
 }
+/** The arrows are listed in reverse removal order: targets first, blockers last. */
+data class PatternBlueprint(val arrows:List<Arrow>,val requiredEdges:Set<Pair<Int,Int>>){
+ fun realized(level:Level):Boolean=requiredEdges.all{(blocker,blocked)->
+  blocker in level.dependencies.requiredRemovals[blocked].orEmpty()
+ }
+}
+object PatternConstruction {
+ fun blueprint(stage:Int,size:Int):PatternBlueprint?{
+  if(stage<=5)return null // preserve the first five stages exactly
+  val m=size/2
+  val a=Arrow(0,m-5,m-1,2,Dir.RIGHT)
+  val b=if(stage>=17)Arrow(1,m+5,m+1,2,Dir.LEFT)
+   else Arrow(1,m-5,m+1,2,Dir.RIGHT)
+  val key=Arrow(2,m,m-1,3,Dir.DOWN)
+  if(stage in 6..8)return PatternBlueprint(listOf(a,b,key),
+   setOf(2 to 0,2 to 1))
+  if(stage>=17)return PatternBlueprint(listOf(a,b,key),
+   setOf(2 to 0,2 to 1))
+  // Right -> Down -> Left forms two concrete dependencies (reverse order).
+  val first=Arrow(0,m-5,m,2,Dir.RIGHT)
+  val middle=Arrow(1,m-2,m-2,3,Dir.DOWN)
+  val last=Arrow(2,m,m+2,3,Dir.LEFT)
+  return PatternBlueprint(listOf(first,middle,last),setOf(1 to 0,2 to 1))
+ }
+}
 class Generator{
  fun generate(stage:Int,seed:Long):Level{
   val family=PatternGoals.preferred(stage)
@@ -193,9 +218,14 @@ class Generator{
  private fun makeCandidate(stage:Int,seed:Long,random:Random):Level{
   val size=BoardProfile.size(stage)
   val arrows=mutableListOf<Arrow>()
+  val blueprint=PatternConstruction.blueprint(stage,size)
+  if(blueprint!=null){
+   arrows.addAll(blueprint.arrows)
+   check(blueprint.realized(Level(seed,stage,size,arrows)))
+  }
   val count=BoardProfile.count(stage)
   val family=PatternGoals.preferred(stage)
-  repeat(count){id->
+  for(id in arrows.size until count){
    var best:Arrow?=null
    var bestScore=Int.MIN_VALUE
    repeat(if(stage<=5)260 else 420){
@@ -243,7 +273,10 @@ class Generator{
    }
    arrows.add(best?:error("No placement for arrow $id"))
   }
-  return Level(seed,stage,size,arrows).also{check(Rules.solve(it)!=null)}
+  return Level(seed,stage,size,arrows).also{
+   check(Rules.solve(it)!=null)
+   check(blueprint==null || blueprint.realized(it))
+  }
  }
 }
 class Game(val level:Level,val maxLives:Int=5,val maxHints:Int=3){
