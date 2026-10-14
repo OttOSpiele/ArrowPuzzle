@@ -47,6 +47,23 @@ class GameTest {
   assertEquals(setOf(2),level.dependencies.remainingBlockers(1,setOf(1,2)))
   assertEquals(emptySet<Int>(),level.dependencies.remainingBlockers(1,setOf(1)))
  }
+ @Test fun movingBodyRoundsCornerWithoutRigidSweep(){
+  val a=Arrow(1,2,5,3,Dir.UP,listOf(Pt(5,5),Pt(5,3)))
+  val level=Level(1,2,10,listOf(a))
+  val plan=Rules.plan(a,level,setOf(1))
+  assertTrue(plan.canExit)
+  assertEquals(a.body().drop(1)+listOf(Pt(5,2)),plan.frame(1))
+  assertEquals(a.body().size,plan.frame(1).size)
+ }
+ @Test fun redAttemptStopsBeforeFirstBlocker(){
+  val a=Arrow(1,2,5,3,Dir.UP,listOf(Pt(5,5),Pt(5,3)))
+  val b=Arrow(2,4,1,3,Dir.RIGHT)
+  val level=Level(1,2,10,listOf(a,b))
+  val plan=Rules.plan(a,level,setOf(1,2))
+  assertFalse(plan.canExit)
+  assertEquals(1,plan.allowedSteps)
+  assertEquals(2,plan.blockedBy)
+ }
  @Test fun spiralStylePathOnlyNeedsHeadExitRay(){
   val spiral=Arrow(1,1,1,3,Dir.RIGHT,listOf(Pt(1,6),Pt(7,6),Pt(7,2),Pt(4,2),Pt(4,4),Pt(6,4)))
   val obstacle=Arrow(2,2,4,2,Dir.DOWN)

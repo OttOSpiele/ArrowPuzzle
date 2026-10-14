@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.sp
 import de.ottospiele.arrow.*
 import kotlin.math.abs
 import kotlin.random.Random
+import kotlinx.coroutines.delay
+import androidx.compose.ui.graphics.drawscope.DrawScope
 
 class MainActivity:ComponentActivity(){
  override fun onCreate(savedInstanceState:Bundle?){
@@ -36,7 +38,30 @@ class MainActivity:ComponentActivity(){
  var invalid by remember{mutableStateOf<Int?>(null)}
  var dialog by remember{mutableStateOf("")}
  var settings by remember{mutableStateOf(false)}
- fun replace(stage:Int){game=fresh(stage,lives,hints);highlighted=null;invalid=null;revision++}
+ var animId by remember{mutableStateOf<Int?>(null)}
+ var animStep by remember{mutableIntStateOf(0)}
+ var animPlan by remember{mutableStateOf<MovePlan?>(null)}
+ var animFailed by remember{mutableStateOf(false)}
+ var showGrid by remember{mutableStateOf(false)}
+ val occupiedEver=remember(game.level){game.level.arrows.flatMap{it.cells()}.toSet()}
+ LaunchedEffect(animPlan){
+  val plan=animPlan?:return@LaunchedEffect
+  val total=plan.allowedSteps
+  for(step in 1..total){delay(52);animStep=step}
+  if(animFailed){
+   delay(130)
+   for(step in total-1 downTo 0){delay(28);animStep=step}
+   if(game.lost)dialog="Alle Herzen verbraucht"
+  }else{
+   delay(90)
+   game.tap(animId!!)
+   revision++
+   if(game.won)dialog="Gewonnen!"
+  }
+  animId=null;animPlan=null;animStep=0
+ }
+
+ fun replace(stage:Int){game=fresh(stage,lives,hints);highlighted=null;invalid=null;animId=null;animPlan=null;revision++}
  Column(Modifier.fillMaxSize().background(Color(0xFFFFF8EB)).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
    Text("OttOSpiele",fontSize=25.sp)
@@ -49,17 +74,20 @@ class MainActivity:ComponentActivity(){
    Text("💡 ${game.hints}",fontSize=24.sp)
   }
   val redraw=revision
-  Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,invalid,Modifier.weight(1f).fillMaxWidth()){
-   if(dialog.isEmpty()){
-    val removed=game.tap(it);revision++;invalid=if(removed)null else it;highlighted=null
-    if(game.won)dialog="Gewonnen!" else if(game.lost)dialog="Alle Herzen verbraucht"
+  Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,invalid,animId,animPlan,animStep,animFailed,occupiedEver,Modifier.weight(1f).fillMaxWidth()){
+   if(dialog.isEmpty() && animPlan==null){
+    val arrow=game.remaining.firstOrNull{a->a.id==it}?:return@Board
+    val plan=Rules.plan(arrow,game.level,game.remaining.map{a->a.id}.toSet())
+    animId=it;animPlan=plan;animStep=0;animFailed=!plan.canExit
+    invalid=null;highlighted=null;showGrid=true
+    if(!plan.canExit){game.tap(it);revision++}
    }
   }
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){
-   Button(onClick={highlighted=game.hint();invalid=null;revision++},enabled=game.hints!=0){Text("💡 Tipp")}
-   OutlinedButton(onClick={game.retry();revision++;highlighted=null;invalid=null}){Text("Neustart")}
+   Button(onClick={highlighted=game.hint();invalid=null;revision++},enabled=game.hints!=0 && animPlan==null){Text("💡 Tipp")}
+   OutlinedButton(onClick={game.retry();revision++;highlighted=null;invalid=null},enabled=animPlan==null){Text("Neustart")}
   }
-  OutlinedButton(onClick={dialog="Anderes Rätsel?"},modifier=Modifier.fillMaxWidth()){Text("Anderes Rätsel (leichter)")}
+  OutlinedButton(onClick={dialog="Anderes Rätsel?"},enabled=animPlan==null,modifier=Modifier.fillMaxWidth()){Text("Anderes Rätsel (leichter)")}
  }
  if(dialog.isNotEmpty())AlertDialog(
   onDismissRequest={},
@@ -96,11 +124,12 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
  repeat(15){try{return Game(Generator().generate(stage,Random.nextLong()),lives,hints)}catch(_:Exception){}}
  error("Cannot generate a valid level")
 }
-@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,modifier:Modifier,onTap:(Int)->Unit){
+@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,animId:Int?,plan:MovePlan?,animStep:Int,failed:Boolean,ever:Set<Pt>,modifier:Modifier,onTap:(Int)->Unit){
  val arrows=level.arrows.filter{it.id in remaining}
  Canvas(modifier.background(Color.White,RoundedCornerShape(18.dp))
-  .pointerInput(level,remaining){
+  .pointerInput(level,remaining,animId){
    detectTapGestures{position->
+    if(animId!=null)return@detectTapGestures
     val cell=minOf(size.width.toFloat(),size.height.toFloat())/level.size
     val ox=(size.width-cell*level.size)/2f
     val oy=(size.height-cell*level.size)/2f
@@ -117,10 +146,16 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
   }.padding(8.dp)){
   val cell=minOf(size.width,size.height)/level.size
   val ox=(size.width-cell*level.size)/2f;val oy=(size.height-cell*level.size)/2f
+  ever.forEach{p->
+   val point=Offset(ox+(p.x+.5f)*cell,oy+(p.y+.5f)*cell)
+   drawCircle(Color(0xFFDDE0F1),radius=(cell*.09f).coerceAtLeast(1.2f),center=point)
+  }
   arrows.forEach{a->
-   val vertices=a.vertices().map{Offset(ox+(it.x+.5f)*cell,oy+(it.y+.5f)*cell)}
+   val points=if(a.id==animId&&plan!=null)plan.frame(animStep) else a.body()
+   if(points.isEmpty())return@forEach
+   val vertices=points.map{Offset(ox+(it.x+.5f)*cell,oy+(it.y+.5f)*cell)}
    val tip=vertices.last()
-   val color=when(a.id){hinted->Color(0xFF21A679);invalid->Color(0xFFEF7658);else->Color(0xFF24677D)}
+   val color=if(a.id==animId)if(failed)Color(0xFFE85161)else Color(0xFF6678F3) else when(a.id){hinted->Color(0xFF21A679);invalid->Color(0xFFEF7658);else->Color(0xFF24677D)}
    val stroke=(cell*.20f).coerceAtLeast(2.5f);val wing=cell*.42f
    vertices.zipWithNext().forEach{(from,to)->drawLine(color,from,to,stroke,cap=StrokeCap.Round)}
    if(a.dir.x!=0){

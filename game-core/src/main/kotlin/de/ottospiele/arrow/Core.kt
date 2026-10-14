@@ -4,6 +4,15 @@ data class Pt(val x:Int,val y:Int)
 enum class Dir(val x:Int,val y:Int){UP(0,-1),RIGHT(1,0),DOWN(0,1),LEFT(-1,0)}
 data class Arrow(val id:Int,val x:Int,val y:Int,val length:Int,val dir:Dir,val bends:List<Pt> = emptyList()){
  fun vertices():List<Pt> = if(bends.isEmpty()) listOf(Pt(x,y),Pt(x+(length-1)*dir.x,y+(length-1)*dir.y)) else listOf(Pt(x,y))+bends
+ /** Ordered points from tail to tip, retained for snake-style movement. */
+ fun body():List<Pt> = buildList {
+  for((index,segment) in vertices().zipWithNext().withIndex()){
+   val (a,b)=segment
+   val dx=(b.x-a.x).compareTo(0);val dy=(b.y-a.y).compareTo(0)
+   val n=kotlin.math.abs(b.x-a.x)+kotlin.math.abs(b.y-a.y)
+   for(step in (if(index==0)0 else 1)..n)add(Pt(a.x+step*dx,a.y+step*dy))
+  }
+ }
  fun cells():Set<Pt> = buildSet {
   for((a,b) in vertices().zipWithNext()){
    require((a.x==b.x) != (a.y==b.y)) { "Only nonzero orthogonal segments allowed" }
@@ -20,7 +29,39 @@ data class Level(val seed:Long,val stage:Int,val size:Int,val arrows:List<Arrow>
 data class LevelDependencies(val requiredRemovals:Map<Int,Set<Int>>){
  fun remainingBlockers(id:Int,remainingIds:Set<Int>)=requiredRemovals[id].orEmpty().intersect(remainingIds)
 }
+data class MovePlan(val body:List<Pt>,val travel:List<Pt>,val allowedSteps:Int,val blockedBy:Int?){
+ val canExit get()=blockedBy==null
+ fun frame(steps:Int):List<Pt>{
+  val whole=body+travel
+  val count=steps.coerceIn(0,travel.size)
+  return whole.drop(count).take(body.size)
+ }
+}
 object Rules{
+ fun plan(a:Arrow,level:Level,remainingIds:Set<Int>):MovePlan{
+  val body=a.body()
+  val head=body.last()
+  val ray=mutableListOf<Pt>()
+  var p=Pt(head.x+a.dir.x,head.y+a.dir.y)
+  // Continue until the LAST body point has exited (off-board positions are valid).
+  repeat(level.size+body.size+1){
+   ray.add(p)
+   p=Pt(p.x+a.dir.x,p.y+a.dir.y)
+  }
+  val ownership=level.arrows.filter{it.id in remainingIds && it.id!=a.id}
+   .flatMap{other->other.cells().map{it to other.id}}.toMap()
+  val collision=ray.indexOfFirst{ownership.containsKey(it)}
+  val exitSteps=when(a.dir){
+   Dir.UP->head.y+body.size
+   Dir.DOWN->level.size-head.y+body.size-1
+   Dir.LEFT->head.x+body.size
+   Dir.RIGHT->level.size-head.x+body.size-1
+  }
+  val steps=exitSteps.coerceAtMost(ray.size)
+  val blocker=if(collision in 0 until steps)ownership[ray[collision]] else null
+  return MovePlan(body,ray.take(steps),if(blocker==null)steps else collision,blocker)
+ }
+
  /**
   * A snake leaves head first. Its body follows its OWN polyline, corner by
   * corner; the only NEW cells entered are those in the straight exit ray
