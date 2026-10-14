@@ -397,6 +397,12 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
   val ox=0f;val oy=0f
   val currentTrail=flights.flatMap{f->f.plan.travel.take(f.step)}.filter{it.x in 0 until level.size && it.y in 0 until level.size}.toSet()
   val pulse=flights.mapNotNull{f->f.plan.travel.getOrNull(f.step-1)}.toSet()
+  // Persistent board-wide dot lattice; visited cells are emphasized below.
+  for(y in 0 until level.size)for(x in 0 until level.size){
+   val p=Pt(x,y)
+   drawCircle(Color(0xFFE9EDF7),radius=(cell*.065f).coerceAtLeast(1.0f),
+    center=Offset(ox+(x+.5f)*sx,oy+(y+.5f)*sy))
+  }
   (ever+traveled+currentTrail).forEach{p->
    val point=Offset(ox+(p.x+.5f)*sx,oy+(p.y+.5f)*sy)
    if(p in pulse){
