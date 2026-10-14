@@ -77,6 +77,12 @@ object Rules{
   }
   return result
  }
+ /** Reject arrows whose outward tip ray crosses their own still-visible body.
+  * Otherwise spiral-like shapes can appear to pass through themselves. */
+ fun selfClear(a:Arrow,width:Int,height:Int):Boolean{
+  val body=a.cells()
+  return exitPath(a,width,height).none{it in body}
+ }
  fun dependencies(level:Level):LevelDependencies{
   val occupancy=mutableMapOf<Pt,Int>()
   for(a in level.arrows)for(p in a.cells()){
@@ -186,7 +192,8 @@ object PatternGoals {
 object BoardProfile {
  fun size(stage:Int):Int=when {
   stage<=1->17
-  stage<=24->18
+  stage<=21->18
+  stage<=24->19
   else->(18+(stage-25)/10*2+2).coerceAtMost(34)
  }
  fun height(stage:Int,aspect:Float):Int=
@@ -345,6 +352,7 @@ class Generator{
       kotlin.math.abs(p.x-q.x)+kotlin.math.abs(p.y-q.y)
      }+1)return@repeat
     if(cells.any{p->p.x !in 0 until size||p.y !in 0 until height||arrows.any{p in it.cells()}})return@repeat
+    if(!Rules.selfClear(a,size,height))return@repeat
     if(!Rules.free(a,arrows+a,size,height))return@repeat
     val unlocked=arrows.filter{old->Rules.blockers(old,listOf(old,a),size,height).isNotEmpty()}
     val different=unlocked.count{it.dir!=a.dir}
