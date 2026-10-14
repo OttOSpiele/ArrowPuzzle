@@ -31,7 +31,7 @@ class GameTest {
   // Up-pointing tip at x=6 is clear. Horizontal tail at y=5 sweeps over
   // the end of the left-pointing arrow at x=3 on its first upward move.
   val bent=Arrow(1,3,5,4,Dir.UP,listOf(Pt(6,5),Pt(6,2)))
-  val crossing=Arrow(2,1,4,3,Dir.RIGHT)
+  val crossing=Arrow(2,3,4,3,Dir.LEFT)
   val level=Level(15,3,10,listOf(bent,crossing))
   assertEquals(setOf(2),Rules.blockers(bent,level.arrows,level.size))
   assertFalse(Rules.free(bent,level.arrows,level.size))
