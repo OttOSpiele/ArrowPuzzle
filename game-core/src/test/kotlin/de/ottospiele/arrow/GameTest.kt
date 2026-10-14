@@ -32,6 +32,16 @@ class GameTest {
   assertTrue(PatternGoals.reached(PatternFamily.ALTERNATING_CHAIN,
    PatternMetrics(1,3,0,2,0)))
  }
+ @Test fun savedGameRestoresState(){
+  val l=Generator().generate(1,42)
+  val original=Game(l,5,3)
+  assertTrue(original.tap(Rules.solve(l)!!.first()))
+  val restored=Game(l,5,3)
+  restored.restore(original.remaining.map{it.id}.toSet(),original.lives,original.hints,original.mistakes)
+  assertEquals(original.remaining,restored.remaining)
+  assertEquals(original.lives,restored.lives)
+  assertEquals(original.hints,restored.hints)
+ }
  @Test fun ageAppropriateStageProgression(){
   for(stage in 1..8)assertEquals(1,Progress(stage).required())
   for(stage in 9..16)assertEquals(2,Progress(stage).required())
