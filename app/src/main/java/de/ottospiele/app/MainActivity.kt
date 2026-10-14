@@ -67,18 +67,34 @@ class MainActivity:ComponentActivity(){
  }
 
  fun replace(stage:Int){game=fresh(stage,lives,hints);highlighted=null;invalid=null;animId=null;animPlan=null;traveledCells=emptySet();pulsePoint=null;revision++}
- Column(Modifier.fillMaxSize().background(Color(0xFFFFF8EB)).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-   Text("OttOSpiele",fontSize=25.sp)
-   TextButton(onClick={settings=true}){Text("⚙")}
+ Column(
+  Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4F2FD),Color(0xFFEDF4FF),Color(0xFFFFFBF5))))
+   .padding(horizontal=20.dp,vertical=14.dp),
+  verticalArrangement=Arrangement.spacedBy(14.dp)
+ ){
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+   Column {
+    Text("OttOSpiele",fontSize=27.sp,fontWeight=FontWeight.Bold,color=Color(0xFF24294B))
+    Text("ARROW PUZZLE",fontSize=11.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF7E84A6),letterSpacing=2.sp)
+   }
+   FilledTonalIconButton(onClick={settings=true},colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=Color.White)){
+    Text("⚙",fontSize=22.sp,color=Color(0xFF5662A7))
+   }
   }
-  Text("Stufe ${progress.stage} · ★ ${progress.done}/${progress.required()}")
-  LinearProgressIndicator(progress={progress.done.toFloat()/progress.required()},modifier=Modifier.fillMaxWidth())
-  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-   Text("♥ ${game.lives}",fontSize=24.sp)
-   Text("💡 ${game.hints}",fontSize=24.sp)
+  Surface(shape=RoundedCornerShape(22.dp),color=Color.White.copy(alpha=.90f),shadowElevation=2.dp){
+   Column(Modifier.fillMaxWidth().padding(horizontal=18.dp,vertical=14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+     Text("Stufe ${progress.stage}",fontWeight=FontWeight.Bold,fontSize=20.sp,color=Color(0xFF292D55))
+     Text("★  ${progress.done} / ${progress.required()}",fontWeight=FontWeight.SemiBold,color=Color(0xFF7364C7))
+    }
+    LinearProgressIndicator(progress={progress.done.toFloat()/progress.required()},modifier=Modifier.fillMaxWidth().height(7.dp),
+     color=Color(0xFF7464D7),trackColor=Color(0xFFE7E6F8))
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+     Text("❤️  ${game.lives}  Herzen",fontWeight=FontWeight.Medium,color=Color(0xFFCE5575))
+     Text("💡  ${game.hints}  Tipps",fontWeight=FontWeight.Medium,color=Color(0xFF5F66A9))
+    }
+   }
   }
-  val redraw=revision
   Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,invalid,animId,animPlan,animStep,animFailed,occupiedEver,traveledCells,pulsePoint,Modifier.weight(1f).fillMaxWidth()){
    if(dialog.isEmpty() && animPlan==null){
     val arrow=game.remaining.firstOrNull{a->a.id==it}?:return@Board
@@ -88,11 +104,21 @@ class MainActivity:ComponentActivity(){
     if(!plan.canExit){game.tap(it);revision++}
    }
   }
-  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){
-   Button(onClick={highlighted=game.hint();invalid=null;revision++},enabled=game.hints!=0 && animPlan==null){Text("💡 Tipp")}
-   OutlinedButton(onClick={game.retry();revision++;highlighted=null;invalid=null},enabled=animPlan==null){Text("Neustart")}
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
+   Button(onClick={highlighted=game.hint();invalid=null;revision++},enabled=game.hints!=0 && animPlan==null,
+    modifier=Modifier.weight(1f).height(52.dp),shape=RoundedCornerShape(18.dp),
+    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7264D6))){
+    Text("💡  Tipp",fontWeight=FontWeight.SemiBold)
+   }
+   FilledTonalButton(onClick={game.retry();revision++;highlighted=null;invalid=null},enabled=animPlan==null,
+    modifier=Modifier.weight(1f).height(52.dp),shape=RoundedCornerShape(18.dp),
+    colors=ButtonDefaults.filledTonalButtonColors(containerColor=Color.White,contentColor=Color(0xFF565E91))){
+    Text("↻  Neustart",fontWeight=FontWeight.SemiBold)
+   }
   }
-  OutlinedButton(onClick={dialog="Anderes Rätsel?"},enabled=animPlan==null,modifier=Modifier.fillMaxWidth()){Text("Anderes Rätsel (leichter)")}
+  TextButton(onClick={dialog="Anderes Rätsel?"},enabled=animPlan==null,modifier=Modifier.fillMaxWidth()){
+   Text("Anderes Rätsel  ·  eine Stufe leichter",color=Color(0xFF646998))
+  }
  }
  if(dialog.isNotEmpty())AlertDialog(
   onDismissRequest={},
