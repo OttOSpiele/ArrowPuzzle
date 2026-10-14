@@ -70,7 +70,7 @@ Die Mustervorlagen sollen zuerst logische Blockierungsgraphen beschreiben, ansch
 | Generator/Solver | Rückwärts-konstruktiv lösbare Level, Solver, Seed-Determinismus, Muster-Kandidatenauswahl | Garantiert erzeugte Muster, Mustermischungen und Schwierigkeitseichung |
 | Analyse | Schlüsselpfeil-, Richtungswechsel-, Verzweigungs- und Kettenmetriken beeinflussen Kandidatenauswahl | Verlässliche Musterquoten und Qualitätstests über viele Seeds |
 | Spielregeln | Herzen 3/5, Tipps 0/1/3/5, Stufenprogression, Neustart/Stufe zurück, parallele Züge | Unbegrenzte Herzen/Tipps, Sonderfalltests, Speicherung |
-| Speicherung | Noch **nicht** implementiert | Vollständiges lokales Resume |
+| Speicherung | Versionierter privater Snapshot mit Fortschritt, Optionen, aktivem Rätsel, Leben, Tipps und Fehlerhistorie | Gerätetests und künftige Speichermigration |
 | Animationen/Monster | Zellweise Schlangenanimation, verstärkte Punktspur, eigene Erfolgs-/Niederlagenbildschirme | Flüssige Interpolation, Monsterfiguren, echte Aufstiegsanimation und Sounds |
 | Elternbereich/Donationware | Einfache Einstellungen vorhanden | Schutz, Spendenoption, rechtliche Prüfung |
 
@@ -181,3 +181,5 @@ Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbi
 Die Planung beschreibt technische Arbeit, keine formale Releasefreigabe.
 
 - **14.10.2026 – Statusabgleich und kräftigere Punktpulse:** Leuchtspur über bis zu sechs Schritte mit deutlich größerem Halo und dunklem Kern, auch auf gerade verlassenen Körperzellen. README-Statusmatrix und offene Entwicklungsschritte aktualisiert; veraltete Kollisionsdarstellung als historisch markiert.
+
+- **14.10.2026 – Lokale Spielstandspeicherung für Kindertest:** Der Stand der aktuellen Stufe und ihrer erfolgreich abgeschlossenen Rätsel sowie alle vorhandenen Einstellungen (Leben, Hinweise, Geschwindigkeit, parallele Pfeile) bleiben nach App-Neustart erhalten. Ebenfalls gesichert: ursprüngliche Levelgeometrie/Seed, verbleibende Pfeile, verbleibende Herzen/Tipps, bereits gezählte Blockierungsfehler und Ergebnisbildschirm. Die Speicherung erfolgt privat auf dem Android-Gerät über versionierte SharedPreferences und wird beim Start geprüft. Ein laufender grafischer Animationsschritt wird nicht wiederaufgenommen; die logisch entfernten Pfeile bleiben entfernt. Datenmigration und instrumentierte Gerätetests sind noch offen.
