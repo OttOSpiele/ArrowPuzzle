@@ -43,6 +43,7 @@ class MainActivity:ComponentActivity(){
  var animPlan by remember{mutableStateOf<MovePlan?>(null)}
  var animFailed by remember{mutableStateOf(false)}
  var showGrid by remember{mutableStateOf(false)}
+ var traveledCells by remember{mutableStateOf(emptySet<Pt>())}
  val occupiedEver=remember(game.level){game.level.arrows.flatMap{it.cells()}.toSet()}
  LaunchedEffect(animPlan){
   val plan=animPlan?:return@LaunchedEffect
@@ -54,6 +55,7 @@ class MainActivity:ComponentActivity(){
    if(game.lost)dialog="Alle Herzen verbraucht"
   }else{
    delay(90)
+   traveledCells=traveledCells+plan.travel.filter{it.x in 0 until game.level.size && it.y in 0 until game.level.size}
    game.tap(animId!!)
    revision++
    if(game.won)dialog="Gewonnen!"
@@ -61,7 +63,7 @@ class MainActivity:ComponentActivity(){
   animId=null;animPlan=null;animStep=0
  }
 
- fun replace(stage:Int){game=fresh(stage,lives,hints);highlighted=null;invalid=null;animId=null;animPlan=null;revision++}
+ fun replace(stage:Int){game=fresh(stage,lives,hints);highlighted=null;invalid=null;animId=null;animPlan=null;traveledCells=emptySet();revision++}
  Column(Modifier.fillMaxSize().background(Color(0xFFFFF8EB)).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
    Text("OttOSpiele",fontSize=25.sp)
@@ -74,7 +76,7 @@ class MainActivity:ComponentActivity(){
    Text("💡 ${game.hints}",fontSize=24.sp)
   }
   val redraw=revision
-  Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,invalid,animId,animPlan,animStep,animFailed,occupiedEver,Modifier.weight(1f).fillMaxWidth()){
+  Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,invalid,animId,animPlan,animStep,animFailed,occupiedEver,traveledCells,Modifier.weight(1f).fillMaxWidth()){
    if(dialog.isEmpty() && animPlan==null){
     val arrow=game.remaining.firstOrNull{a->a.id==it}?:return@Board
     val plan=Rules.plan(arrow,game.level,game.remaining.map{a->a.id}.toSet())
@@ -124,7 +126,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
  repeat(15){try{return Game(Generator().generate(stage,Random.nextLong()),lives,hints)}catch(_:Exception){}}
  error("Cannot generate a valid level")
 }
-@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,animId:Int?,plan:MovePlan?,animStep:Int,failed:Boolean,ever:Set<Pt>,modifier:Modifier,onTap:(Int)->Unit){
+@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,animId:Int?,plan:MovePlan?,animStep:Int,failed:Boolean,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,onTap:(Int)->Unit){
  val arrows=level.arrows.filter{it.id in remaining}
  Canvas(modifier.background(Color.White,RoundedCornerShape(18.dp))
   .pointerInput(level,remaining,animId){
@@ -146,9 +148,10 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
   }.padding(8.dp)){
   val cell=minOf(size.width,size.height)/level.size
   val ox=(size.width-cell*level.size)/2f;val oy=(size.height-cell*level.size)/2f
-  ever.forEach{p->
+  val currentTrail=if(plan!=null)plan.travel.take(animStep.coerceAtMost(plan.travel.size)).filter{it.x in 0 until level.size && it.y in 0 until level.size}.toSet() else emptySet()
+  (ever+traveled+currentTrail).forEach{p->
    val point=Offset(ox+(p.x+.5f)*cell,oy+(p.y+.5f)*cell)
-   drawCircle(Color(0xFFDDE0F1),radius=(cell*.09f).coerceAtLeast(1.2f),center=point)
+   drawCircle(if(p in currentTrail)Color(0xFFBEC5FF) else Color(0xFFDDE0F1),radius=(cell*.09f).coerceAtLeast(1.2f),center=point)
   }
   arrows.forEach{a->
    val points=if(a.id==animId&&plan!=null)plan.frame(animStep) else a.body()
