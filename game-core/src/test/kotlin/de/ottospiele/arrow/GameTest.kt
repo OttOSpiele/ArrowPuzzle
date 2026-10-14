@@ -9,6 +9,20 @@ class GameTest {
    assertNotNull(Rules.solve(level))
   }
  }
+ @Test fun compactBoardsAfterStageFive(){
+  assertEquals(25,BoardProfile.size(5))
+  for(stage in 6..26)assertEquals(25,BoardProfile.size(stage))
+  assertTrue(BoardProfile.count(9)>BoardProfile.count(5))
+  assertEquals(24,BoardProfile.count(30))
+ }
+ @Test fun compactBoardGenerationStaysSolvable(){
+  for(stage in listOf(6,9,17,25))for(seed in 0L..2L){
+   val level=Generator().generate(stage,seed)
+   assertEquals(25,level.size)
+   assertEquals(BoardProfile.count(stage),level.arrows.size)
+   assertNotNull(Rules.solve(level))
+  }
+ }
  @Test fun patternGoalsChangeWithStage(){
   assertEquals(PatternFamily.INTRO,PatternGoals.preferred(3))
   assertEquals(PatternFamily.KEY_ARROW,PatternGoals.preferred(4))
