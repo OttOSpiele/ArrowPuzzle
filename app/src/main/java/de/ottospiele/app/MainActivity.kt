@@ -117,11 +117,11 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
   val cell=minOf(size.width,size.height)/level.size
   val ox=(size.width-cell*level.size)/2f;val oy=(size.height-cell*level.size)/2f
   arrows.forEach{a->
-   val start=Offset(ox+(a.x+.5f)*cell,oy+(a.y+.5f)*cell)
-   val tip=Offset(start.x+(a.length-1)*a.dir.x*cell,start.y+(a.length-1)*a.dir.y*cell)
+   val vertices=a.vertices().map{Offset(ox+(it.x+.5f)*cell,oy+(it.y+.5f)*cell)}
+   val tip=vertices.last()
    val color=if(a.id==hinted)Color(0xFFEF7658)else Color(0xFF24677D)
    val stroke=(cell*.20f).coerceAtLeast(2.5f);val wing=cell*.42f
-   drawLine(color,start,tip,stroke,cap=StrokeCap.Round)
+   vertices.zipWithNext().forEach{(from,to)->drawLine(color,from,to,stroke,cap=StrokeCap.Round)}
    if(a.dir.x!=0){
     drawLine(color,tip,Offset(tip.x-a.dir.x*wing,tip.y-wing*.7f),stroke,cap=StrokeCap.Round)
     drawLine(color,tip,Offset(tip.x-a.dir.x*wing,tip.y+wing*.7f),stroke,cap=StrokeCap.Round)

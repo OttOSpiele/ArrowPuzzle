@@ -2,8 +2,16 @@ package de.ottospiele.arrow
 import kotlin.random.Random
 data class Pt(val x:Int,val y:Int)
 enum class Dir(val x:Int,val y:Int){UP(0,-1),RIGHT(1,0),DOWN(0,1),LEFT(-1,0)}
-data class Arrow(val id:Int,val x:Int,val y:Int,val length:Int,val dir:Dir){
- fun cells()=(0 until length).map{Pt(x+it*dir.x,y+it*dir.y)}.toSet()
+data class Arrow(val id:Int,val x:Int,val y:Int,val length:Int,val dir:Dir,val bends:List<Pt> = emptyList()){
+ fun vertices():List<Pt> = if(bends.isEmpty()) listOf(Pt(x,y),Pt(x+(length-1)*dir.x,y+(length-1)*dir.y)) else listOf(Pt(x,y))+bends
+ fun cells():Set<Pt> = buildSet {
+  for((a,b) in vertices().zipWithNext()){
+   require((a.x==b.x) != (a.y==b.y)) { "Only nonzero orthogonal segments allowed" }
+   val dx=(b.x-a.x).compareTo(0);val dy=(b.y-a.y).compareTo(0)
+   var p=a
+   while(true){add(p);if(p==b)break;p=Pt(p.x+dx,p.y+dy)}
+  }
+ }
 }
 data class Level(val seed:Long,val stage:Int,val size:Int,val arrows:List<Arrow>)
 object Rules{
@@ -39,11 +47,20 @@ class Generator{
    var best:Arrow?=null;var score=-1
    repeat(600){
     val dir=Dir.entries.random(random);val length=random.nextInt(2,5)
-    val a=Arrow(id,random.nextInt(size),random.nextInt(size),length,dir)
+    val sx=random.nextInt(size);val sy=random.nextInt(size)
+    // The final segment always points in the declared exit direction.
+    val a=if(stage>=2 && random.nextInt(100)<65){
+     val middleDir=if(dir.x!=0) if(random.nextBoolean())Dir.UP else Dir.DOWN else if(random.nextBoolean())Dir.LEFT else Dir.RIGHT
+     val firstLen=random.nextInt(2,5)
+     val turn=Pt(sx+firstLen*middleDir.x,sy+firstLen*middleDir.y)
+     val tip=Pt(turn.x+(length-1)*dir.x,turn.y+(length-1)*dir.y)
+     Arrow(id,sx,sy,length,dir,listOf(turn,tip))
+    } else Arrow(id,sx,sy,length,dir)
+    if(a.cells().size!=a.vertices().zipWithNext().sumOf{(p,q)->kotlin.math.abs(p.x-q.x)+kotlin.math.abs(p.y-q.y)}+1)return@repeat
     if(a.cells().any{p->p.x !in 0 until size||p.y !in 0 until size||arrows.any{p in it.cells()}})return@repeat
     if(!Rules.free(a,arrows+a,size))return@repeat
     val blocked=arrows.count{Rules.blockers(it,listOf(it,a),size).isNotEmpty()}
-    val s=blocked*10+random.nextInt(5)
+    val s=blocked*10+random.nextInt(5) + if(a.bends.isNotEmpty()) 2 else 0
     if(s>score){best=a;score=s}
    }
    arrows.add(best?:error("No placement for arrow "+id))
