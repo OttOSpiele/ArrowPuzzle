@@ -398,13 +398,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
     val sy=size.height.toFloat()/level.size
     val x=position.x/sx-.5f
     val y=position.y/sy-.5f
-    val selected=arrows.minByOrNull{a->
-     a.cells().minOf{p->(p.x-x)*(p.x-x)+(p.y-y)*(p.y-y)}
-    }
-    if(selected!=null){
-     val distance=selected.cells().minOf{p->(p.x-x)*(p.x-x)+(p.y-y)*(p.y-y)}
-     if(distance<1.2f)onTap(selected.id)
-    }
+    ArrowTouch.select(level,remaining,x,y)?.let(onTap)
    }
   }){
   val sx=size.width/level.size;val sy=size.height/level.size
