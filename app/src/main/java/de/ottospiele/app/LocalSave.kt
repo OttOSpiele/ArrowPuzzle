@@ -14,13 +14,13 @@ internal data class SavedSession(
 
 internal object LocalSave {
  private const val NAME="arrow_puzzle_local"
- private const val KEY="session_v1"
+ private const val KEY="session_v2"
  private const val TAG="ArrowPuzzleSave"
  fun read(context:Context):SavedSession? {
   val json=context.getSharedPreferences(NAME,Context.MODE_PRIVATE).getString(KEY,null)?:return null
   return try {
    val root=JSONObject(json)
-   require(root.getInt("version")==1)
+   require(root.getInt("version")==2)
    val stage=root.getInt("stage")
    val progress=Progress(stage,root.getInt("done"))
    require(stage in 1..100000 && progress.done in 0 until progress.required())
@@ -45,7 +45,7 @@ internal object LocalSave {
      obj.getInt("length"),Dir.valueOf(obj.getString("direction")),bends)
    }
    require(arrows.map{it.id}.toSet().size==arrows.size)
-   val level=Level(root.getLong("seed"),stage,size,arrows,root.optInt("height",size))
+   val level=Level(root.getLong("seed"),stage,size,arrows,root.getInt("height"))
    require(Rules.solve(level)!=null)
    val remainingArray=root.getJSONArray("remaining")
    val remaining=(0 until remainingArray.length()).map{remainingArray.getInt(it)}.toSet()
@@ -83,7 +83,7 @@ internal object LocalSave {
  fun write(context:Context,progress:Progress,lifeSetting:Int,hintSetting:Int,
   concurrent:Boolean,speed:Int,game:Game,win:Boolean,defeat:Boolean) {
   val root=JSONObject()
-  root.put("version",1).put("stage",progress.stage).put("done",progress.done)
+  root.put("version",2).put("stage",progress.stage).put("done",progress.done)
    .put("lifeSetting",lifeSetting).put("hintSetting",hintSetting)
    .put("concurrent",concurrent).put("speed",speed)
    .put("seed",game.level.seed).put("size",game.level.size).put("height",game.level.height)
