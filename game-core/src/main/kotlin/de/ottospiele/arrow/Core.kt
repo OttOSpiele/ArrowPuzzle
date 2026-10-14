@@ -246,6 +246,14 @@ class Game(val level:Level,val maxLives:Int=5,val maxHints:Int=3){
   val id=remaining.firstOrNull{dependencyMatrix.remainingBlockers(it.id,ids).isEmpty()}?.id?:return null
   hints--;return id
  }
+ fun restore(ids:Set<Int>,savedLives:Int,savedHints:Int,savedMistakes:Map<Int,Set<Int>>){
+  require(savedLives in 0..maxLives && savedHints in 0..maxHints)
+  require(ids.all{id->level.arrows.any{it.id==id}})
+  require(savedMistakes.keys.all{it in ids})
+  remaining.clear();remaining.addAll(level.arrows.filter{it.id in ids})
+  mistakes.clear();mistakes.putAll(savedMistakes)
+  lives=savedLives;hints=savedHints
+ }
  fun retry(){remaining.clear();remaining.addAll(level.arrows);mistakes.clear();lives=maxLives;hints=maxHints}
 }
 data class Progress(val stage:Int=1,val done:Int=0){
