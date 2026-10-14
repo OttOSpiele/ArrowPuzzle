@@ -201,7 +201,7 @@ object BoardProfile {
  fun count(stage:Int):Int=when {
   stage<=5->stage.coerceAtLeast(1)+3
   stage<=24->(8+(stage-5)).coerceAtMost(20)
-  else->(17+(stage-24)).coerceAtMost(40)
+  else->(20+(stage-24)).coerceAtMost(40)
  }
 }
 
