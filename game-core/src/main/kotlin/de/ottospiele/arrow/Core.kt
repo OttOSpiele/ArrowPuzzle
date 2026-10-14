@@ -22,7 +22,8 @@ data class Arrow(val id:Int,val x:Int,val y:Int,val length:Int,val dir:Dir,val b
   }
  }
 }
-data class Level(val seed:Long,val stage:Int,val size:Int,val arrows:List<Arrow>){
+data class Level(val seed:Long,val stage:Int,val size:Int,val arrows:List<Arrow>,val height:Int=size){
+ val width:Int get()=size
  val dependencies:LevelDependencies by lazy { Rules.dependencies(this) }
 }
 /** Cached full-level occupancy and geometric prerequisite IDs. */
@@ -44,7 +45,7 @@ object Rules{
   val ray=mutableListOf<Pt>()
   var p=Pt(head.x+a.dir.x,head.y+a.dir.y)
   // Continue until the LAST body point has exited (off-board positions are valid).
-  repeat(level.size+body.size+1){
+  repeat(maxOf(level.width,level.height)+body.size+1){
    ray.add(p)
    p=Pt(p.x+a.dir.x,p.y+a.dir.y)
   }
@@ -53,9 +54,9 @@ object Rules{
   val collision=ray.indexOfFirst{ownership.containsKey(it)}
   val exitSteps=when(a.dir){
    Dir.UP->head.y+body.size
-   Dir.DOWN->level.size-head.y+body.size-1
+   Dir.DOWN->level.height-head.y+body.size-1
    Dir.LEFT->head.x+body.size
-   Dir.RIGHT->level.size-head.x+body.size-1
+   Dir.RIGHT->level.width-head.x+body.size-1
   }
   val steps=exitSteps.coerceAtMost(ray.size)
   val blocker=if(collision in 0 until steps)ownership[ray[collision]] else null
@@ -67,11 +68,11 @@ object Rules{
   * corner; the only NEW cells entered are those in the straight exit ray
   * extending the final head segment.
   */
- fun exitPath(a:Arrow,size:Int):List<Pt>{
+ fun exitPath(a:Arrow,size:Int,height:Int=size):List<Pt>{
   val head=a.vertices().last()
   val result=mutableListOf<Pt>()
   var p=Pt(head.x+a.dir.x,head.y+a.dir.y)
-  while(p.x in 0 until size && p.y in 0 until size){
+  while(p.x in 0 until size && p.y in 0 until height){
    result.add(p);p=Pt(p.x+a.dir.x,p.y+a.dir.y)
   }
   return result
@@ -79,23 +80,23 @@ object Rules{
  fun dependencies(level:Level):LevelDependencies{
   val occupancy=mutableMapOf<Pt,Int>()
   for(a in level.arrows)for(p in a.cells()){
-   require(p.x in 0 until level.size && p.y in 0 until level.size){ "Arrow outside board" }
+   require(p.x in 0 until level.size && p.y in 0 until level.height){ "Arrow outside board" }
    require(occupancy.put(p,a.id)==null){ "Overlapping arrows" }
   }
   return LevelDependencies(level.arrows.associate{a->
-   a.id to exitPath(a,level.size).mapNotNull{occupancy[it]}.filter{it!=a.id}.toSet()
+   a.id to exitPath(a,level.width,level.height).mapNotNull{occupancy[it]}.filter{it!=a.id}.toSet()
   })
  }
- fun blockers(a:Arrow,remaining:List<Arrow>,size:Int):Set<Int>{
+ fun blockers(a:Arrow,remaining:List<Arrow>,size:Int,height:Int=size):Set<Int>{
   val occupied=remaining.filter{it.id!=a.id}.associate{it.id to it.cells()}
-  val ray=exitPath(a,size).toSet()
+  val ray=exitPath(a,size,height).toSet()
   return occupied.filterValues{cells->cells.any{it in ray}}.keys
  }
- fun free(a:Arrow,remaining:List<Arrow>,size:Int)=blockers(a,remaining,size).isEmpty()
+ fun free(a:Arrow,remaining:List<Arrow>,size:Int,height:Int=size)=blockers(a,remaining,size,height).isEmpty()
  fun solve(level:Level):List<Int>?{
   val used=mutableSetOf<Pt>()
   for(a in level.arrows)for(p in a.cells()){
-   if(p.x !in 0 until level.size||p.y !in 0 until level.size||!used.add(p))return null
+   if(p.x !in 0 until level.size||p.y !in 0 until level.height||!used.add(p))return null
   }
   val rest=level.arrows.toMutableList();val result=mutableListOf<Int>()
   while(rest.isNotEmpty()){
@@ -136,7 +137,7 @@ data class PatternMetrics(
 object PatternAnalysis {
  fun analyze(level:Level):PatternMetrics {
   val edges=level.arrows.associate{blocked->
-   blocked.id to Rules.blockers(blocked,level.arrows,level.size)
+   blocked.id to Rules.blockers(blocked,level.arrows,level.width,level.height)
   }
   val free=edges.values.count{it.isEmpty()}
   val byId=level.arrows.associateBy{it.id}
@@ -183,15 +184,20 @@ object PatternGoals {
  }
 }
 object BoardProfile {
- fun size(stage:Int):Int=when{
-  stage<=5->15+stage.coerceAtLeast(1)*2
-  else->(25+2*((stage-6)/10)).coerceAtMost(35)
+ fun size(stage:Int):Int=when {
+  stage<=1->17
+  stage<=24->18
+  else->(18+(stage-25)/10*2+2).coerceAtMost(34)
  }
- fun count(stage:Int):Int=when{
+ fun height(stage:Int,aspect:Float):Int=
+  (size(stage)/aspect.coerceIn(1f,1.65f)).toInt().coerceIn(11,size(stage))
+ fun count(stage:Int):Int=when {
   stage<=5->stage.coerceAtLeast(1)+3
-  else->(8+(stage-5)*2).coerceAtMost(52)
+  stage<=24->(8+(stage-5)).coerceAtMost(17)
+  else->(17+(stage-24)).coerceAtMost(40)
  }
 }
+
 /** The arrows are listed in reverse removal order: targets first, blockers last. */
 data class PatternBlueprint(val arrows:List<Arrow>,val requiredEdges:Set<Pair<Int,Int>>){
  fun realized(level:Level):Boolean=requiredEdges.all{(blocker,blocked)->
@@ -243,7 +249,7 @@ object PatternConstruction {
 }
 
 class Generator{
- fun generate(stage:Int,seed:Long):Level{
+ fun generate(stage:Int,seed:Long,aspect:Float=1f):Level{
   val family=PatternGoals.preferred(stage)
   val attempts=if(stage<=3)1 else 24
   var best:Level?=null
@@ -253,7 +259,7 @@ class Generator{
    val random=Random(seed+attempt*1000003L)
    // Dense boards can reach a geometric placement dead end. Retry with an
    // independent deterministic stream instead of aborting the entire level.
-   val level=try{makeCandidate(stage,seed,random)}catch(_:IllegalStateException){continue}
+   val level=try{makeCandidate(stage,seed,random,aspect)}catch(_:IllegalStateException){continue}
    val m=PatternAnalysis.analyze(level)
    val score=PatternGoals.score(family,m)
    if(score>bestScore){bestScore=score;best=level}
@@ -261,13 +267,20 @@ class Generator{
   }
   return best?:error("Unable to construct a puzzle")
  }
- private fun makeCandidate(stage:Int,seed:Long,random:Random):Level{
+ private fun makeCandidate(stage:Int,seed:Long,random:Random,aspect:Float):Level{
   val size=BoardProfile.size(stage)
+  val height=BoardProfile.height(stage,aspect)
   val arrows=mutableListOf<Arrow>()
-  val blueprint=PatternConstruction.blueprint(stage,size,seed)
+  val blueprint=PatternConstruction.blueprint(stage,minOf(size,height),seed)
   if(blueprint!=null){
-   arrows.addAll(blueprint.arrows)
-   check(blueprint.realized(Level(seed,stage,size,arrows)))
+   val offset=Pt((size-minOf(size,height))/2,(height-minOf(size,height))/2)
+   arrows.addAll(blueprint.arrows.map{a->
+    Arrow(a.id,a.x+offset.x,a.y+offset.y,a.length,a.dir,
+     a.bends.map{Pt(it.x+offset.x,it.y+offset.y)})
+   })
+   check(blueprint.requiredEdges.all{(blocker,blocked)->
+    blocker in Level(seed,stage,size,arrows,height).dependencies.requiredRemovals[blocked].orEmpty()
+   })
   }
   val count=BoardProfile.count(stage)
   val family=PatternGoals.preferred(stage)
@@ -278,7 +291,7 @@ class Generator{
     val dir=Dir.entries.random(random)
     val length=if(stage<=5)random.nextInt(2,5) else random.nextInt(3,if(stage>=10)7 else 6)
     val sx=if(stage<=5)random.nextInt(size) else random.nextInt(3,size-3)
-    val sy=if(stage<=5)random.nextInt(size) else random.nextInt(3,size-3)
+    val sy=if(stage<=5)random.nextInt(height) else random.nextInt(2,height-2)
     val a=if(stage>=2 && random.nextInt(100)<65){
      val middleDir=if(dir.x!=0)if(random.nextBoolean())Dir.UP else Dir.DOWN
       else if(random.nextBoolean())Dir.LEFT else Dir.RIGHT
@@ -291,9 +304,9 @@ class Generator{
     if(cells.size!=a.vertices().zipWithNext().sumOf{(p,q)->
       kotlin.math.abs(p.x-q.x)+kotlin.math.abs(p.y-q.y)
      }+1)return@repeat
-    if(cells.any{p->p.x !in 0 until size||p.y !in 0 until size||arrows.any{p in it.cells()}})return@repeat
-    if(!Rules.free(a,arrows+a,size))return@repeat
-    val unlocked=arrows.filter{old->Rules.blockers(old,listOf(old,a),size).isNotEmpty()}
+    if(cells.any{p->p.x !in 0 until size||p.y !in 0 until height||arrows.any{p in it.cells()}})return@repeat
+    if(!Rules.free(a,arrows+a,size,height))return@repeat
+    val unlocked=arrows.filter{old->Rules.blockers(old,listOf(old,a),size,height).isNotEmpty()}
     val different=unlocked.count{it.dir!=a.dir}
     val branches=unlocked.map{it.dir}.distinct().size
     val base=unlocked.size*12+random.nextInt(7)
@@ -311,17 +324,17 @@ class Generator{
      val cx=cells.sumOf{it.x}/cells.size
      val cy=cells.sumOf{it.y}/cells.size
      val xBand=band(cx)
-     val yBand=band(cy)
+     val yBand=((cy*3)/height).coerceIn(0,2)
      val xUsage=occupied.count{band(it.x)==xBand}
-     val yUsage=occupied.count{band(it.y)==yBand}
+     val yUsage=occupied.count{((it.y*3)/height).coerceIn(0,2)==yBand}
      val xLeast=(0..2).minOf{target->occupied.count{band(it.x)==target}}
-     val yLeast=(0..2).minOf{target->occupied.count{band(it.y)==target}}
+     val yLeast=(0..2).minOf{target->occupied.count{((it.y*3)/height).coerceIn(0,2)==target}}
      val nearest=if(occupied.isEmpty())0 else cells.minOf{p->
       occupied.minOf{q->kotlin.math.abs(p.x-q.x)+kotlin.math.abs(p.y-q.y)}
      }
      val isolationPenalty=(nearest-4).coerceAtLeast(0)*9
      val borderPenalty=(kotlin.math.abs(cx-size/2)-size/3).coerceAtLeast(0)*4+
-      (kotlin.math.abs(cy-size/2)-size/3).coerceAtLeast(0)*4
+      (kotlin.math.abs(cy-height/2)-height/3).coerceAtLeast(0)*4
      val balance=(xLeast-xUsage+yLeast-yUsage)*3
      balance-isolationPenalty-borderPenalty
     }
@@ -330,9 +343,9 @@ class Generator{
    }
    arrows.add(best?:error("No placement for arrow $id"))
   }
-  return Level(seed,stage,size,arrows).also{
+  return Level(seed,stage,size,arrows,height).also{
    check(Rules.solve(it)!=null)
-   check(blueprint==null || blueprint.realized(it))
+   check(blueprint==null || blueprint.requiredEdges.all{edge->edge.first in it.dependencies.requiredRemovals[edge.second].orEmpty()})
   }
  }
 }
