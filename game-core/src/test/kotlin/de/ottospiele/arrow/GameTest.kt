@@ -33,6 +33,12 @@ class GameTest {
    assertNotNull(Rules.solve(level))
   }
  }
+ @Test fun compactLaterStagesGetMoreArrowsWithoutGrowingGrid(){
+  assertEquals(18,BoardProfile.size(21))
+  assertEquals(19,BoardProfile.size(24))
+  assertEquals(20,BoardProfile.count(18))
+  assertEquals(20,BoardProfile.count(24))
+ }
  @Test fun compactBoardsAfterStageFive(){
   assertEquals(17,BoardProfile.size(1))
   for(stage in 2..21)assertEquals(18,BoardProfile.size(stage))
@@ -44,8 +50,8 @@ class GameTest {
   assertEquals(34,BoardProfile.size(100))
   assertEquals(11,BoardProfile.height(14,1.8f))
   assertTrue(BoardProfile.count(12)>BoardProfile.count(6))
-  assertEquals(17,BoardProfile.count(16))
-  assertEquals(17,BoardProfile.count(18))
+  assertEquals(19,BoardProfile.count(16))
+  assertEquals(20,BoardProfile.count(18))
   assertTrue(BoardProfile.count(25)>BoardProfile.count(18))
  }
  @Test fun rectangularBoardPreservesSolutionAndBounds(){
