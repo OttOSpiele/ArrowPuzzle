@@ -89,7 +89,7 @@ class MainActivity:ComponentActivity(){
   }
   Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,invalid,
    flights.toList(),occupiedEver,traveledCells,Modifier.weight(1f).fillMaxWidth()){
-   if(dialog.isNotEmpty() || (!concurrent && flights.isNotEmpty()) || flights.any{f->f.id==it})return@Board
+   if(dialog.isNotEmpty() || game.lost || (!concurrent && flights.isNotEmpty()) || flights.any{f->f.id==it})return@Board
    val arrow=game.remaining.firstOrNull{a->a.id==it}?:return@Board
    val plan=Rules.plan(arrow,game.level,game.remaining.map{a->a.id}.toSet())
    val failed=!plan.canExit
@@ -220,7 +220,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
    drawCircle(if(p in pulse)Color(0xFF6F63DE) else if(p in currentTrail)Color(0xFFB1B7F2) else Color(0xFFD9E0F2),
     radius=(cell*(if(p in pulse).14f else .08f)).coerceAtLeast(1.3f),center=point)
   }
-  val allVisible=arrows.map{it to (it.body() to false)}+flights.mapNotNull{f->level.arrows.firstOrNull{it.id==f.id}?.let{a->a to (f.plan.frame(f.step) to f.failed)}}
+  val allVisible=arrows.filter{a->flights.none{f->f.id==a.id}}.map{it to (it.body() to false)}+flights.mapNotNull{f->level.arrows.firstOrNull{it.id==f.id}?.let{a->a to (f.plan.frame(f.step) to f.failed)}}
   allVisible.forEach{(a,shape)->
    val points=shape.first
    if(points.isEmpty())return@forEach
