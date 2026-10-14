@@ -33,9 +33,10 @@ class MainActivity:ComponentActivity(){
  var game by remember{mutableStateOf(fresh(1,5,3))}
  var revision by remember{mutableIntStateOf(0)}
  var highlighted by remember{mutableStateOf<Int?>(null)}
+ var invalid by remember{mutableStateOf<Int?>(null)}
  var dialog by remember{mutableStateOf("")}
  var settings by remember{mutableStateOf(false)}
- fun replace(stage:Int){game=fresh(stage,lives,hints);highlighted=null;revision++}
+ fun replace(stage:Int){game=fresh(stage,lives,hints);highlighted=null;invalid=null;revision++}
  Column(Modifier.fillMaxSize().background(Color(0xFFFFF8EB)).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
    Text("OttOSpiele",fontSize=25.sp)
@@ -48,15 +49,15 @@ class MainActivity:ComponentActivity(){
    Text("💡 ${game.hints}",fontSize=24.sp)
   }
   val redraw=revision
-  Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,Modifier.weight(1f).fillMaxWidth()){
+  Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,invalid,Modifier.weight(1f).fillMaxWidth()){
    if(dialog.isEmpty()){
-    val removed=game.tap(it);revision++;highlighted=if(removed)null else it
+    val removed=game.tap(it);revision++;invalid=if(removed)null else it;highlighted=null
     if(game.won)dialog="Gewonnen!" else if(game.lost)dialog="Alle Herzen verbraucht"
    }
   }
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){
-   Button(onClick={highlighted=game.hint();revision++},enabled=game.hints!=0){Text("💡 Tipp")}
-   OutlinedButton(onClick={game.retry();revision++;highlighted=null}){Text("Neustart")}
+   Button(onClick={highlighted=game.hint();invalid=null;revision++},enabled=game.hints!=0){Text("💡 Tipp")}
+   OutlinedButton(onClick={game.retry();revision++;highlighted=null;invalid=null}){Text("Neustart")}
   }
   OutlinedButton(onClick={dialog="Anderes Rätsel?"},modifier=Modifier.fillMaxWidth()){Text("Anderes Rätsel (leichter)")}
  }
@@ -71,7 +72,7 @@ class MainActivity:ComponentActivity(){
   confirmButton={TextButton(onClick={
    when(dialog){
     "Gewonnen!"->{progress=progress.win();replace(progress.stage)}
-    "Alle Herzen verbraucht"->{game.retry();revision++;highlighted=null}
+    "Alle Herzen verbraucht"->{game.retry();revision++;highlighted=null;invalid=null}
     else->{progress=progress.easier();replace(progress.stage)}
    }
    dialog=""
@@ -95,7 +96,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
  repeat(15){try{return Game(Generator().generate(stage,Random.nextLong()),lives,hints)}catch(_:Exception){}}
  error("Cannot generate a valid level")
 }
-@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,modifier:Modifier,onTap:(Int)->Unit){
+@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,modifier:Modifier,onTap:(Int)->Unit){
  val arrows=level.arrows.filter{it.id in remaining}
  Canvas(modifier.background(Color.White,RoundedCornerShape(18.dp))
   .pointerInput(level,remaining){
@@ -119,7 +120,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
   arrows.forEach{a->
    val vertices=a.vertices().map{Offset(ox+(it.x+.5f)*cell,oy+(it.y+.5f)*cell)}
    val tip=vertices.last()
-   val color=if(a.id==hinted)Color(0xFFEF7658)else Color(0xFF24677D)
+   val color=when(a.id){hinted->Color(0xFF21A679);invalid->Color(0xFFEF7658);else->Color(0xFF24677D)}
    val stroke=(cell*.20f).coerceAtLeast(2.5f);val wing=cell*.42f
    vertices.zipWithNext().forEach{(from,to)->drawLine(color,from,to,stroke,cap=StrokeCap.Round)}
    if(a.dir.x!=0){

@@ -119,3 +119,5 @@ Rechtliche Quellen (Stand 14.10.2026):
 - **14.10.2026 – Algorithmik:** Musterfamilien, Schlüsselpfeile, Wechselketten, Verzweigungen und geometrisch überprüfte Abhängigkeiten.
 - **14.10.2026 – Prototyp/Build:** Kotlin/JVM-Spielkern, Jetpack Compose, GitHub Actions, GitHub-Releases-Vorschau, geknickte Pfeile und Abhängigkeitsanalyse.
 - **14.10.2026 – Transparenz und Dokumentation:** KI-Provenienz, Commit-Konvention und laufend gepflegte Anforderungshistorie eingeführt.
+
+- **14.10.2026 – Korrektur Ausfahrpfad (Gerätetest):** Für verwinkelte Pfeile wird der vollständige Ausfahrweg des gesamten starr in Pfeilrichtung verschobenen Linienverlaufs bis einschließlich des letzten austretenden Zellenpunkts überprüft. Ein freier Pfeilkopf allein genügt ausdrücklich nicht. Regressionstest für einen durch das seitliche Segment blockierten Pfeil. Visuell werden Tippempfehlungen (grün) und falsche Antippversuche (korallfarben) nun unterschieden.

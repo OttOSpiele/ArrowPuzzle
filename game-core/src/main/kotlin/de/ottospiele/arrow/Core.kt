@@ -15,13 +15,25 @@ data class Arrow(val id:Int,val x:Int,val y:Int,val length:Int,val dir:Dir,val b
 }
 data class Level(val seed:Long,val stage:Int,val size:Int,val arrows:List<Arrow>)
 object Rules{
+ /** Every board position occupied while the entire rigid polyline exits in its tip direction. */
+ fun exitFrames(a:Arrow,size:Int):List<Set<Pt>> {
+  val initial=a.cells()
+  val frames=mutableListOf<Set<Pt>>()
+  // The farthest trailing cell determines when the full arrow has left the board.
+  val steps=when(a.dir){
+   Dir.UP->initial.maxOf{it.y}+1
+   Dir.DOWN->size-initial.minOf{it.y}
+   Dir.LEFT->initial.maxOf{it.x}+1
+   Dir.RIGHT->size-initial.minOf{it.x}
+  }
+  for(step in 1..steps)frames.add(initial.map{Pt(it.x+step*a.dir.x,it.y+step*a.dir.y)}.toSet())
+  return frames
+ }
  fun blockers(a:Arrow,remaining:List<Arrow>,size:Int):Set<Int>{
   val other=remaining.filter{it.id!=a.id}.associate{it.id to it.cells()}
-  val hit=mutableSetOf<Int>();var cells=a.cells()
-  repeat(size+1){
-   cells=cells.map{Pt(it.x+a.dir.x,it.y+a.dir.y)}.toSet()
-   other.forEach{(id,occupied)->if(cells.any{it in occupied})hit.add(id)}
-   if(cells.none{it.x in 0 until size&&it.y in 0 until size})return hit
+  val hit=mutableSetOf<Int>()
+  for(frame in exitFrames(a,size)){
+   other.forEach{(id,occupied)->if(frame.any{it in occupied})hit.add(id)}
   }
   return hit
  }
