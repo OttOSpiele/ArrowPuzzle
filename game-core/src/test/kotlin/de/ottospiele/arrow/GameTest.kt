@@ -32,10 +32,24 @@ class GameTest {
    assertNotNull(blue)
    for(seed in 0L..3L){
     val level=Generator().generate(stage,seed)
-    assertTrue(blue!!.realized(level),"required edges absent at stage $stage, seed $seed")
+    assertTrue(PatternConstruction.blueprint(stage,level.size,seed)!!.realized(level),"required edges absent at stage $stage, seed $seed")
     assertTrue(PatternGoals.reached(PatternGoals.preferred(stage),PatternAnalysis.analyze(level)))
     assertNotNull(Rules.solve(level))
    }
+  }
+ }
+ @Test fun patternTransformationsVaryBySeedButKeepEdges(){
+  for(stage in listOf(6,9,17)){
+   val variants=(0L..24L).map{seed->
+    val blueprint=PatternConstruction.blueprint(stage,BoardProfile.size(stage),seed)!!
+    val level=Level(seed,stage,BoardProfile.size(stage),blueprint.arrows)
+    assertTrue(blueprint.realized(level))
+    assertNotNull(Rules.solve(level))
+    blueprint.arrows
+   }
+   assertTrue(variants.distinct().size>=5,"motifs do not vary enough at stage $stage")
+   assertEquals(PatternConstruction.blueprint(stage,BoardProfile.size(stage),42L),
+    PatternConstruction.blueprint(stage,BoardProfile.size(stage),42L))
   }
  }
  @Test fun firstFiveStagesHaveNoForcedPatternBlueprint(){
