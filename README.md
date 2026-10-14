@@ -112,6 +112,10 @@ Rechtliche Quellen (Stand 14.10.2026):
 - [Europäische Kommission: FAQ zu Transparenzpflichten (einschl. Quellcode)](https://digital-strategy.ec.europa.eu/en/faqs/transparency-obligations-under-article-50-ai-act)
 - [EU-Leitlinien zu Art. 50 (20.07.2026)](https://digital-strategy.ec.europa.eu/en/library/guidelines-transparency-obligations-providers-and-deployers-ai-systems)
 
+## Kollisionstest aus dem Tablet-Feedback (14.10.2026)
+
+Bei einem nach oben zeigenden L-Pfeil muss auch das horizontal herausragende Schwanzsegment gegen alle verbliebenen Pfeile geprüft werden. Die Bewegung gilt als starr und kontinuierlich, nicht als Folge von Teleportationen zwischen Rasterpunkten. Der Spielkern prüft daher den **gesamten kontinuierlich überstrichenen Bereich jedes Liniensegments** bis zum vollständigen Ausfahren. Das ist eine konservative Kollisionsprüfung von Linienmittelachsen; optische Strichdicke und Pfeilflügel werden noch nicht in die Kollisionsgeometrie integriert. Der rote/koral farbige Pfeil im Screenshot kennzeichnet den vom Spiel als blockiert bewerteten Antippversuch. Ein Screenshot allein beweist daher nicht, dass ein physikalisch freier Pfeil zurückgewiesen wurde.
+
 ## Dokumentationsstand / Änderungsverlauf
 
 - **14.10.2026 – Initiale Anforderungen:** Werbefreies Pfeilrätsel, konfigurierbare Leben und Tipps, Levelgenerierung, Progression und Monster.
@@ -121,3 +125,5 @@ Rechtliche Quellen (Stand 14.10.2026):
 - **14.10.2026 – Transparenz und Dokumentation:** KI-Provenienz, Commit-Konvention und laufend gepflegte Anforderungshistorie eingeführt.
 
 - **14.10.2026 – Korrektur Ausfahrpfad (Gerätetest):** Für verwinkelte Pfeile wird der vollständige Ausfahrweg des gesamten starr in Pfeilrichtung verschobenen Linienverlaufs bis einschließlich des letzten austretenden Zellenpunkts überprüft. Ein freier Pfeilkopf allein genügt ausdrücklich nicht. Regressionstest für einen durch das seitliche Segment blockierten Pfeil. Visuell werden Tippempfehlungen (grün) und falsche Antippversuche (korallfarben) nun unterschieden.
+
+- **14.10.2026 – Nachbesserung Kollisionen:** Kontinuierlicher Bewegungs-Sweep statt einzelner Raster-Frames; die seitlichen Segmente geknickter Pfeile werden über ihre gesamte Ausfahrdistanz berücksichtigt. Weitere Regressionstests für blockierte und freie L-Pfeile. Gerätetest weiter erforderlich.

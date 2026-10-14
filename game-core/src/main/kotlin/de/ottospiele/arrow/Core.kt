@@ -29,13 +29,36 @@ object Rules{
   for(step in 1..steps)frames.add(initial.map{Pt(it.x+step*a.dir.x,it.y+step*a.dir.y)}.toSet())
   return frames
  }
- fun blockers(a:Arrow,remaining:List<Arrow>,size:Int):Set<Int>{
-  val other=remaining.filter{it.id!=a.id}.associate{it.id to it.cells()}
-  val hit=mutableSetOf<Int>()
-  for(frame in exitFrames(a,size)){
-   other.forEach{(id,occupied)->if(frame.any{it in occupied})hit.add(id)}
+ /**
+  * An orthogonal segment translated along a cardinal direction sweeps a
+  * closed axis-aligned rectangle. Intersections can happen BETWEEN grid frames,
+  * so sampling exitFrames is not a sufficient collision test.
+  */
+ private data class Sweep(val left:Int,val top:Int,val right:Int,val bottom:Int){
+  fun includes(p:Pt)=p.x in left..right && p.y in top..bottom
+ }
+ private fun sweptSegments(a:Arrow,size:Int):List<Sweep>{
+  val initial=a.cells()
+  val steps=when(a.dir){
+   Dir.UP->initial.maxOf{it.y}+1
+   Dir.DOWN->size-initial.minOf{it.y}
+   Dir.LEFT->initial.maxOf{it.x}+1
+   Dir.RIGHT->size-initial.minOf{it.x}
   }
-  return hit
+  return a.vertices().zipWithNext().map{(from,to)->
+   val movedFrom=Pt(from.x+steps*a.dir.x,from.y+steps*a.dir.y)
+   val movedTo=Pt(to.x+steps*a.dir.x,to.y+steps*a.dir.y)
+   Sweep(minOf(from.x,to.x,movedFrom.x,movedTo.x),
+    minOf(from.y,to.y,movedFrom.y,movedTo.y),
+    maxOf(from.x,to.x,movedFrom.x,movedTo.x),
+    maxOf(from.y,to.y,movedFrom.y,movedTo.y))
+  }
+ }
+ fun blockers(a:Arrow,remaining:List<Arrow>,size:Int):Set<Int>{
+  val swept=sweptSegments(a,size)
+  return remaining.asSequence().filter{it.id!=a.id}
+   .filter{other->other.cells().any{cell->swept.any{it.includes(cell)}}}
+   .map{it.id}.toSet()
  }
  fun free(a:Arrow,remaining:List<Arrow>,size:Int)=blockers(a,remaining,size).isEmpty()
  fun solve(level:Level):List<Int>?{

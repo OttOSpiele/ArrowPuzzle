@@ -48,6 +48,19 @@ class GameTest {
   assertTrue(frames.last().none{it.y in 0 until 8})
   assertEquals(7,frames.size)
  }
+ @Test fun fullContinuousSweepIncludesStationarySegmentCrossing() {
+  // The tail travels upward; a fixed horizontal line is crossed by its
+  // far-right corner, although the upward-pointing tip has a clear lane.
+  val moving=Arrow(1,2,7,4,Dir.UP,listOf(Pt(6,7),Pt(6,4)))
+  val stationary=Arrow(2,6,5,3,Dir.RIGHT)
+  assertEquals(setOf(2),Rules.blockers(moving,listOf(moving,stationary),12))
+  assertFalse(Rules.free(moving,listOf(moving,stationary),12))
+ }
+ @Test fun unobstructedBentArrowIsFree() {
+  val moving=Arrow(1,2,7,4,Dir.UP,listOf(Pt(6,7),Pt(6,4)))
+  val elsewhere=Arrow(2,9,7,3,Dir.DOWN)
+  assertTrue(Rules.free(moving,listOf(moving,elsewhere),12))
+ }
  @Test fun bendGeometryRemainsSolvable() {
   for(stage in 2..5)for(seed in 10L..20L){
    val level=Generator().generate(stage,seed)
