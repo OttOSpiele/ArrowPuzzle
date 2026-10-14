@@ -154,7 +154,7 @@ class GameTest {
    listOf(Pt(2,7),Pt(8,7),Pt(8,4),Pt(10,4)))
   // Tip ray here is clear; a reversed spiral may have a ray through its body.
   assertTrue(Rules.selfClear(crossing,18,12))
-  val selfCrossing=Arrow(8,2,2,3,Dir.LEFT,
+  val selfCrossing=Arrow(8,2,4,3,Dir.LEFT,
    listOf(Pt(2,8),Pt(9,8),Pt(9,4),Pt(4,4)))
   assertFalse(Rules.selfClear(selfCrossing,18,12))
  }
