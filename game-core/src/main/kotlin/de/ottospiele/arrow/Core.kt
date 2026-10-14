@@ -180,24 +180,49 @@ data class PatternBlueprint(val arrows:List<Arrow>,val requiredEdges:Set<Pair<In
  }
 }
 object PatternConstruction {
- fun blueprint(stage:Int,size:Int):PatternBlueprint?{
-  if(stage<=5)return null // preserve the first five stages exactly
+ fun blueprint(stage:Int,size:Int,seed:Long=0L):PatternBlueprint?{
+  if(stage<=5)return null
   val m=size/2
   val a=Arrow(0,m-5,m-1,2,Dir.RIGHT)
   val b=if(stage>=17)Arrow(1,m+5,m+1,2,Dir.LEFT)
    else Arrow(1,m-5,m+1,2,Dir.RIGHT)
   val key=Arrow(2,m,m-1,3,Dir.DOWN)
-  if(stage in 6..8)return PatternBlueprint(listOf(a,b,key),
-   setOf(2 to 0,2 to 1))
-  if(stage>=17)return PatternBlueprint(listOf(a,b,key),
-   setOf(2 to 0,2 to 1))
-  // Right -> Down -> Left forms two concrete dependencies (reverse order).
-  val first=Arrow(0,m-5,m,2,Dir.RIGHT)
-  val middle=Arrow(1,m-2,m-2,3,Dir.DOWN)
-  val last=Arrow(2,m,m+2,3,Dir.LEFT)
-  return PatternBlueprint(listOf(first,middle,last),setOf(1 to 0,2 to 1))
+  val canonical=if(stage in 6..8 || stage>=17){
+   PatternBlueprint(listOf(a,b,key),setOf(2 to 0,2 to 1))
+  }else{
+   val first=Arrow(0,m-5,m,2,Dir.RIGHT)
+   val middle=Arrow(1,m-2,m-2,3,Dir.DOWN)
+   val last=Arrow(2,m,m+2,3,Dir.LEFT)
+   PatternBlueprint(listOf(first,middle,last),setOf(1 to 0,2 to 1))
+  }
+  // Transform the entire motif, including directions and bends, to preserve
+  // all geometric collision relations and the declared prerequisite edges.
+  val random=Random(seed xor (stage.toLong()*1000003L))
+  val turns=random.nextInt(4)
+  val mirror=random.nextBoolean()
+  val shiftX=random.nextInt(-2,3)
+  val shiftY=random.nextInt(-2,3)
+  fun transform(p:Pt):Pt {
+   var x=p.x-m
+   var y=p.y-m
+   if(mirror)x=-x
+   repeat(turns){val tmp=x;x=-y;y=tmp}
+   return Pt(x+m+shiftX,y+m+shiftY)
+  }
+  fun direction(d:Dir):Dir {
+   val zero=transform(Pt(m,m))
+   val other=transform(Pt(m+d.x,m+d.y))
+   return Dir.entries.first{it.x==other.x-zero.x && it.y==other.y-zero.y}
+  }
+  val arrows=canonical.arrows.map{arrow->
+   val base=transform(Pt(arrow.x,arrow.y))
+   Arrow(arrow.id,base.x,base.y,arrow.length,direction(arrow.dir),
+    arrow.bends.map(::transform))
+  }
+  return PatternBlueprint(arrows,canonical.requiredEdges)
  }
 }
+
 class Generator{
  fun generate(stage:Int,seed:Long):Level{
   val family=PatternGoals.preferred(stage)
@@ -218,7 +243,7 @@ class Generator{
  private fun makeCandidate(stage:Int,seed:Long,random:Random):Level{
   val size=BoardProfile.size(stage)
   val arrows=mutableListOf<Arrow>()
-  val blueprint=PatternConstruction.blueprint(stage,size)
+  val blueprint=PatternConstruction.blueprint(stage,size,seed)
   if(blueprint!=null){
    arrows.addAll(blueprint.arrows)
    check(blueprint.realized(Level(seed,stage,size,arrows)))
