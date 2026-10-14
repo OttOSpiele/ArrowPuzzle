@@ -9,6 +9,17 @@ class GameTest {
    assertNotNull(Rules.solve(level))
   }
  }
+ @Test fun ageAppropriateStageProgression(){
+  for(stage in 1..8)assertEquals(1,Progress(stage).required())
+  for(stage in 9..16)assertEquals(2,Progress(stage).required())
+  assertEquals(3,Progress(17).required())
+  assertEquals(3,Progress(24).required())
+  assertEquals(4,Progress(25).required())
+  assertEquals(10,Progress(200).required())
+  assertEquals(Progress(2,0),Progress(1).win())
+  assertEquals(Progress(9,1),Progress(9).win())
+  assertEquals(Progress(10,0),Progress(9,1).win())
+ }
  @Test fun retryRestoresLivesAndBoard() {
   val level=Generator().generate(1,42)
   val game=Game(level,3,2)

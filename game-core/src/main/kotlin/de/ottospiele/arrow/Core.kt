@@ -194,7 +194,11 @@ class Game(val level:Level,val maxLives:Int=5,val maxHints:Int=3){
  fun retry(){remaining.clear();remaining.addAll(level.arrows);mistakes.clear();lives=maxLives;hints=maxHints}
 }
 data class Progress(val stage:Int=1,val done:Int=0){
- fun required()=when(stage){1,2->3;3->4;4->5;5->6;6->7;7->8;8->9;else->10}
+ fun required():Int=when{
+  stage<=8->1
+  stage<=16->2
+  else->((stage-17)/8+3).coerceAtMost(10)
+ }
  fun win():Progress=if(done+1>=required())Progress(stage+1,0)else copy(done=done+1)
  fun easier()=Progress((stage-1).coerceAtLeast(1),0)
 }

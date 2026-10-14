@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -53,7 +54,7 @@ class MainActivity:ComponentActivity(){
  var traveledCells by remember{mutableStateOf(emptySet<Pt>())}
  val occupiedEver=remember(game.level){game.level.arrows.flatMap{it.cells()}.toSet()}
  // 0 = already much faster than the old 58 ms per cell.
- val stepDelay=when(speed){0->32L;1->20L;else->11L}
+ val stepDelay=when(speed){0->58L;1->32L;2->20L;else->11L}
  fun stopFlights(){
   jobs.values.forEach{it.cancel()}
   jobs.clear();flights.clear()
@@ -127,18 +128,18 @@ class MainActivity:ComponentActivity(){
    }
   }
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
-   Button(onClick={highlighted=game.hint();invalid=null;revision++},enabled=game.hints!=0 && flights.isEmpty(),
+   Button(onClick={highlighted=game.hint();invalid=null;revision++},enabled=game.hints!=0 && !game.lost && !game.won,
     modifier=Modifier.weight(1f).height(52.dp),shape=RoundedCornerShape(18.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7264D6))){
     Text("💡  Tipp",fontWeight=FontWeight.SemiBold)
    }
-   FilledTonalButton(onClick={game.retry();revision++;highlighted=null;invalid=null},enabled=flights.isEmpty(),
+   FilledTonalButton(onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
     modifier=Modifier.weight(1f).height(52.dp),shape=RoundedCornerShape(18.dp),
     colors=ButtonDefaults.filledTonalButtonColors(containerColor=Color.White,contentColor=Color(0xFF565E91))){
     Text("↻  Neustart",fontWeight=FontWeight.SemiBold)
    }
   }
-  TextButton(onClick={dialog="Anderes Rätsel?"},enabled=flights.isEmpty(),modifier=Modifier.fillMaxWidth()){
+  TextButton(onClick={stopFlights();dialog="Anderes Rätsel?"},modifier=Modifier.fillMaxWidth()){
    Text("Anderes Rätsel  ·  eine Stufe leichter",color=Color(0xFF646998))
   }
  }
@@ -175,7 +176,7 @@ class MainActivity:ComponentActivity(){
    }
    Text("Ausfahrgeschwindigkeit")
    Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
-    listOf("Ruhig","Flott","Turbo").forEachIndexed{index,label->
+    listOf("Ruhig","Normal","Flott","Turbo").forEachIndexed{index,label->
      FilterChip(selected=speed==index,onClick={speed=index},label={Text(label)})
     }
    }
@@ -190,14 +191,13 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
 }
 @Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,onTap:(Int)->Unit){
  val arrows=level.arrows.filter{it.id in remaining}
- Canvas(modifier.background(Brush.verticalGradient(listOf(Color.White,Color(0xFFF9FBFF))),RoundedCornerShape(26.dp))
+ Canvas(modifier.clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(Color.White,Color(0xFFF9FBFF))))
   .pointerInput(level,remaining,flights.map{it.id}){
    detectTapGestures{position->
-    val cell=minOf(size.width.toFloat(),size.height.toFloat())/level.size
-    val ox=(size.width-cell*level.size)/2f
-    val oy=(size.height-cell*level.size)/2f
-    val x=(position.x-ox)/cell-.5f
-    val y=(position.y-oy)/cell-.5f
+    val sx=size.width.toFloat()/level.size
+    val sy=size.height.toFloat()/level.size
+    val x=position.x/sx-.5f
+    val y=position.y/sy-.5f
     val selected=arrows.minByOrNull{a->
      a.cells().minOf{p->(p.x-x)*(p.x-x)+(p.y-y)*(p.y-y)}
     }
@@ -206,13 +206,14 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
      if(distance<1.2f)onTap(selected.id)
     }
    }
-  }.padding(8.dp)){
-  val cell=minOf(size.width,size.height)/level.size
-  val ox=(size.width-cell*level.size)/2f;val oy=(size.height-cell*level.size)/2f
+  }){
+  val sx=size.width/level.size;val sy=size.height/level.size
+  val cell=minOf(sx,sy)
+  val ox=0f;val oy=0f
   val currentTrail=flights.flatMap{f->f.plan.travel.take(f.step)}.filter{it.x in 0 until level.size && it.y in 0 until level.size}.toSet()
   val pulse=flights.mapNotNull{f->f.plan.travel.getOrNull(f.step-1)}.toSet()
   (ever+traveled+currentTrail).forEach{p->
-   val point=Offset(ox+(p.x+.5f)*cell,oy+(p.y+.5f)*cell)
+   val point=Offset(ox+(p.x+.5f)*sx,oy+(p.y+.5f)*sy)
    if(p in pulse){
     drawCircle(Color(0xFF9189EF).copy(alpha=.18f),radius=(cell*.42f).coerceAtLeast(4f),center=point)
     drawCircle(Color(0xFF9189EF).copy(alpha=.35f),radius=(cell*.25f).coerceAtLeast(2.5f),center=point)
@@ -224,7 +225,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
   allVisible.forEach{(a,shape)->
    val points=shape.first
    if(points.isEmpty())return@forEach
-   val vertices=points.map{Offset(ox+(it.x+.5f)*cell,oy+(it.y+.5f)*cell)}
+   val vertices=points.map{Offset(ox+(it.x+.5f)*sx,oy+(it.y+.5f)*sy)}
    val tip=vertices.last()
    val color=if(flights.any{it.id==a.id})if(shape.second)Color(0xFFE85161)else Color(0xFF7468EB) else when(a.id){hinted->Color(0xFF21A679);invalid->Color(0xFFEF7658);else->Color(0xFF28385D)}
    val stroke=(cell*.20f).coerceAtLeast(2.5f);val wing=cell*.42f

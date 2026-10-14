@@ -31,7 +31,7 @@ Dies ist eine redaktionelle Zusammenfassung des Benutzerauftrags und **kein wör
 ### Level, Fortschritt und Rückstufung
 
 - Vollständig lösbare, deterministisch über einen Seed reproduzierbare Rätsel; der Solver prüft jedes generierte Level.
-- Langsame Progression: erforderliche abgeschlossene Level pro Stufe `3,3,4,5,6,7,8,9,10,10` für Stufen 1–10; später maximal zehn.
+- Langsame Progression: erforderliche abgeschlossene Level pro Stufe: Stufen 1–8 je 1, Stufen 9–16 je 2, anschließend jeweils in 8er-Stufenblöcken 3, 4, 5 usw. bis maximal 10. Diese neue Vorgabe ersetzt die ursprüngliche Staffelung.
 - Anzahl und optische Länge der Pfeile allein definieren die Schwierigkeit nicht: auch Blockierungsabhängigkeiten, Freigaben, Dichte, Knicke und Kettentiefe zählen.
 - Ein Levelabschluss erhöht den Stufenfortschritt; bei Erreichen des Schwellenwerts steigt die Stufe.
 - „Anderes Rätsel“ generiert neu, setzt den Fortschrittszähler auf null und senkt die aktuelle Schwierigkeitsstufe um eins (minimal Stufe 1). Mindestens drei erfolgreich absolvierte Level bis zum nächsten Aufstieg.
@@ -137,3 +137,5 @@ Bei einem nach oben zeigenden L-Pfeil muss auch das horizontal herausragende Sch
 - **14.10.2026 – Modernisierung der Spieloberfläche:** Heller Farbverlauf, abgesetzte Stufen-/Fortschrittskarte, gerundete Schaltflächen, ruhigere Linienfarben und ein kurz aufleuchtender Leuchthof an neu durchlaufenen Rasterpunkten. Die optische Überarbeitung verändert die Spielregeln nicht. Die Animation bleibt zunächst zellenweise; Gerätetest und ggf. Anpassungen an verschiedenen Displaygrößen stehen noch aus.
 
 - **14.10.2026 – Schneller Spielfluss:** Erfolgreiche Pfeile werden sofort aus der logischen Belegungsmatrix entfernt, während ihre Ausfahranimation weiterläuft. Standardmäßig können mehrere Pfeile parallel angetippt und animiert werden; per Einstellungen lässt sich die sequentielle Eingabesperre wieder aktivieren. Geschwindigkeiten Ruhig (32 ms/Zelle), Flott (20 ms/Zelle, Standard) und Turbo (11 ms/Zelle) sind deutlich schneller als bisher (58 ms/Zelle). Animationen und Punktspuren unterstützen mehrere gleichzeitig laufende Pfeile. Neustart oder Levelwechsel beendet laufende Animationen. Noch keine subzellgenaue Interpolation.
+
+- **14.10.2026 – Spielfluss und 6-Jährigen-Progression:** Geschwindigkeiten Ruhig 58, Normal 32 (Standard), Flott 20 und Turbo 11 ms/Zelle. Stufen 1–8 jeweils ein erfolgreiches Level, 9–16 jeweils zwei, anschließend alle acht Stufen um ein erforderliches Level mehr, höchstens zehn. Die Spielfläche benutzt die verfügbare Breite und Höhe ohne quadratische Zentrierung; die Animation wird auf ihre gerundeten Grenzen begrenzt. Die Rasterzellen können auf nichtquadratischen Displays rechteckig sein. Während der Animation bleiben Tipp, Neustart und Rätselauswahl sichtbar aktiv; Neustart/Rätselwechsel brechen laufende Animationen ab. Der Wunsch nach langfristig gespeicherten Einstellungen bleibt offen.
