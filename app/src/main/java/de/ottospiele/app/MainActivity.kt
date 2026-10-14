@@ -414,10 +414,10 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
   // Visible afterglow over several steps, also including just-vacated tail cells.
   val glow=mutableMapOf<Pt,Float>()
   flights.forEach{f->
-   for(age in 0..5){
+   for(age in 0..3){
     val step=f.step-age
     if(step<=0)continue
-    val strength=1f-age/6f
+    val strength=1f-age/4f
     listOfNotNull(f.plan.body.getOrNull(step-1),f.plan.travel.getOrNull(step-1))
      .filter{it.x in 0 until level.size && it.y in 0 until level.size}
      .forEach{p->glow[p]=maxOf(glow[p]?:0f,strength)}
@@ -431,13 +431,13 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
    val point=Offset(ox+(p.x+.5f)*sx,oy+(p.y+.5f)*sy)
    val power=glow[p]?:0f
    if(power>0f){
-    drawCircle(Color(0xFF6956EF).copy(alpha=.32f*power),
-     radius=(cell*.80f).coerceAtLeast(7f),center=point)
-    drawCircle(Color(0xFF8B7DFB).copy(alpha=.60f*power),
-     radius=(cell*.43f).coerceAtLeast(4f),center=point)
+    drawCircle(Color(0xFF6956EF).copy(alpha=.15f*power),
+     radius=(cell*.58f).coerceAtLeast(5f),center=point)
+    drawCircle(Color(0xFF8B7DFB).copy(alpha=.30f*power),
+     radius=(cell*.31f).coerceAtLeast(3f),center=point)
    }
-   drawCircle(if(power>0f)Color(0xFF4E3ED2) else if(p in currentTrail)Color(0xFFA4A8EE) else Color(0xFFBFCBE7),
-    radius=(cell*(if(power>0f).22f else .125f)).coerceAtLeast(1.65f),center=point)
+   drawCircle(if(power>0f)Color(0xFF655AD2) else if(p in currentTrail)Color(0xFFA4A8EE) else Color(0xFFBFCBE7),
+    radius=(cell*(if(power>0f).17f else .125f)).coerceAtLeast(1.65f),center=point)
   }
   val allVisible=arrows.filter{a->flights.none{f->f.id==a.id}}.map{it to (it.body() to false)}+flights.mapNotNull{f->level.arrows.firstOrNull{it.id==f.id}?.let{a->a to (f.plan.frame(f.step) to f.failed)}}
   allVisible.forEach{(a,shape)->

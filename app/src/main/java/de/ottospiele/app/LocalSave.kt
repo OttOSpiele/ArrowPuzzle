@@ -1,6 +1,7 @@
 package de.ottospiele.app
 
 import android.content.Context
+import android.util.Log
 import de.ottospiele.arrow.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -14,6 +15,7 @@ internal data class SavedSession(
 internal object LocalSave {
  private const val NAME="arrow_puzzle_local"
  private const val KEY="session_v1"
+ private const val TAG="ArrowPuzzleSave"
  fun read(context:Context):SavedSession? {
   val json=context.getSharedPreferences(NAME,Context.MODE_PRIVATE).getString(KEY,null)?:return null
   return try {
@@ -25,6 +27,9 @@ internal object LocalSave {
    val lifeSetting=root.getInt("lifeSetting")
    val hintSetting=root.getInt("hintSetting")
    require(lifeSetting in listOf(3,5,10) && hintSetting in listOf(0,1,3,5))
+   val activeLives=root.optInt("activeMaxLives",lifeSetting)
+   val activeHints=root.optInt("activeMaxHints",hintSetting)
+   require(activeLives in listOf(3,5,10) && activeHints in listOf(0,1,3,5))
    val size=root.getInt("size")
    require(size in 10..80)
    val savedArrows=root.getJSONArray("arrows")
@@ -51,13 +56,29 @@ internal object LocalSave {
     val values=mistakesObject.getJSONArray(key)
     mistakes[key.toInt()]=(0 until values.length()).map{values.getInt(it)}.toSet()
    }
-   val game=Game(level,lifeSetting,hintSetting)
+   val game=Game(level,activeLives,activeHints)
    game.restore(remaining,root.getInt("remainingLives"),root.getInt("remainingHints"),mistakes)
    SavedSession(progress,lifeSetting,hintSetting,
     root.optBoolean("concurrent",true),root.optInt("speed",1).coerceIn(0,3),
     game,root.optBoolean("win",false)||game.won,
     root.optBoolean("defeat",false)||game.lost)
-  }catch(_:Exception){null}
+  }catch(error:Exception){
+   Log.w(TAG,"Puzzle snapshot could not be restored",error)
+   // Preserve the child's progress and settings even when board data is damaged.
+   try{
+    val root=JSONObject(json)
+    val stage=root.optInt("stage",1).coerceIn(1,100000)
+    val progress=Progress(stage,root.optInt("done",0).coerceIn(0,Progress(stage).required()-1))
+    val life=root.optInt("lifeSetting",5).takeIf{it in listOf(3,5,10)}?:5
+    val hint=root.optInt("hintSetting",3).takeIf{it in listOf(0,1,3,5)}?:3
+    val newGame=Game(Generator().generate(stage,java.util.Random().nextLong()),life,hint)
+    SavedSession(progress,life,hint,root.optBoolean("concurrent",true),
+     root.optInt("speed",1).coerceIn(0,3),newGame,false,false)
+   }catch(secondary:Exception){
+    Log.w(TAG,"Cannot recover stage/settings either",secondary)
+    null
+   }
+  }
  }
  fun write(context:Context,progress:Progress,lifeSetting:Int,hintSetting:Int,
   concurrent:Boolean,speed:Int,game:Game,win:Boolean,defeat:Boolean) {
@@ -66,6 +87,7 @@ internal object LocalSave {
    .put("lifeSetting",lifeSetting).put("hintSetting",hintSetting)
    .put("concurrent",concurrent).put("speed",speed)
    .put("seed",game.level.seed).put("size",game.level.size)
+   .put("activeMaxLives",game.maxLives).put("activeMaxHints",game.maxHints)
    .put("remainingLives",game.lives).put("remainingHints",game.hints)
    .put("win",win).put("defeat",defeat)
   val arrows=JSONArray()
@@ -86,7 +108,8 @@ internal object LocalSave {
    mistakes.put(id.toString(),values)
   }
   root.put("mistakes",mistakes)
-  context.getSharedPreferences(NAME,Context.MODE_PRIVATE).edit()
+  val success=context.getSharedPreferences(NAME,Context.MODE_PRIVATE).edit()
    .putString(KEY,root.toString()).commit()
+  if(!success)Log.e(TAG,"Saving puzzle state failed")
  }
 }
