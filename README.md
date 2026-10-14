@@ -18,7 +18,7 @@ Dies ist eine redaktionelle Zusammenfassung des Benutzerauftrags und **kein wör
 
 - Vier Bewegungsrichtungen: oben, unten, links, rechts. Die Pfeilspitze bestimmt die Austrittsrichtung.
 - Verwinkelte Pfeile bestehen aus einer zusammenhängenden orthogonalen Polylinie.
-- **Die gesamte bewegte Pfeilgeometrie** muss den Weg bis über den Spielfeldrand kollisionsfrei durchlaufen können, nicht nur die Spitze.
+- **Schlangenbewegung statt starrer Translation:** Die Pfeilspitze verlässt das Spielfeld in Richtung ihres letzten Segments; der restliche Körper folgt der bereits gezeichneten Linie einschließlich aller Kurven. Neue Zellen werden nur auf dem geraden Austrittsstrahl vor der Spitze betreten. Andere Pfeile auf diesem Strahl sind Blockierer.
 - Freie Pfeile verschwinden mit einer Bewegungsanimation; blockierte Pfeile werden sichtbar markiert und bleiben stehen.
 - Erneutes Antippen eines bei gleicher Blockierermenge weiterhin blockierten Pfeils kostet nicht erneut ein Leben; bei Veränderung der Blockierer kann ein erneuter Fehler zählen. Alternative: höchstens ein Abzug pro Pfeil und Level.
 
@@ -66,7 +66,7 @@ Die Mustervorlagen sollen zuerst logische Blockierungsgraphen beschreiben, ansch
 | Kotlin/JVM-Spielkern | Vorhanden, CI-Tests erfolgreich | Erweiterte Validierung und Lasttests |
 | Android / Jetpack Compose | Startbar, Debug-APK über GitHub Actions | Gerätetests und UI-Politur |
 | Pfeilgeometrie | Gerade und einfach geknickte orthogonale Pfeile | Mehrfach geknickte komplexe Pfade |
-| Kollisionslogik | Rasterbasierte Bewegung der gesamten Pfeilzellen | Erweiterte geometrische Fälle |
+| Kollisionslogik | Schlangen-Ausfahrpfad an der Spitze und vorberechnete ID-Abhängigkeitsmatrix | Erweiterte geometrische Fälle |
 | Generator/Solver | Konstruktive Generierung, Solver | Gezielt realisierte und kombinierte Mustervorlagen |
 | Analyse | Schlüsselpfeil-, Verzweigungs- und Kettenmetriken | Rückkopplung in die Erzeugung |
 | Spielregeln | Grundlegende Herzen, Tipps, Neustart und Stufen | Alle Einstellungsvarianten, UX und Robustheit |
@@ -127,3 +127,5 @@ Bei einem nach oben zeigenden L-Pfeil muss auch das horizontal herausragende Sch
 - **14.10.2026 – Korrektur Ausfahrpfad (Gerätetest):** Für verwinkelte Pfeile wird der vollständige Ausfahrweg des gesamten starr in Pfeilrichtung verschobenen Linienverlaufs bis einschließlich des letzten austretenden Zellenpunkts überprüft. Ein freier Pfeilkopf allein genügt ausdrücklich nicht. Regressionstest für einen durch das seitliche Segment blockierten Pfeil. Visuell werden Tippempfehlungen (grün) und falsche Antippversuche (korallfarben) nun unterschieden.
 
 - **14.10.2026 – Nachbesserung Kollisionen:** Kontinuierlicher Bewegungs-Sweep statt einzelner Raster-Frames; die seitlichen Segmente geknickter Pfeile werden über ihre gesamte Ausfahrdistanz berücksichtigt. Weitere Regressionstests für blockierte und freie L-Pfeile. Gerätetest weiter erforderlich.
+
+- **14.10.2026 – Verbindliche Korrektur des Bewegungsmodells:** Ein Pfeil bewegt sich wie eine Schlange entlang seiner eigenen Kontur um Kurven und Spiralen. Die zuvor implementierte starre Translation bzw. Rechteck-Sweep-Prüfung war fachlich falsch und wurde entfernt. Beim Levelaufbau entsteht eine ID-basierte Matrix `requiredRemovals[arrowId] -> Set<blockingArrowId>`. Bei einem Klick wird nur diese vorberechnete Menge gegen die verbleibenden IDs geschnitten; Tipps und Solver verwenden dieselbe Datenbasis. Neue Regressionstests prüfen L- und spiralartige Formen. Die spätere Darstellung einer kontinuierlichen Schlangen-Animation bleibt offen.

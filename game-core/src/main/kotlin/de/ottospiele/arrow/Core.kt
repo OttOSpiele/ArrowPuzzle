@@ -13,52 +13,42 @@ data class Arrow(val id:Int,val x:Int,val y:Int,val length:Int,val dir:Dir,val b
   }
  }
 }
-data class Level(val seed:Long,val stage:Int,val size:Int,val arrows:List<Arrow>)
+data class Level(val seed:Long,val stage:Int,val size:Int,val arrows:List<Arrow>){
+ val dependencies:LevelDependencies by lazy { Rules.dependencies(this) }
+}
+/** Cached full-level occupancy and geometric prerequisite IDs. */
+data class LevelDependencies(val requiredRemovals:Map<Int,Set<Int>>){
+ fun remainingBlockers(id:Int,remainingIds:Set<Int>)=requiredRemovals[id].orEmpty().intersect(remainingIds)
+}
 object Rules{
- /** Every board position occupied while the entire rigid polyline exits in its tip direction. */
- fun exitFrames(a:Arrow,size:Int):List<Set<Pt>> {
-  val initial=a.cells()
-  val frames=mutableListOf<Set<Pt>>()
-  // The farthest trailing cell determines when the full arrow has left the board.
-  val steps=when(a.dir){
-   Dir.UP->initial.maxOf{it.y}+1
-   Dir.DOWN->size-initial.minOf{it.y}
-   Dir.LEFT->initial.maxOf{it.x}+1
-   Dir.RIGHT->size-initial.minOf{it.x}
-  }
-  for(step in 1..steps)frames.add(initial.map{Pt(it.x+step*a.dir.x,it.y+step*a.dir.y)}.toSet())
-  return frames
- }
  /**
-  * An orthogonal segment translated along a cardinal direction sweeps a
-  * closed axis-aligned rectangle. Intersections can happen BETWEEN grid frames,
-  * so sampling exitFrames is not a sufficient collision test.
+  * A snake leaves head first. Its body follows its OWN polyline, corner by
+  * corner; the only NEW cells entered are those in the straight exit ray
+  * extending the final head segment.
   */
- private data class Sweep(val left:Int,val top:Int,val right:Int,val bottom:Int){
-  fun includes(p:Pt)=p.x in left..right && p.y in top..bottom
+ fun exitPath(a:Arrow,size:Int):List<Pt>{
+  val head=a.vertices().last()
+  val result=mutableListOf<Pt>()
+  var p=Pt(head.x+a.dir.x,head.y+a.dir.y)
+  while(p.x in 0 until size && p.y in 0 until size){
+   result.add(p);p=Pt(p.x+a.dir.x,p.y+a.dir.y)
+  }
+  return result
  }
- private fun sweptSegments(a:Arrow,size:Int):List<Sweep>{
-  val initial=a.cells()
-  val steps=when(a.dir){
-   Dir.UP->initial.maxOf{it.y}+1
-   Dir.DOWN->size-initial.minOf{it.y}
-   Dir.LEFT->initial.maxOf{it.x}+1
-   Dir.RIGHT->size-initial.minOf{it.x}
+ fun dependencies(level:Level):LevelDependencies{
+  val occupancy=mutableMapOf<Pt,Int>()
+  for(a in level.arrows)for(p in a.cells()){
+   require(p.x in 0 until level.size && p.y in 0 until level.size){ "Arrow outside board" }
+   require(occupancy.put(p,a.id)==null){ "Overlapping arrows" }
   }
-  return a.vertices().zipWithNext().map{(from,to)->
-   val movedFrom=Pt(from.x+steps*a.dir.x,from.y+steps*a.dir.y)
-   val movedTo=Pt(to.x+steps*a.dir.x,to.y+steps*a.dir.y)
-   Sweep(minOf(from.x,to.x,movedFrom.x,movedTo.x),
-    minOf(from.y,to.y,movedFrom.y,movedTo.y),
-    maxOf(from.x,to.x,movedFrom.x,movedTo.x),
-    maxOf(from.y,to.y,movedFrom.y,movedTo.y))
-  }
+  return LevelDependencies(level.arrows.associate{a->
+   a.id to exitPath(a,level.size).mapNotNull{occupancy[it]}.filter{it!=a.id}.toSet()
+  })
  }
  fun blockers(a:Arrow,remaining:List<Arrow>,size:Int):Set<Int>{
-  val swept=sweptSegments(a,size)
-  return remaining.asSequence().filter{it.id!=a.id}
-   .filter{other->other.cells().any{cell->swept.any{it.includes(cell)}}}
-   .map{it.id}.toSet()
+  val occupied=remaining.filter{it.id!=a.id}.associate{it.id to it.cells()}
+  val ray=exitPath(a,size).toSet()
+  return occupied.filterValues{cells->cells.any{it in ray}}.keys
  }
  fun free(a:Arrow,remaining:List<Arrow>,size:Int)=blockers(a,remaining,size).isEmpty()
  fun solve(level:Level):List<Int>?{
@@ -68,7 +58,8 @@ object Rules{
   }
   val rest=level.arrows.toMutableList();val result=mutableListOf<Int>()
   while(rest.isNotEmpty()){
-   val next=rest.firstOrNull{free(it,rest,level.size)}?:return null
+   val ids=rest.map{it.id}.toSet()
+   val next=rest.firstOrNull{level.dependencies.remainingBlockers(it.id,ids).isEmpty()}?:return null
    result.add(next.id);rest.remove(next)
   }
   return result
@@ -139,6 +130,7 @@ class Generator{
 }
 class Game(val level:Level,val maxLives:Int=5,val maxHints:Int=3){
  val remaining=level.arrows.toMutableList()
+ private val dependencyMatrix=level.dependencies
  val mistakes=mutableMapOf<Int,Set<Int>>()
  var lives=maxLives;private set
  var hints=maxHints;private set
@@ -147,14 +139,15 @@ class Game(val level:Level,val maxLives:Int=5,val maxHints:Int=3){
  fun tap(id:Int):Boolean{
   if(lost)return false
   val a=remaining.firstOrNull{it.id==id}?:return false
-  val blocked=Rules.blockers(a,remaining,level.size)
+  val blocked=dependencyMatrix.remainingBlockers(id,remaining.map{it.id}.toSet())
   if(blocked.isEmpty()){remaining.remove(a);mistakes.remove(id);return true}
   if(mistakes[id]!=blocked){mistakes[id]=blocked;lives=(lives-1).coerceAtLeast(0)}
   return false
  }
  fun hint():Int?{
   if(hints==0)return null
-  val id=remaining.firstOrNull{Rules.free(it,remaining,level.size)}?.id?:return null
+  val ids=remaining.map{it.id}.toSet()
+  val id=remaining.firstOrNull{dependencyMatrix.remainingBlockers(it.id,ids).isEmpty()}?.id?:return null
   hints--;return id
  }
  fun retry(){remaining.clear();remaining.addAll(level.arrows);mistakes.clear();lives=maxLives;hints=maxHints}
