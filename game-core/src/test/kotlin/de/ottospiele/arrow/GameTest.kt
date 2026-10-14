@@ -35,7 +35,7 @@ class GameTest {
  }
  @Test fun compactBoardsAfterStageFive(){
   assertEquals(17,BoardProfile.size(1))
-  for(stage in 2..24)assertEquals(18,BoardProfile.size(stage))
+  for(stage in 2..21)assertEquals(18,BoardProfile.size(stage))
   assertEquals(18,BoardProfile.size(21))
   assertEquals(19,BoardProfile.size(22))
   assertEquals(19,BoardProfile.size(24))
