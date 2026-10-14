@@ -146,6 +146,19 @@ class GameTest {
  @Test fun simplerLevelResetsProgress(){
   assertEquals(Progress(2,0),Progress(3,2).easier())
  }
+ @Test fun multiTurnArrowsFollowTheirOwnBodies(){
+  val zigzag=Arrow(0,2,2,3,Dir.RIGHT,listOf(Pt(5,2),Pt(5,5),Pt(7,5)))
+  val spiral=Arrow(1,10,2,3,Dir.RIGHT,
+   listOf(Pt(10,7),Pt(6,7),Pt(6,4),Pt(8,4)))
+  for(arrow in listOf(zigzag,spiral)){
+   val level=Level(1,24,18,listOf(arrow),12)
+   assertEquals(arrow.body().size,arrow.cells().size)
+   assertNotNull(Rules.solve(level))
+   val plan=Rules.plan(arrow,level,setOf(arrow.id))
+   assertTrue(plan.canExit)
+   assertEquals(arrow.body().drop(1)+plan.travel.take(1),plan.frame(1))
+  }
+ }
  @Test fun bendFollowsOwnShapeNotRigidTranslation(){
   val snake=Arrow(1,2,7,4,Dir.UP,listOf(Pt(6,7),Pt(6,4)))
   val underSide=Arrow(2,3,5,3,Dir.RIGHT)
