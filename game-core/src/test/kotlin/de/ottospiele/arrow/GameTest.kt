@@ -52,7 +52,7 @@ class GameTest {
   // The tail travels upward; a fixed horizontal line is crossed by its
   // far-right corner, although the upward-pointing tip has a clear lane.
   val moving=Arrow(1,2,7,4,Dir.UP,listOf(Pt(6,7),Pt(6,4)))
-  val stationary=Arrow(2,6,5,3,Dir.RIGHT)
+  val stationary=Arrow(2,3,5,3,Dir.RIGHT)
   assertEquals(setOf(2),Rules.blockers(moving,listOf(moving,stationary),12))
   assertFalse(Rules.free(moving,listOf(moving,stationary),12))
  }
