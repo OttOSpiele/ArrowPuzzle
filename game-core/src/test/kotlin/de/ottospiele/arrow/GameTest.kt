@@ -26,6 +26,21 @@ class GameTest {
    assertNotNull(Rules.solve(level))
   }
  }
+ @Test fun constructedGraphPatternsAreRealDependencies(){
+  for(stage in listOf(6,8,9,12,16,17,25,46)){
+   val blue=PatternConstruction.blueprint(stage,BoardProfile.size(stage))
+   assertNotNull(blue)
+   for(seed in 0L..3L){
+    val level=Generator().generate(stage,seed)
+    assertTrue(blue!!.realized(level),"required edges absent at stage $stage, seed $seed")
+    assertTrue(PatternGoals.reached(PatternGoals.preferred(stage),PatternAnalysis.analyze(level)))
+    assertNotNull(Rules.solve(level))
+   }
+  }
+ }
+ @Test fun firstFiveStagesHaveNoForcedPatternBlueprint(){
+  for(stage in 1..5)assertNull(PatternConstruction.blueprint(stage,BoardProfile.size(stage)))
+ }
  @Test fun patternGoalsChangeWithStage(){
   assertEquals(PatternFamily.INTRO,PatternGoals.preferred(3))
   assertEquals(PatternFamily.KEY_ARROW,PatternGoals.preferred(4))
