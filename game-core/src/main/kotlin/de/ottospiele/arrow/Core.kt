@@ -106,6 +106,25 @@ object Rules{
   return result
  }
 }
+/** Hit testing in grid cells: favor removable arrows within overlapping touch regions. */
+object ArrowTouch {
+ fun select(level:Level,remainingIds:Set<Int>,x:Float,y:Float):Int?{
+  val arrows=level.arrows.filter{it.id in remainingIds}
+  val candidates=arrows.map{arrow->
+   val distance=arrow.cells().minOf{p->
+    val dx=p.x-x;val dy=p.y-y;dx*dx+dy*dy
+   }
+   val free=level.dependencies.remainingBlockers(arrow.id,remainingIds).isEmpty()
+   Triple(arrow.id,distance,free)
+  }
+  // Previously, every arrow shared a roughly 1.1-cell radius.
+  // Offer generous, overlapping targets to removable arrows first.
+  return candidates.filter{it.third && it.second<=1.75f*1.75f}
+   .minByOrNull{it.second}?.first
+   ?:candidates.filter{!it.third && it.second<=1.25f*1.25f}
+    .minByOrNull{it.second}?.first
+ }
+}
 /** Analyzes the actual collision-based dependency graph, rather than guessing from appearance. */
 data class PatternMetrics(
  val initiallyFree:Int,
