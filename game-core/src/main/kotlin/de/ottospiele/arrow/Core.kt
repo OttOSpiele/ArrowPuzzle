@@ -163,10 +163,14 @@ object PatternGoals {
   PatternFamily.BRANCH->m.branchArrows*35+m.keyArrows*6+m.longestChain*4
  }
 }
+object BoardProfile {
+ fun size(stage:Int)=15+stage.coerceIn(1,5)*2
+ fun count(stage:Int)=if(stage<=5)stage+3 else (8+(stage-5)*2).coerceAtMost(24)
+}
 class Generator{
  fun generate(stage:Int,seed:Long):Level{
   val family=PatternGoals.preferred(stage)
-  val attempts=if(stage<=3)1 else 6
+  val attempts=if(stage<=3)1 else 8
   var best:Level?=null
   var bestScore=Int.MIN_VALUE
   for(attempt in 0 until attempts){
@@ -181,17 +185,18 @@ class Generator{
   return best?:error("Unable to construct a puzzle")
  }
  private fun makeCandidate(stage:Int,seed:Long,random:Random):Level{
-  val size=15+stage.coerceAtMost(8)*2
+  val size=BoardProfile.size(stage)
   val arrows=mutableListOf<Arrow>()
-  val count=(stage+3).coerceAtMost(15)
+  val count=BoardProfile.count(stage)
   val family=PatternGoals.preferred(stage)
   repeat(count){id->
    var best:Arrow?=null
    var bestScore=Int.MIN_VALUE
-   repeat(260){
+   repeat(if(stage<=5)260 else 420){
     val dir=Dir.entries.random(random)
     val length=random.nextInt(2,5)
-    val sx=random.nextInt(size);val sy=random.nextInt(size)
+    val sx=if(stage<=5)random.nextInt(size) else random.nextInt(3,size-3)
+    val sy=if(stage<=5)random.nextInt(size) else random.nextInt(3,size-3)
     val a=if(stage>=2 && random.nextInt(100)<65){
      val middleDir=if(dir.x!=0)if(random.nextBoolean())Dir.UP else Dir.DOWN
       else if(random.nextBoolean())Dir.LEFT else Dir.RIGHT
@@ -216,7 +221,18 @@ class Generator{
      PatternFamily.ALTERNATING_CHAIN->different*18
      PatternFamily.BRANCH->if(branches>=2)45 else different*4
     }
-    val score=base+patternBonus+(if(a.bends.isNotEmpty())2 else 0)
+    val cluster=if(stage<=5)0 else {
+     val cx=cells.sumOf{it.x}/cells.size
+     val cy=cells.sumOf{it.y}/cells.size
+     val centerDistance=kotlin.math.abs(cx-size/2)+kotlin.math.abs(cy-size/2)
+     val neighborDistance=if(arrows.isEmpty())0 else arrows.minOf{old->
+      old.cells().minOf{p->cells.minOf{q->
+       kotlin.math.abs(p.x-q.x)+kotlin.math.abs(p.y-q.y)
+      }}
+     }
+     -centerDistance*4-neighborDistance*6
+    }
+    val score=base+patternBonus+(if(a.bends.isNotEmpty())2 else 0)+cluster
     if(score>bestScore){best=a;bestScore=score}
    }
    arrows.add(best?:error("No placement for arrow $id"))
