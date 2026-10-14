@@ -214,27 +214,36 @@ class MainActivity:ComponentActivity(){
    }
   }
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-   FilledTonalButton(
+   Button(
     onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
-    modifier=Modifier.weight(1f).height(54.dp),shape=RoundedCornerShape(16.dp),
-    contentPadding=PaddingValues(horizontal=5.dp),
-    colors=ButtonDefaults.filledTonalButtonColors(containerColor=Color.White,contentColor=Color(0xFF565E91))){
-    Text("↻ Neustart",fontWeight=FontWeight.SemiBold,fontSize=13.sp,maxLines=1)
+    modifier=Modifier.weight(1f).height(60.dp),shape=RoundedCornerShape(18.dp),
+    contentPadding=PaddingValues(horizontal=4.dp),
+    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8),contentColor=Color.White)){
+    Column(horizontalAlignment=Alignment.CenterHorizontally){
+     Text("↻",fontSize=24.sp,fontWeight=FontWeight.Bold)
+     Text("Neustart",fontWeight=FontWeight.Bold,fontSize=12.sp,maxLines=1)
+    }
    }
    Button(
     onClick={highlighted=game.hint();invalid=null;revision++},
     enabled=game.hints!=0 && !game.lost && !game.won,
-    modifier=Modifier.weight(1f).height(54.dp),shape=RoundedCornerShape(16.dp),
-    contentPadding=PaddingValues(horizontal=5.dp),
-    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7264D6))){
-    Text("💡 Tipp",fontWeight=FontWeight.SemiBold,fontSize=13.sp,maxLines=1)
-   }
-   FilledTonalButton(
-    onClick={progress=progress.easier();replace(progress.stage);dialog=""},
-    modifier=Modifier.weight(1.15f).height(54.dp),shape=RoundedCornerShape(16.dp),
+    modifier=Modifier.weight(1f).height(60.dp),shape=RoundedCornerShape(18.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
-    colors=ButtonDefaults.filledTonalButtonColors(containerColor=Color.White,contentColor=Color(0xFF565E91))){
-    Text("Stufe zurück",fontWeight=FontWeight.SemiBold,fontSize=12.sp,maxLines=1)
+    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF158B65),contentColor=Color.White)){
+    Column(horizontalAlignment=Alignment.CenterHorizontally){
+     Text("💡",fontSize=22.sp)
+     Text("Tipp",fontWeight=FontWeight.Bold,fontSize=12.sp,maxLines=1)
+    }
+   }
+   Button(
+    onClick={progress=progress.easier();replace(progress.stage);dialog=""},
+    modifier=Modifier.weight(1.15f).height(60.dp),shape=RoundedCornerShape(18.dp),
+    contentPadding=PaddingValues(horizontal=4.dp),
+    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7955CE),contentColor=Color.White)){
+    Column(horizontalAlignment=Alignment.CenterHorizontally){
+     Text("↓",fontSize=23.sp,fontWeight=FontWeight.Bold)
+     Text("Stufe zurück",fontWeight=FontWeight.Bold,fontSize=11.sp,maxLines=1)
+    }
    }
   }
  }
@@ -400,7 +409,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
   // Persistent board-wide dot lattice; visited cells are emphasized below.
   for(y in 0 until level.size)for(x in 0 until level.size){
    val p=Pt(x,y)
-   drawCircle(Color(0xFFE9EDF7),radius=(cell*.065f).coerceAtLeast(1.0f),
+   drawCircle(Color(0xFFCED7ED),radius=(cell*.115f).coerceAtLeast(1.65f),
     center=Offset(ox+(x+.5f)*sx,oy+(y+.5f)*sy))
   }
   (ever+traveled+currentTrail).forEach{p->
@@ -409,8 +418,8 @@ private fun fresh(stage:Int,lives:Int,hints:Int):Game{
     drawCircle(Color(0xFF9189EF).copy(alpha=.18f),radius=(cell*.42f).coerceAtLeast(4f),center=point)
     drawCircle(Color(0xFF9189EF).copy(alpha=.35f),radius=(cell*.25f).coerceAtLeast(2.5f),center=point)
    }
-   drawCircle(if(p in pulse)Color(0xFF6F63DE) else if(p in currentTrail)Color(0xFFB1B7F2) else Color(0xFFD9E0F2),
-    radius=(cell*(if(p in pulse).14f else .08f)).coerceAtLeast(1.3f),center=point)
+   drawCircle(if(p in pulse)Color(0xFF6F63DE) else if(p in currentTrail)Color(0xFFB1B7F2) else Color(0xFFBFCBE7),
+    radius=(cell*(if(p in pulse).14f else .125f)).coerceAtLeast(1.65f),center=point)
   }
   val allVisible=arrows.filter{a->flights.none{f->f.id==a.id}}.map{it to (it.body() to false)}+flights.mapNotNull{f->level.arrows.firstOrNull{it.id==f.id}?.let{a->a to (f.plan.frame(f.step) to f.failed)}}
   allVisible.forEach{(a,shape)->
