@@ -45,7 +45,7 @@ internal object LocalSave {
      obj.getInt("length"),Dir.valueOf(obj.getString("direction")),bends)
    }
    require(arrows.map{it.id}.toSet().size==arrows.size)
-   val level=Level(root.getLong("seed"),stage,size,arrows)
+   val level=Level(root.getLong("seed"),stage,size,arrows,root.optInt("height",size))
    require(Rules.solve(level)!=null)
    val remainingArray=root.getJSONArray("remaining")
    val remaining=(0 until remainingArray.length()).map{remainingArray.getInt(it)}.toSet()
@@ -86,7 +86,7 @@ internal object LocalSave {
   root.put("version",1).put("stage",progress.stage).put("done",progress.done)
    .put("lifeSetting",lifeSetting).put("hintSetting",hintSetting)
    .put("concurrent",concurrent).put("speed",speed)
-   .put("seed",game.level.seed).put("size",game.level.size)
+   .put("seed",game.level.seed).put("size",game.level.size).put("height",game.level.height)
    .put("activeMaxLives",game.maxLives).put("activeMaxHints",game.maxHints)
    .put("remainingLives",game.lives).put("remainingHints",game.hints)
    .put("win",win).put("defeat",defeat)
