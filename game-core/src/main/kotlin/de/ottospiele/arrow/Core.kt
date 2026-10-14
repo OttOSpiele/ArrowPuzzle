@@ -306,7 +306,33 @@ class Generator{
     val length=if(stage<=5)random.nextInt(2,5) else random.nextInt(3,if(stage>=10)7 else 6)
     val sx=if(stage<=5)random.nextInt(size) else random.nextInt(3,size-3)
     val sy=if(stage<=5)random.nextInt(height) else random.nextInt(2,height-2)
-    val a=if(stage>=2 && random.nextInt(100)<65){
+    // Progressively introduce multi-turn snakes while keeping their final
+    // segment aligned with the arrow head's exit direction.
+    val shapeRoll=random.nextInt(100)
+    val a=if(stage>=24 && shapeRoll<16){
+     // Inward, spiral-like four-segment path (three corners).
+     val side=if(dir.x!=0) (if(random.nextBoolean())Dir.UP else Dir.DOWN)
+      else (if(random.nextBoolean())Dir.LEFT else Dir.RIGHT)
+     val sideLength=random.nextInt(3,6)
+     val backLength=random.nextInt(3,6)
+     val middleLength=random.nextInt(2,sideLength)
+     val start=Pt(sx,sy)
+     val one=Pt(start.x+side.x*sideLength,start.y+side.y*sideLength)
+     val two=Pt(one.x-dir.x*backLength,one.y-dir.y*backLength)
+     val three=Pt(two.x-side.x*middleLength,two.y-side.y*middleLength)
+     val tip=Pt(three.x+dir.x*(length-1),three.y+dir.y*(length-1))
+     Arrow(id,sx,sy,length,dir,listOf(one,two,three,tip))
+    }else if(stage>=12 && shapeRoll<(if(stage>=18)48 else 28)){
+     // Two corners: a real zigzag, not a rigidly translated straight arrow.
+     val side=if(dir.x!=0) (if(random.nextBoolean())Dir.UP else Dir.DOWN)
+      else (if(random.nextBoolean())Dir.LEFT else Dir.RIGHT)
+     val firstLength=random.nextInt(2,5)
+     val sideLength=random.nextInt(2,5)
+     val one=Pt(sx+dir.x*firstLength,sy+dir.y*firstLength)
+     val two=Pt(one.x+side.x*sideLength,one.y+side.y*sideLength)
+     val tip=Pt(two.x+dir.x*(length-1),two.y+dir.y*(length-1))
+     Arrow(id,sx,sy,length,dir,listOf(one,two,tip))
+    }else if(stage>=2 && shapeRoll<75){
      val middleDir=if(dir.x!=0)if(random.nextBoolean())Dir.UP else Dir.DOWN
       else if(random.nextBoolean())Dir.LEFT else Dir.RIGHT
      val turn=Pt(sx+random.nextInt(2,5)*middleDir.x,
