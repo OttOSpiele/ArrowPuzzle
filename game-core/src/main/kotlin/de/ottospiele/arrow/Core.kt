@@ -164,8 +164,14 @@ object PatternGoals {
  }
 }
 object BoardProfile {
- fun size(stage:Int)=15+stage.coerceIn(1,5)*2
- fun count(stage:Int)=if(stage<=5)stage+3 else (8+(stage-5)*2).coerceAtMost(24)
+ fun size(stage:Int):Int=when{
+  stage<=5->15+stage.coerceAtLeast(1)*2
+  else->(25+2*((stage-6)/10)).coerceAtMost(35)
+ }
+ fun count(stage:Int):Int=when{
+  stage<=5->stage.coerceAtLeast(1)+3
+  else->(8+(stage-5)*2).coerceAtMost(52)
+ }
 }
 class Generator{
  fun generate(stage:Int,seed:Long):Level{
