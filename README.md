@@ -65,13 +65,13 @@ Die Mustervorlagen sollen zuerst logische Blockierungsgraphen beschreiben, ansch
 | --- | --- | --- |
 | Kotlin/JVM-Spielkern | Vorhanden, CI-Tests erfolgreich | Erweiterte Validierung und Lasttests |
 | Android / Jetpack Compose | Startbar, Debug-APK über GitHub Actions | Gerätetests und UI-Politur |
-| Pfeilgeometrie | Gerade und einfach geknickte orthogonale Pfeile | Mehrfach geknickte komplexe Pfade |
+| Pfeilgeometrie | Gerade und einfach geknickte Pfeile; Datenmodell unterstützt weitere Knicke | Mehrfach geknickte und spiralförmige Pfeile gezielt generieren und überprüfen |
 | Kollisionslogik | Schlangen-Ausfahrpfad an der Spitze und vorberechnete ID-Abhängigkeitsmatrix | Erweiterte geometrische Fälle |
-| Generator/Solver | Konstruktive Generierung, Solver | Gezielt realisierte und kombinierte Mustervorlagen |
-| Analyse | Schlüsselpfeil-, Verzweigungs- und Kettenmetriken | Rückkopplung in die Erzeugung |
-| Spielregeln | Grundlegende Herzen, Tipps, Neustart und Stufen | Alle Einstellungsvarianten, UX und Robustheit |
+| Generator/Solver | Rückwärts-konstruktiv lösbare Level, Solver, Seed-Determinismus, Muster-Kandidatenauswahl | Garantiert erzeugte Muster, Mustermischungen und Schwierigkeitseichung |
+| Analyse | Schlüsselpfeil-, Richtungswechsel-, Verzweigungs- und Kettenmetriken beeinflussen Kandidatenauswahl | Verlässliche Musterquoten und Qualitätstests über viele Seeds |
+| Spielregeln | Herzen 3/5, Tipps 0/1/3/5, Stufenprogression, Neustart/Stufe zurück, parallele Züge | Unbegrenzte Herzen/Tipps, Sonderfalltests, Speicherung |
 | Speicherung | Noch **nicht** implementiert | Vollständiges lokales Resume |
-| Animationen/Monster | Noch **nicht** vollständig implementiert | Erfolg, Niederlage, Aufstieg und Sounds |
+| Animationen/Monster | Zellweise Schlangenanimation, verstärkte Punktspur, eigene Erfolgs-/Niederlagenbildschirme | Flüssige Interpolation, Monsterfiguren, echte Aufstiegsanimation und Sounds |
 | Elternbereich/Donationware | Einfache Einstellungen vorhanden | Schutz, Spendenoption, rechtliche Prüfung |
 
 **Hinweis:** Die frühere prototypische Pattern-Engine darf nicht mit der aktuell veröffentlichten Android-Codebasis gleichgesetzt werden. Die explizite Komposition der Muster ist noch ein offener Entwicklungsschritt. Die App ist nicht releasefähig.
@@ -112,9 +112,9 @@ Rechtliche Quellen (Stand 14.10.2026):
 - [Europäische Kommission: FAQ zu Transparenzpflichten (einschl. Quellcode)](https://digital-strategy.ec.europa.eu/en/faqs/transparency-obligations-under-article-50-ai-act)
 - [EU-Leitlinien zu Art. 50 (20.07.2026)](https://digital-strategy.ec.europa.eu/en/library/guidelines-transparency-obligations-providers-and-deployers-ai-systems)
 
-## Kollisionstest aus dem Tablet-Feedback (14.10.2026)
+## Historische Kollisionstests (überholter Ansatz)
 
-Bei einem nach oben zeigenden L-Pfeil muss auch das horizontal herausragende Schwanzsegment gegen alle verbliebenen Pfeile geprüft werden. Die Bewegung gilt als starr und kontinuierlich, nicht als Folge von Teleportationen zwischen Rasterpunkten. Der Spielkern prüft daher den **gesamten kontinuierlich überstrichenen Bereich jedes Liniensegments** bis zum vollständigen Ausfahren. Das ist eine konservative Kollisionsprüfung von Linienmittelachsen; optische Strichdicke und Pfeilflügel werden noch nicht in die Kollisionsgeometrie integriert. Der rote/koral farbige Pfeil im Screenshot kennzeichnet den vom Spiel als blockiert bewerteten Antippversuch. Ein Screenshot allein beweist daher nicht, dass ein physikalisch freier Pfeil zurückgewiesen wurde.
+Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbindlich ist seit der Nutzerkorrektur ausschließlich das Schlangenmodell:** Der Körper folgt seiner eigenen Linie um Ecken; nur vor der Pfeilspitze werden neue Spielfeldzellen betreten. Ältere Einträge unten sind Entwicklungshistorie und keine aktuelle Spezifikation.
 
 ## Dokumentationsstand / Änderungsverlauf
 
@@ -153,3 +153,31 @@ Bei einem nach oben zeigenden L-Pfeil muss auch das horizontal herausragende Sch
 - **14.10.2026 – Immer sichtbares Punkteraster:** Auf dem gesamten Spielfeld werden die Rasterpunkte unabhängig von bereits belegten, zurückgelegten oder freigewordenen Zellen dezent dauerhaft angezeigt. Vorherige Pfeilpositionen, Austrittswege und kurz aufleuchtende Punkte bleiben als hervorgehobene Ebene darüber sichtbar. Die Punktstruktur ändert die Kollisionen und Levelgenerierung nicht.
 
 - **14.10.2026 – Farbcode für Kinder vor dem Lesealter:** Die drei ständig sichtbaren Hauptaktionen tragen jetzt eigenständige Vollfarben und große Symbole: **Blau (↻) = Neustart**, **Grün (💡) = Tipp**, **Lila (↓) = Stufe zurück / leichter**. Lila ersetzt die zunächst erwogene orangefarbene Variante nach Nutzerwunsch. Das permanente Punkteraster wird etwas größer und kontrastreicher, bleibt aber optisch hinter den Pfeilen. Texte ergänzen die Symbole für lesende Kinder und Begleitpersonen.
+
+## Entwicklungsabgleich mit der Planung – 14.10.2026
+
+### Umgesetzt (Prototyp)
+- Werbefreier/offlinefähiger Android-Prototyp mit Kotlin-Spielkern, Jetpack Compose, automatischen Tests, GitHub Actions und Debug-APK über GitHub Releases.
+- Orthogonale Pfeile, gerade oder mit einem Knick im Generator; Schlangenbewegung, vorberechnete Blockierer-ID-Matrix, lösbare Seed-Rätsel, Tipp und begrenzte Fehlerabzüge bei unveränderter Blockierermenge.
+- Stufenaufstieg (1–8: je 1 Rätsel, 9–16: je 2, später aufsteigend bis max. 10), „Neustart“ desselben Levels und „Stufe zurück“ um eins mit neuem Level.
+- Paralleles Antippen als Standard, vier Ausfahrgeschwindigkeiten (58/32/20/11 ms/Zelle), drei farbcodierte Tasten und immer sichtbares Punkteraster.
+- Eigenständige Erfolgs- und Niederlagenansichten mit sichtbarer Ladephase, vorbereitetem Folgerätsel, bewusstem Weiter und Wiederholungsoption.
+- Erste musterbasierte **Auswahl** generierter Kandidaten: Schlüsselpfeile, abwechselnde Ketten und Verzweigungen je nach Stufe – **nicht garantiert**.
+
+### Teilweise umgesetzt
+- Animationspfade folgen der Schlangengeometrie, laufen aber zellenweise statt flüssig interpoliert. Die Leuchtspur betont jetzt sechs aufeinanderfolgende Positionen einschließlich freigewordener Schwanzzellen; Wirkung auf Geräten erneut prüfen.
+- Komplexe Mehrfachknicke sind durch die Datenstruktur möglich, aber der Generator baut überwiegend gerade Pfeile und einen Knick. Geometrische Verschachtelungen und Spiralen noch nicht systematisch realisiert.
+- Leben und Hinweise konfigurierbar, aber die vorgesehenen **Unendlich**-Optionen fehlen; der Schutz des Einstellungsbereichs für Eltern fehlt.
+- Kindgerechtere UI und Ergebnisse vorhanden, jedoch noch keine eigentlichen Monstercharaktere, separate Aufstiegsinszenierung oder Sounds.
+
+### Noch offen – empfohlene Reihenfolge
+1. **Generator robust machen:** Key-Arrows, Wechselketten und Verzweigungen gezielt konstruieren, strukturell prüfen, Mustervarianten kombinieren, Schwierigkeit über viele Seeds und Altersgruppen kalibrieren.
+2. **Spielstand dauerhaft speichern:** Stufe, Fortschritt, ursprüngliches Level/Seed, verbliebene Pfeile, Fehlerhistorie, Leben, Tipps und Einstellungen; automatisches Resume nach Prozessende.
+3. **Bewegung und Bedienbarkeit verfeinern:** Kontinuierliche Interpolation, bessere Rückfahreffekte, visuelle Qualität, reale Tablet-/Bildschirmgrößen- und Accessibility-Tests.
+4. **Kinder-UX vervollständigen:** Tutorial, sympathische Monster, echte Aufstiegsfeier, optional deaktivierbarer Ton, Zoom/geeignete Darstellung dichter Level.
+5. **Regel-/Elternoptionen vervollständigen:** Unendlich Leben und Hinweise, geschützte Einstellungen/Elternbereich und geeignete Hilfetexte.
+6. **Veröffentlichungsreife herstellen:** Viele Seed-/Leistungs-/Gerätetests, Datenschutz-/Offline-/Kinderschutzprüfung, Release-Signing und Play-Store-Vorbereitung. Spendenoption nur nach gesonderter Prüfung.
+
+Die Planung beschreibt technische Arbeit, keine formale Releasefreigabe.
+
+- **14.10.2026 – Statusabgleich und kräftigere Punktpulse:** Leuchtspur über bis zu sechs Schritte mit deutlich größerem Halo und dunklem Kern, auch auf gerade verlassenen Körperzellen. README-Statusmatrix und offene Entwicklungsschritte aktualisiert; veraltete Kollisionsdarstellung als historisch markiert.
