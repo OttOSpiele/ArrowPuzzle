@@ -24,6 +24,15 @@ class GameTest {
    assertNotNull(Rules.solve(level))
   }
  }
+ @Test fun laterBoardsUseBothVerticalHalves(){
+  for(stage in listOf(9,14,17))for(seed in 0L..3L){
+   val level=Generator().generate(stage,seed)
+   val points=level.arrows.flatMap{it.cells()}
+   assertTrue(points.any{it.y<level.size/2},"no upper-half occupancy")
+   assertTrue(points.any{it.y>=level.size/2},"no lower-half occupancy")
+   assertNotNull(Rules.solve(level))
+  }
+ }
  @Test fun compactBoardsAfterStageFive(){
   assertEquals(25,BoardProfile.size(5))
   for(stage in 6..15)assertEquals(25,BoardProfile.size(stage))
