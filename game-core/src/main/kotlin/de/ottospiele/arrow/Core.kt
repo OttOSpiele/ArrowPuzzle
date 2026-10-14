@@ -262,7 +262,7 @@ class Generator{
   val portrait=aspect<1f
   val normalized=if(portrait)1f/aspect.coerceAtLeast(0.2f) else aspect
   val family=PatternGoals.preferred(stage)
-  val attempts=if(stage<=3)1 else 24
+  val attempts=if(stage<=3)1 else 40
   var best:Level?=null
   var bestScore=Int.MIN_VALUE
   for(attempt in 0 until attempts){
@@ -308,14 +308,20 @@ class Generator{
   for(id in arrows.size until count){
    var best:Arrow?=null
    var bestScore=Int.MIN_VALUE
-   repeat(if(stage<=5)260 else if(stage>=18)1000 else 560){
+   repeat(if(stage<=5)260 else if(stage>=18)1300 else 560){
     val dir=Dir.entries.random(random)
-    val length=if(stage<=5)random.nextInt(2,5) else random.nextInt(3,if(stage>=10)7 else 6)
+    val length=when {
+     stage<=5->random.nextInt(2,5)
+     id>=count*3/4->random.nextInt(2,4)
+     id>=count/2->random.nextInt(2,5)
+     else->random.nextInt(3,if(stage>=10)7 else 6)
+    }
     val sx=if(stage<=5)random.nextInt(size) else random.nextInt(3,size-3)
     val sy=if(stage<=5)random.nextInt(height) else random.nextInt(2,height-2)
     // Progressively introduce multi-turn snakes while keeping their final
     // segment aligned with the arrow head's exit direction.
     val shapeRoll=when {
+     id>=count*3/4 -> 90
      stage>=24 && id in 3..5 -> random.nextInt(0,25)
      stage>=12 && id in 3..6 -> random.nextInt(16,58)
      else -> random.nextInt(100)
