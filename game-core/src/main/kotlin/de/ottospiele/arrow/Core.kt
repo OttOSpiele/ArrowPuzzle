@@ -245,13 +245,15 @@ object PatternConstruction {
 class Generator{
  fun generate(stage:Int,seed:Long):Level{
   val family=PatternGoals.preferred(stage)
-  val attempts=if(stage<=3)1 else 8
+  val attempts=if(stage<=3)1 else 24
   var best:Level?=null
   var bestScore=Int.MIN_VALUE
   for(attempt in 0 until attempts){
    // Derived independently but deterministically, without using random global state.
    val random=Random(seed+attempt*1000003L)
-   val level=makeCandidate(stage,seed,random)
+   // Dense boards can reach a geometric placement dead end. Retry with an
+   // independent deterministic stream instead of aborting the entire level.
+   val level=try{makeCandidate(stage,seed,random)}catch(_:IllegalStateException){continue}
    val m=PatternAnalysis.analyze(level)
    val score=PatternGoals.score(family,m)
    if(score>bestScore){bestScore=score;best=level}
@@ -272,7 +274,7 @@ class Generator{
   for(id in arrows.size until count){
    var best:Arrow?=null
    var bestScore=Int.MIN_VALUE
-   repeat(if(stage<=5)260 else 420){
+   repeat(if(stage<=5)260 else 560){
     val dir=Dir.entries.random(random)
     val length=if(stage<=5)random.nextInt(2,5) else random.nextInt(3,if(stage>=10)7 else 6)
     val sx=if(stage<=5)random.nextInt(size) else random.nextInt(3,size-3)
