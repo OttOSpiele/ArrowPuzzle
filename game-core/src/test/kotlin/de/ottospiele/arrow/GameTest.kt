@@ -41,7 +41,9 @@ class GameTest {
   assertEquals(34,BoardProfile.size(100))
   assertEquals(11,BoardProfile.height(14,1.8f))
   assertTrue(BoardProfile.count(12)>BoardProfile.count(6))
-  assertTrue(BoardProfile.count(18)>BoardProfile.count(16))
+  assertEquals(17,BoardProfile.count(16))
+  assertEquals(17,BoardProfile.count(18))
+  assertTrue(BoardProfile.count(25)>BoardProfile.count(18))
  }
  @Test fun rectangularBoardPreservesSolutionAndBounds(){
   for(stage in listOf(6,9,14,17))for(seed in 0L..2L){
