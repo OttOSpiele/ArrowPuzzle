@@ -1,6 +1,7 @@
 package de.ottospiele.app
 
 import android.os.Bundle
+import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
@@ -39,16 +40,18 @@ class MainActivity:ComponentActivity(){
  }
 }
 @Composable fun Puzzle(){
- var progress by remember{mutableStateOf(Progress())}
- var lives by remember{mutableIntStateOf(5)}
- var hints by remember{mutableIntStateOf(3)}
- var game by remember{mutableStateOf(fresh(1,5,3))}
+ val context=LocalContext.current
+ val saved=remember{LocalSave.read(context)}
+ var progress by remember{mutableStateOf(saved?.progress?:Progress())}
+ var lives by remember{mutableIntStateOf(saved?.lifeSetting?:5)}
+ var hints by remember{mutableIntStateOf(saved?.hintSetting?:3)}
+ var game by remember{mutableStateOf(saved?.game?:fresh(1,5,3))}
  var revision by remember{mutableIntStateOf(0)}
  var highlighted by remember{mutableStateOf<Int?>(null)}
  var invalid by remember{mutableStateOf<Int?>(null)}
  var dialog by remember{mutableStateOf("")}
- var winScreen by remember{mutableStateOf(false)}
- var defeatScreen by remember{mutableStateOf(false)}
+ var winScreen by remember{mutableStateOf(saved?.win?:false)}
+ var defeatScreen by remember{mutableStateOf(saved?.defeat?:false)}
  var defeatMode by remember{mutableStateOf("choice")}
  var defeatPrepared by remember{mutableStateOf<Game?>(null)}
  var defeatAttempt by remember{mutableIntStateOf(0)}
@@ -57,8 +60,8 @@ class MainActivity:ComponentActivity(){
  var prepareError by remember{mutableStateOf(false)}
  var preparationAttempt by remember{mutableIntStateOf(0)}
  var settings by remember{mutableStateOf(false)}
- var concurrent by remember{mutableStateOf(true)}
- var speed by remember{mutableIntStateOf(1)}
+ var concurrent by remember{mutableStateOf(saved?.concurrent?:true)}
+ var speed by remember{mutableIntStateOf(saved?.speed?:1)}
  val flights=remember{mutableStateListOf<Flight>()}
  val scope=rememberCoroutineScope()
  val jobs=remember{mutableMapOf<Int,Job>()}
@@ -66,6 +69,9 @@ class MainActivity:ComponentActivity(){
  val occupiedEver=remember(game.level){game.level.arrows.flatMap{it.cells()}.toSet()}
  // 0 = already much faster than the old 58 ms per cell.
  val stepDelay=when(speed){0->58L;1->32L;2->20L;else->11L}
+ LaunchedEffect(progress,lives,hints,concurrent,speed,game,revision,winScreen,defeatScreen){
+  LocalSave.write(context,progress,lives,hints,concurrent,speed,game,winScreen,defeatScreen)
+ }
  fun stopFlights(){
   jobs.values.forEach{it.cancel()}
   jobs.clear();flights.clear()
