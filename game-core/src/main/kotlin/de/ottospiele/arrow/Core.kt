@@ -274,7 +274,7 @@ class Generator{
    var bestScore=Int.MIN_VALUE
    repeat(if(stage<=5)260 else 420){
     val dir=Dir.entries.random(random)
-    val length=random.nextInt(2,5)
+    val length=if(stage<=5)random.nextInt(2,5) else random.nextInt(3,if(stage>=10)7 else 6)
     val sx=if(stage<=5)random.nextInt(size) else random.nextInt(3,size-3)
     val sy=if(stage<=5)random.nextInt(size) else random.nextInt(3,size-3)
     val a=if(stage>=2 && random.nextInt(100)<65){
@@ -301,18 +301,29 @@ class Generator{
      PatternFamily.ALTERNATING_CHAIN->different*18
      PatternFamily.BRANCH->if(branches>=2)45 else different*4
     }
-    val cluster=if(stage<=5)0 else {
+    // Prefer a balanced occupied area rather than collapsing all arrows
+    // into a tiny knot. Reward underused thirds, but penalize isolation.
+    val layout=if(stage<=5)0 else {
+     fun band(v:Int)=((v*3)/size).coerceIn(0,2)
+     val occupied=arrows.flatMap{it.cells()}
      val cx=cells.sumOf{it.x}/cells.size
      val cy=cells.sumOf{it.y}/cells.size
-     val centerDistance=kotlin.math.abs(cx-size/2)+kotlin.math.abs(cy-size/2)
-     val neighborDistance=if(arrows.isEmpty())0 else arrows.minOf{old->
-      old.cells().minOf{p->cells.minOf{q->
-       kotlin.math.abs(p.x-q.x)+kotlin.math.abs(p.y-q.y)
-      }}
+     val xBand=band(cx)
+     val yBand=band(cy)
+     val xUsage=occupied.count{band(it.x)==xBand}
+     val yUsage=occupied.count{band(it.y)==yBand}
+     val xLeast=(0..2).minOf{target->occupied.count{band(it.x)==target}}
+     val yLeast=(0..2).minOf{target->occupied.count{band(it.y)==target}}
+     val nearest=if(occupied.isEmpty())0 else cells.minOf{p->
+      occupied.minOf{q->kotlin.math.abs(p.x-q.x)+kotlin.math.abs(p.y-q.y)}
      }
-     -centerDistance*4-neighborDistance*6
+     val isolationPenalty=(nearest-4).coerceAtLeast(0)*9
+     val borderPenalty=(kotlin.math.abs(cx-size/2)-size/3).coerceAtLeast(0)*4+
+      (kotlin.math.abs(cy-size/2)-size/3).coerceAtLeast(0)*4
+     val balance=(xLeast-xUsage+yLeast-yUsage)*3
+     balance-isolationPenalty-borderPenalty
     }
-    val score=base+patternBonus+(if(a.bends.isNotEmpty())2 else 0)+cluster
+    val score=base+patternBonus+(if(a.bends.isNotEmpty())2 else 0)+layout
     if(score>bestScore){best=a;bestScore=score}
    }
    arrows.add(best?:error("No placement for arrow $id"))
