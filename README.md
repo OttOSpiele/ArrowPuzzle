@@ -1,36 +1,38 @@
 # OttOSpiele / ArrowPuzzle
 
-A completely ad-free, offline-first children's arrow puzzle for Android.
+An ad-free, offline-first arrow puzzle for Android.
 
-## State of the project
+## Development status
 
-Branch `develop` contains **B.1 bootstrap**, a deliberately reduced, build-oriented first version.
-It currently includes basic straight-line arrows, a constructive solvable-level generator,
-life and hint counters, progression, retry of the same level, and manual step-down.
+The `develop` branch contains the initial **B.1 bootstrap**: straight-line arrows,
+a constructive solvable-level generator, life and hint counters, progression, retries
+of the same level and voluntary step-down.
 
-**Still to port from the earlier B.1 source package:** the multi-segment geometry,
-KEY_ARROW/ALTERNATING_CHAIN/BRANCH pattern families, persistence and polished animations.
-This branch has NOT been built on an Android SDK in the ChatGPT environment.
-It must not be mistaken for a validated or release-ready application.
+**Not yet ported from the previous prototype:** multi-segment arrow geometry,
+KEY_ARROW / ALTERNATING_CHAIN / BRANCH patterns, persistence, and polished animations.
+This version has not yet been verified with a successful Android CI build.
 
-## Android build
+## GitHub Actions: download the debug APK
 
-JDK 17 and Android SDK API 35 are required. Use Gradle 8.11.1:
+The workflow at [`.github/workflows/android.yml`](.github/workflows/android.yml) runs
+for pushes to `develop`, pull requests targeting `develop` or `main`, and manual runs.
+
+1. Open **Actions** in this repository.
+2. Select **Android Debug APK**.
+3. Open the newest successful workflow run.
+4. Download the **OttOSpiele-ArrowPuzzle-debug** artifact at the bottom of the run.
+5. Extract the ZIP and install `app-debug.apk` on your Android device.
+
+The APK is a **debug build**, not a Play Store release. No release signing is configured.
+
+## Local build (optional)
+
+Requires JDK 17, Android SDK 35, and Gradle 8.11.1.
 
 ```sh
 gradle :game-core:test :app:assembleDebug
 ```
 
-Output: `app/build/outputs/apk/debug/app-debug.apk`.
-
-The Gradle wrapper *properties* file is provided; `gradlew` and its wrapper JAR
-are not committed, so the workflow downloads a pinned Gradle distribution itself.
-
-## Codemagic
-
-1. Add `OttOSpiele/ArrowPuzzle` in https://codemagic.io/.
-2. Choose the `codemagic.yaml` configuration on branch `develop`.
-3. Run workflow `android-debug`.
-4. Download `app-debug.apk` from Build artifacts once CI succeeds.
-
-Only the debug APK is produced; no Google Play signing or publication is set up.
+The debug APK is produced at `app/build/outputs/apk/debug/app-debug.apk`.
+The Gradle wrapper is not yet included; CI installs the pinned Gradle version using
+`gradle/actions/setup-gradle`.
