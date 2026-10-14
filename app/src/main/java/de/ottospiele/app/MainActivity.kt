@@ -148,7 +148,7 @@ class MainActivity:ComponentActivity(){
   )
  }else Column(
   Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4F2FD),Color(0xFFEDF4FF),Color(0xFFFFFBF5))))
-   .padding(horizontal=20.dp,vertical=14.dp),
+   .safeDrawingPadding().padding(horizontal=20.dp,vertical=14.dp),
   verticalArrangement=Arrangement.spacedBy(14.dp)
  ){
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
@@ -273,7 +273,7 @@ private fun DefeatScreen(
 ){
  Column(
   Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFFFEFF2),Color(0xFFF6F3FF),Color(0xFFEDF6FF))))
-   .padding(28.dp),
+   .safeDrawingPadding().padding(28.dp),
   horizontalAlignment=Alignment.CenterHorizontally,
   verticalArrangement=Arrangement.Center
  ){
