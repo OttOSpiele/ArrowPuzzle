@@ -36,6 +36,9 @@ class GameTest {
  @Test fun compactBoardsAfterStageFive(){
   assertEquals(17,BoardProfile.size(1))
   for(stage in 2..24)assertEquals(18,BoardProfile.size(stage))
+  assertEquals(18,BoardProfile.size(21))
+  assertEquals(19,BoardProfile.size(22))
+  assertEquals(19,BoardProfile.size(24))
   assertEquals(20,BoardProfile.size(25))
   assertEquals(22,BoardProfile.size(35))
   assertEquals(34,BoardProfile.size(100))
@@ -145,6 +148,15 @@ class GameTest {
  }
  @Test fun simplerLevelResetsProgress(){
   assertEquals(Progress(2,0),Progress(3,2).easier())
+ }
+ @Test fun spiralExitCannotCrossItsOwnBody(){
+  val crossing=Arrow(7,2,2,3,Dir.RIGHT,
+   listOf(Pt(2,7),Pt(8,7),Pt(8,4),Pt(10,4)))
+  // Tip ray here is clear; a reversed spiral may have a ray through its body.
+  assertTrue(Rules.selfClear(crossing,18,12))
+  val selfCrossing=Arrow(8,2,2,3,Dir.LEFT,
+   listOf(Pt(2,8),Pt(9,8),Pt(9,4),Pt(4,4)))
+  assertFalse(Rules.selfClear(selfCrossing,18,12))
  }
  @Test fun multiTurnArrowsFollowTheirOwnBodies(){
   val zigzag=Arrow(0,2,2,3,Dir.RIGHT,listOf(Pt(5,2),Pt(5,5),Pt(7,5)))
