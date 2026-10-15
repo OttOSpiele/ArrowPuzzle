@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MPL-2.0
 package de.ottospiele.arrow
 
 import kotlin.math.abs
