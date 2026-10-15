@@ -311,7 +311,7 @@ class Generator {
     val inner=w-2
     // A U-shaped winding with a genuine inward return and a free exit ray.
     add(s to h,Dir.entries.first{it.x==-dir.x&&it.y==-dir.y} to w,
-     Dir.entries.first{it.x==-s.x&&it.y==-s.y} to (h-1),dir to inner)
+     Dir.entries.first{it.x==-s.x&&it.y==-s.y} to (h+2),dir to inner)
    }
   }
   return result
@@ -348,7 +348,8 @@ class Generator {
    val usedBands=arrows.flatMap{it.cells()}.groupingBy{
     (it.x*3/width) to (it.y*3/height)
    }.eachCount()
-   val candidates=mutableListOf<Pair<Int,Arrow>>()
+   var winner:Arrow?=null
+   var winningScore=Int.MIN_VALUE
    for(index in order){
     val shape=templates[index]
     val segments=shape.offsets.size-1
@@ -378,10 +379,10 @@ class Generator {
      val distancePenalty=(isolation-4).coerceAtLeast(0)*6
      val score=preference+links+coverage-distancePenalty+
       (if(segments>=3)15 else 0)+random.nextInt(12)
-     candidates.add(score to a)
+     if(score>winningScore){winningScore=score;winner=a}
     }
    }
-   return candidates.maxByOrNull{it.first}?.second
+   return winner
   }
   for(id in arrows.size until count){
    val a=choose(id)?:error("Cannot construct arrow $id at stage $stage")
