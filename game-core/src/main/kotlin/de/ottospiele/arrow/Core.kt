@@ -201,8 +201,19 @@ object BoardProfile {
  fun count(stage:Int):Int=when {
   stage<=5->stage.coerceAtLeast(1)+3
   stage<=24->(8+(stage-5)).coerceAtMost(20)
-  else->(20+(stage-24)).coerceAtMost(40)
+  stage<=44->20+(stage-24)
+  else->(40+(stage-44)/4).coerceAtMost(100)
  }
+ /** Long-term aspiration, not a hard promise: higher occupancy must never
+  * displace solvability, readable paths, or predictable generation time. */
+ fun targetOccupancy(stage:Int):Float=when {
+  stage<=8->0.08f
+  stage<=24->0.08f+(stage-8)*0.005f
+  stage<=80->0.16f+(stage-24)*0.006f
+  else->(0.496f+(stage-80)*0.0028f).coerceAtMost(1f)
+ }
+ fun actualOccupancy(level:Level):Float=
+  level.arrows.sumOf { it.cells().size }.toFloat()/(level.width*level.height)
 }
 
 /** The arrows are listed in reverse removal order: targets first, blockers last. */
@@ -309,7 +320,6 @@ class Generator {
   val result=mutableListOf<Shape>()
   for(dir in Dir.entries){
    val side=if(dir.x!=0)listOf(Dir.UP,Dir.DOWN) else listOf(Dir.LEFT,Dir.RIGHT)
-   fun at(d:Dir,n:Int)=Pt(d.x*n,d.y*n)
    fun add(vararg legs:Pair<Dir,Int>){
     val vertices=mutableListOf(Pt(0,0))
     for((d,n) in legs){
@@ -318,7 +328,7 @@ class Generator {
     }
     result.add(Shape(vertices,dir))
    }
-   for(n in 1..3)add(dir to n)
+   for(n in 1..(if(stage>=45)8 else if(stage>=25)5 else 3))add(dir to n)
    if(stage>=2)for(s in side)for(n in 2..3)for(k in 2..3)
     add(s to n,dir to k)
    if(stage>=12)for(s in side)for(n in 2..3)for(k in 2..3)
@@ -328,6 +338,14 @@ class Generator {
     // A U-shaped winding with a genuine inward return and a free exit ray.
     add(s to h,Dir.entries.first{it.x==-dir.x&&it.y==-dir.y} to w,
      Dir.entries.first{it.x==-s.x&&it.y==-s.y} to (h+2),dir to inner)
+   }
+   if(stage>=35)for(s in side) {
+    val opposite=Dir.entries.first{it.x==-dir.x && it.y==-dir.y}
+    val reverse=Dir.entries.first{it.x==-s.x && it.y==-s.y}
+    // A readable, self-avoiding five-leg winding; longer paths consume more
+    // cells without introducing abrupt difficulty for early players.
+    for(span in 3..4) add(s to span,opposite to 4,
+     reverse to (span+2),dir to 6,s to 2,dir to 2)
    }
   }
   return result
@@ -354,8 +372,8 @@ class Generator {
    points.zipWithNext().sumOf{(a,b)->kotlin.math.abs(a.x-b.x)+kotlin.math.abs(a.y-b.y)}+1
   }
   fun choose(id:Int):Arrow?{
-   val remaining=count-id
    val targetComplexity=when{
+    stage>=35 && id in 3..(count/3)->6
     stage>=24 && id in 3..5->4
     stage>=12 && id in 3..6->3
     stage>=2 && id<count/2->2
@@ -415,8 +433,16 @@ class Generator {
      val links=if(id<=3)unlocked*12 else unlocked*35
      val isolation=if(occupied.isEmpty())0 else body.minOf{p->distances[p.y][p.x]}
      val distancePenalty=(isolation-4).coerceAtLeast(0)*6
+     val densityWeight=when {
+      stage>=80->10
+      stage>=45->6
+      stage>=24->3
+      else->0
+     }
+     // Reward genuinely occupied cells, not merely long bounding boxes.
+     // Prefer connected dependencies even in densely packed stages.
      val score=preference+links+coverage-distancePenalty+
-      (if(segments>=3)15 else 0)+random.nextInt(12)
+      (if(segments>=3)15 else 0)+cellsPerArrow[index]*densityWeight+random.nextInt(12)
      if(score>winningScore){winningScore=score;winner=a}
     }
    }
