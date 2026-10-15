@@ -320,7 +320,7 @@ class Generator {
    return Arrow(id,x,y,length,direction,if(v.size==2)emptyList() else v.drop(1))
   }
  }
- private fun shapes(stage:Int):List<Shape> {
+ private fun shapes(stage:Int,enableNested:Boolean=true):List<Shape> {
   val result=mutableListOf<Shape>()
   for(dir in Dir.entries){
    val side=if(dir.x!=0)listOf(Dir.UP,Dir.DOWN) else listOf(Dir.LEFT,Dir.RIGHT)
@@ -346,7 +346,7 @@ class Generator {
    // Interleaved corridors inspired by dense maze-like puzzles. Each path
    // remains a single ordered snake; the terminal ray stays outside its
    // own body. Geometry is still independently checked at placement.
-   if(stage>=35)for(s in side){
+   if(enableNested && stage>=35)for(s in side){
     val opposite=Dir.entries.first{it.x==-dir.x && it.y==-dir.y}
     val reverse=Dir.entries.first{it.x==-s.x && it.y==-s.y}
     for(span in 3..4) {
@@ -366,7 +366,12 @@ class Generator {
   }
   return result
  }
- private fun construct(stage:Int,seed:Long,aspect:Float):Level {
+ private fun construct(stage:Int,seed:Long,aspect:Float):Level =
+  if(stage>=35) runCatching { constructOnce(stage,seed,aspect,true) }
+   .getOrElse { constructOnce(stage,seed,aspect,false) }
+  else constructOnce(stage,seed,aspect,false)
+
+ private fun constructOnce(stage:Int,seed:Long,aspect:Float,enableNested:Boolean):Level {
   val width=BoardProfile.size(stage)
   val height=BoardProfile.height(stage,aspect)
   val count=BoardProfile.count(stage)
@@ -377,7 +382,7 @@ class Generator {
    arrows.addAll(blueprint.arrows.map{a->Arrow(a.id,a.x+off.x,a.y+off.y,
     a.length,a.dir,a.bends.map{Pt(it.x+off.x,it.y+off.y)})})
   }
-  val templates=shapes(stage)
+  val templates=shapes(stage,enableNested)
   val occupied=arrows.flatMapTo(mutableSetOf()){it.cells()}
   val random=Random(seed xor (stage.toLong()*127773L))
   // A fixed permutation makes the construction different for every seed,
@@ -389,7 +394,7 @@ class Generator {
   }
   fun choose(id:Int):Arrow?{
    val targetComplexity=when{
-    stage>=35 && id in 3..5->6
+    enableNested && stage>=35 && id in 3..5->6
     stage>=24 && id in 3..5->4
     stage>=12 && id in 3..6->3
     stage>=2 && id<count/2->2
