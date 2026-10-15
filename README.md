@@ -150,6 +150,9 @@ Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbi
 
 ## Dokumentationsstand / Änderungsverlauf
 
+- **15.10.2026 – Verschachtelte Korridorformen:** Referenzbilder komplexer Pfeilrätsel als geometrische Anregung ausgewertet. Ab Stufe 35 ergänzen offene sechssegmentige Wickelformen den Katalog, um lange Korridore, U-Kehren und ineinanderliegende Verläufe zu ermöglichen. Reverse-Konstruktion, Selbstüberschneidungsprüfung und Solver bleiben verbindlich. Seed-/Seitenverhältnistests ergänzt; tatsächliche Häufigkeit und 100%-Dichte sind noch nicht garantiert.
+
+
 - **15.10.2026 – Generator-Ausbau (inkrementell):** Geometrisches DFS priorisiert jetzt Kandidaten mit vielen Verknüpfungen zu vorhandenen Ausfahrstrahlen und größerer tatsächlicher Zellbelegung. Bei erfolgloser Einbettung des logischen Plans erfolgt für Stufen 6–16 ein zweiter deterministisch variierter Geometrieversuch desselben Graphen, bevor der bewährte konstruktive Fallback greift. Regressionstest für deterministische und geometrisch korrekte Graphrealisierung ergänzt. Noch keine garantierte Planrealisierung, Spiral- oder Dichtequote.
 
 
