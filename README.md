@@ -92,6 +92,12 @@ Der neue `DependencyPlanner` plant zuerst einen vollständigen, seedabhängigen 
 
 **Offen:** Geometrische Einbettung ohne Rückfall für alle Stufen und Seitenverhältnisse, mehrere Abhängigkeitskanten pro Pfeil, tiefere kombinierte Muster, gezielte Spiralkonstruktion statt lediglich komplexerer Mehrfachknicke, höhere Belegungsdichte mit quantitativen Mindestquoten und belastbare Performancegrenzen. Auch eine systematische Schwierigkeitskalibrierung steht aus.
 
+### Stufe direkt auswählen (Debug)
+
+Im Hamburgermenü gibt es auf Debug-Builds den Eintrag **„Stufe anpassen“**. Damit lässt sich für Tests unmittelbar eine Stufe von 1 bis 9999 auswählen. Das Level wird im Hintergrund neu generiert, der Fortschritt der ausgewählten Stufe wird auf null gesetzt und das neue Rätsel als Spielstand gespeichert. Während der Generierung ist die Bestätigung gesperrt; Fehler erscheinen im Dialog.
+
+Sichtbarkeit über `app/src/main/assets/game-defaults.properties`: `showStageAdjustment=true` (standardmäßig aktiviert). Mit `false` ist der Menüeintrag auch im Debug-Build ausgeblendet. In nicht debuggbaren Release-Builds ist der Eintrag unabhängig von diesem Wert nicht sichtbar. Änderungen an der Parameterdatei erfordern einen neuen APK-Build.
+
 ## APK auf einem Android-Tablet testen
 
 - Stetig aktualisierte Entwicklungs-Vorabversion: [GitHub Release `develop-preview`](https://github.com/OttOSpiele/ArrowPuzzle/releases/tag/develop-preview).
@@ -133,6 +139,9 @@ Rechtliche Quellen (Stand 14.10.2026):
 Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbindlich ist seit der Nutzerkorrektur ausschließlich das Schlangenmodell:** Der Körper folgt seiner eigenen Linie um Ecken; nur vor der Pfeilspitze werden neue Spielfeldzellen betreten. Ältere Einträge unten sind Entwicklungshistorie und keine aktuelle Spezifikation.
 
 ## Dokumentationsstand / Änderungsverlauf
+
+- **15.10.2026 – Debug-Stufenauswahl:** Hamburgermenü „Stufe anpassen“ ausschließlich bei debuggbarer App und aktiviertem Parameter `showStageAdjustment`; Zahleneingabe, neue Generierung im Hintergrund und Zurücksetzen des Stufenfortschritts für gezielte Generator-Tests.
+
 
 - **15.10.2026 – CI-Regressionskorrektur:** Build #119 scheiterte in zwei Generator-Tests durch geometrische Platzierungssackgassen. Die zuvor verfrühte Erhöhung der Pfeilzahl wurde zurückgenommen (weiterhin maximal 40), besonders komplexe Wickelformen beginnen erst ab Stufe 60; die Dichtegewichtung wurde reduziert. Zielwerte bis 100 % bleiben ausdrücklich Planungsgrößen, keine realisierte Füllgarantie.
 
