@@ -63,6 +63,17 @@ class GameTest {
    assertNotNull(Rules.solve(level))
   }
  }
+ @Test fun constructedBoardsRemainSolvableAndSeeded(){
+  for(stage in listOf(12,18,24,25))for(seed in 0L..2L){
+   val level=Generator().generate(stage,seed,1.4f)
+   assertEquals(BoardProfile.count(stage),level.arrows.size)
+   assertEquals(level.arrows,Generator().generate(stage,seed,1.4f).arrows)
+   assertNotNull(Rules.solve(level))
+   assertTrue(level.arrows.all{Rules.selfClear(it,level.width,level.height)})
+   if(stage>=12)assertTrue(level.arrows.any{it.vertices().size>=4},
+    "No multi-turn motif at stage $stage")
+  }
+ }
  @Test fun compactBoardGenerationStaysSolvable(){
   for(stage in listOf(6,9,17,25))for(seed in 0L..2L){
    val level=Generator().generate(stage,seed)
