@@ -384,10 +384,10 @@ class Generator {
   // BEFORE greedy filling. The group is a DAG, not a hardcoded visual motif.
   // Its geometry is backed by bounded DFS and individually verified.
   if(stage>=35) {
-   val groupSize=minOf(7,count)
+   val groupSize=minOf(5,count)
    val groupPlan=DependencyPlanner.plan(stage,seed,groupSize)
    val group=GeometricBacktracker.place(
-    groupPlan,stage,seed,width,height,maxNodes=800
+    groupPlan,stage,seed,width,height,maxNodes=160
    )
    if(group!=null) {
     arrows.addAll(group.arrows)
