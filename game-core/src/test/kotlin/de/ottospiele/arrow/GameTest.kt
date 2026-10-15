@@ -3,6 +3,42 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class GameTest {
+ @Test fun dependencyPlannerProducesCompleteAcyclicGraph() {
+  for(stage in listOf(1,6,9,17,25))for(seed in listOf(0L,1L,42L,2026L)){
+   val count=BoardProfile.count(stage)
+   val plan=DependencyPlanner.plan(stage,seed,count)
+   assertEquals((0 until count).toList(),plan.order)
+   assertEquals(count-1,plan.edges.size)
+   assertTrue(plan.edges.all { (from,to)->to<from })
+   assertEquals(plan,DependencyPlanner.plan(stage,seed,count))
+  }
+ }
+ @Test fun geometricBacktrackingEmbedsSmallPlannedGraph() {
+  for(seed in 0L..3L) {
+   val plan=DependencyPlanner.plan(9,seed,2)
+   val placed=GeometricBacktracker.place(plan,9,seed,12,12,maxNodes=1000)
+   assertNotNull(placed,"No small graph embedding for seed $seed")
+   val level=Level(seed,9,12,placed!!.arrows)
+   assertNotNull(Rules.solve(level))
+   assertTrue(plan.edges.all { (from,to)->
+    from in level.dependencies.requiredRemovals[to].orEmpty()
+   })
+   assertEquals(placed.arrows,GeometricBacktracker.place(plan,9,seed,12,12,maxNodes=1000)?.arrows)
+  }
+ }
+ @Test fun plannedGeneratorPreservesPortraitAndLandscapeProgression() {
+  for(stage in listOf(6,9,12,16,17,25))for(aspect in listOf(0.7f,1f,1.5f)){
+   for(seed in listOf(0L,17L)){
+    val level=Generator().generate(stage,seed,aspect)
+    assertEquals(BoardProfile.count(stage),level.arrows.size)
+    assertNotNull(Rules.solve(level))
+    assertEquals(level.arrows,Generator().generate(stage,seed,aspect).arrows)
+    assertTrue(level.arrows.all { a->a.cells().all { p->
+     p.x in 0 until level.width && p.y in 0 until level.height
+    } })
+   }
+  }
+ }
  @Test fun touchPrefersRemovableArrowsInOverlappingRegions(){
   val blocked=Arrow(0,2,4,2,Dir.RIGHT)
   val free=Arrow(1,5,4,2,Dir.UP)
