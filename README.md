@@ -65,7 +65,7 @@ Die Mustervorlagen sollen zuerst logische Blockierungsgraphen beschreiben, ansch
 | --- | --- | --- |
 | Kotlin/JVM-Spielkern | Vorhanden, CI-Tests erfolgreich | Erweiterte Validierung und Lasttests |
 | Android / Jetpack Compose | Startbar, Debug-APK über GitHub Actions | Gerätetests und UI-Politur |
-| Pfeilgeometrie | Gerade und einfach geknickte Pfeile; Datenmodell unterstützt weitere Knicke | Mehrfach geknickte und spiralförmige Pfeile gezielt generieren und überprüfen |
+| Pfeilgeometrie | Gerade, geknickte und in späteren Stufen längere Wickelformen; geometrische Selbstüberschneidung wird geprüft | Gezielte Spiralen, verlässliche Formvielfalt und Gerätevalidierung |
 | Kollisionslogik | Schlangen-Ausfahrpfad an der Spitze und vorberechnete ID-Abhängigkeitsmatrix | Erweiterte geometrische Fälle |
 | Generator/Solver | Rückwärts-konstruktiv lösbare Level; vollständiger logischer DAG-Planer und begrenztes geometrisches DFS-Backtracking als Versuch für Stufen 6–16 mit konstruktivem Fallback | Verlässliche Einbettung jedes Plans für alle Stufen, Mehrfachkanten, Spiralen, Dichte und Schwierigkeitseichung |
 | Analyse | Schlüsselpfeil-, Richtungswechsel-, Verzweigungs- und Kettenmetriken beeinflussen Kandidatenauswahl | Verlässliche Musterquoten und Qualitätstests über viele Seeds |
@@ -75,6 +75,14 @@ Die Mustervorlagen sollen zuerst logische Blockierungsgraphen beschreiben, ansch
 | Elternbereich/Donationware | Einfache Einstellungen vorhanden | Schutz, Spendenoption, rechtliche Prüfung |
 
 **Hinweis:** Die frühere prototypische Pattern-Engine darf nicht mit der aktuell veröffentlichten Android-Codebasis gleichgesetzt werden. Die explizite Komposition der Muster ist noch ein offener Entwicklungsschritt. Die App ist nicht releasefähig.
+
+## Schrittweise dichtere Level und längere Pfeile (15.10.2026)
+
+Die frühen Stufen behalten die bisherigen Rastergrößen und Pfeilzahlen. Ab Stufe 25 können längere gerade Pfeile entstehen; ab Stufe 35 ergänzt der Katalog längere selbstüberschneidungsfrei zu prüfende Wickel- und Schlangenformen. Ab Stufe 45 wächst die Pfeilzahl behutsam über das bisherige Maximum von 40 hinaus (Obergrenze aktuell 100 Pfeile). Die Wahl der Geometrie bewertet nun für höhere Stufen stärker die **wirklich belegten Rasterzellen**. Verknüpfungen über Ausfahrstrahlen bleiben ein wichtiges Bewertungskriterium. Seed, Seitenverhältnis, Kollisionsprüfung und Solver werden weiterhin verwendet.
+
+Die Funktion `BoardProfile.targetOccupancy(stage)` dokumentiert eine langsam steigende **angestrebte**, nicht erzwungene Flächenbelegung von später bis zu 100 %; `actualOccupancy(level)` misst die tatsächlich belegten Zellen. Das Maximum wird ausdrücklich **nicht garantiert**: bei eng gepackten Rätseln können zu wenige konfliktfreie Positionen bleiben, und zu hohe Dichte kann Lesbarkeit oder Lösbarkeit beeinträchtigen. Ziel ist eine langfristig kindgerechte Progression für Sechsjährige, nicht eine frühe Maximierung des Schwierigkeitsgrads.
+
+**Noch offen:** automatische Erfüllung der Dichteziele, vollständig geplante Kombinationen mehrerer Abhängigkeitsfamilien, erzwungene Spiralen, Vermeidung isolierter Restpfeile, Mindestquoten für Ketten/Verzweigungen sowie belastbare Generierungszeiten auf älteren Tablets. Die Erhöhung der Pfeilzahl ist noch keine Garantie für hohe Zellenbelegung.
 
 ## Abhängigkeitsplaner und geometrisches Backtracking (15.10.2026)
 
@@ -125,6 +133,9 @@ Rechtliche Quellen (Stand 14.10.2026):
 Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbindlich ist seit der Nutzerkorrektur ausschließlich das Schlangenmodell:** Der Körper folgt seiner eigenen Linie um Ecken; nur vor der Pfeilspitze werden neue Spielfeldzellen betreten. Ältere Einträge unten sind Entwicklungshistorie und keine aktuelle Spezifikation.
 
 ## Dokumentationsstand / Änderungsverlauf
+
+- **15.10.2026 – Weiterentwicklung Dichte und Formen:** Größerer Längen- und Wickelformenkatalog für spätere Stufen, behutsam wachsende Pfeilzahl jenseits Stufe 44, steigende Flächenbelegungspräferenz und instrumentierte Ist-/Zielbelegung. 100 % ist bisher lediglich ein langfristiger Zielwert, keine zugesicherte Generatoreigenschaft; Performance- und Gerätetests bleiben erforderlich.
+
 
 - **15.10.2026 – TODO 1/2, erste Integration:** Seedabhängiger vollständiger logischer DAG-Planer, geometrisches Backtracking mit Rücknahme von Platzierungen, experimentelle Anbindung für Stufen 6–16 und Regressionstests für Seeds, Stufen und Seitenverhältnisse. Bei fehlgeschlagener Einbettung verbleibt bewusst der bewährte konstruktive Fallback; vollständige geometrische Graphumsetzung, garantierte Spiralen und hohe Vernetzungsquote sind noch offen.
 
