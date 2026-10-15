@@ -115,7 +115,11 @@ object GeometricBacktracker {
      c.ray.none { it in occupied } &&
      (targetRay == null || c.cells.any { it in targetRay })
    }.map { c ->
-    c to priorRays.values.count { ray -> c.cells.any { it in ray } }
+    val links=priorRays.values.count { ray -> c.cells.any { it in ray } }
+    // Dense contact with earlier exit rays favours integrated puzzles,
+    // while footprint and variety only break ties. Keep ordering stable.
+    val footprint=c.cells.size.coerceAtMost(12)
+    c to (links*32+footprint)
    }.sortedByDescending { it.second }.take(20).toList()
    for ((candidate, _) in options) {
     if (++nodes > maxNodes) return false
