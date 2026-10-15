@@ -257,29 +257,21 @@ object PatternConstruction {
  }
 }
 
-class Generator{
- fun generate(stage:Int,seed:Long,aspect:Float=1f):Level{
+/**
+ * Constructive level builder. Arrows are inserted in reverse removal order:
+ * each new arrow MUST have a free exit through the arrows already constructed.
+ * Existing arrows may become blocked by the new arrow, creating a DAG by design.
+ * A deterministic, seeded enumeration selects fitting geometric candidates;
+ * no random full-level retry loop is necessary.
+ */
+class Generator {
+ fun generate(stage:Int,seed:Long,aspect:Float=1f):Level {
   val portrait=aspect<1f
-  val normalized=if(portrait)1f/aspect.coerceAtLeast(0.2f) else aspect
-  val family=PatternGoals.preferred(stage)
-  val attempts=if(stage<=3)1 else 40
-  var best:Level?=null
-  var bestScore=Int.MIN_VALUE
-  for(attempt in 0 until attempts){
-   // Derived independently but deterministically, without using random global state.
-   val random=Random(seed+attempt*1000003L)
-   // Dense boards can reach a geometric placement dead end. Retry with an
-   // independent deterministic stream instead of aborting the entire level.
-   val raw=try{makeCandidate(stage,seed,random,normalized)}catch(_:IllegalStateException){continue}
-   val level=if(portrait)rotatePortrait(raw) else raw
-   val m=PatternAnalysis.analyze(level)
-   val score=PatternGoals.score(family,m)
-   if(score>bestScore){bestScore=score;best=level}
-   if(PatternGoals.reached(family,m))return level
-  }
-  return best?:error("Unable to construct a puzzle")
+  val normalized=if(portrait)1f/aspect.coerceAtLeast(.2f) else aspect
+  val raw=construct(stage,seed,normalized)
+  return if(portrait)rotatePortrait(raw) else raw
  }
- private fun rotatePortrait(level:Level):Level{
+ private fun rotatePortrait(level:Level):Level {
   fun turn(p:Pt)=Pt(level.height-1-p.y,p.x)
   val arrows=level.arrows.map{a->
    val p=turn(Pt(a.x,a.y))
@@ -288,125 +280,120 @@ class Generator{
   }
   return Level(level.seed,level.stage,level.height,arrows,level.width)
  }
- private fun makeCandidate(stage:Int,seed:Long,random:Random,aspect:Float):Level{
-  val size=BoardProfile.size(stage)
-  val height=BoardProfile.height(stage,aspect)
-  val arrows=mutableListOf<Arrow>()
-  val blueprint=PatternConstruction.blueprint(stage,minOf(size,height),seed)
-  if(blueprint!=null){
-   val offset=Pt((size-minOf(size,height))/2,(height-minOf(size,height))/2)
-   arrows.addAll(blueprint.arrows.map{a->
-    Arrow(a.id,a.x+offset.x,a.y+offset.y,a.length,a.dir,
-     a.bends.map{Pt(it.x+offset.x,it.y+offset.y)})
-   })
-   check(blueprint.requiredEdges.all{(blocker,blocked)->
-    blocker in Level(seed,stage,size,arrows,height).dependencies.requiredRemovals[blocked].orEmpty()
-   })
+ private data class Shape(val offsets:List<Pt>,val direction:Dir){
+  fun place(id:Int,x:Int,y:Int):Arrow{
+   val v=offsets.map{Pt(x+it.x,y+it.y)}
+   val last=v.last()
+   val before=v[v.lastIndex-1]
+   val length=kotlin.math.abs(last.x-before.x)+kotlin.math.abs(last.y-before.y)+1
+   return Arrow(id,x,y,length,direction,if(v.size==2)emptyList() else v.drop(1))
   }
-  val count=BoardProfile.count(stage)
-  val family=PatternGoals.preferred(stage)
-  for(id in arrows.size until count){
-   var best:Arrow?=null
-   var bestScore=Int.MIN_VALUE
-   repeat(if(stage<=5)260 else if(stage>=18)1300 else 560){
-    val dir=Dir.entries.random(random)
-    val length=when {
-     stage<=5->random.nextInt(2,5)
-     id>=count*3/4->random.nextInt(2,4)
-     id>=count/2->random.nextInt(2,5)
-     else->random.nextInt(3,if(stage>=10)7 else 6)
+ }
+ private fun shapes(stage:Int):List<Shape> {
+  val result=mutableListOf<Shape>()
+  for(dir in Dir.entries){
+   val side=if(dir.x!=0)listOf(Dir.UP,Dir.DOWN) else listOf(Dir.LEFT,Dir.RIGHT)
+   fun at(d:Dir,n:Int)=Pt(d.x*n,d.y*n)
+   fun add(vararg legs:Pair<Dir,Int>){
+    val vertices=mutableListOf(Pt(0,0))
+    for((d,n) in legs){
+     val p=vertices.last()
+     vertices.add(Pt(p.x+d.x*n,p.y+d.y*n))
     }
-    val sx=if(stage<=5)random.nextInt(size) else random.nextInt(3,size-3)
-    val sy=if(stage<=5)random.nextInt(height) else random.nextInt(2,height-2)
-    // Progressively introduce multi-turn snakes while keeping their final
-    // segment aligned with the arrow head's exit direction.
-    val shapeRoll=when {
-     id>=count*3/4 -> 90
-     stage>=24 && id in 3..5 -> random.nextInt(0,25)
-     stage>=12 && id in 3..6 -> random.nextInt(16,58)
-     else -> random.nextInt(100)
-    }
-    val a=if(stage>=24 && shapeRoll<16){
-     // Inward, spiral-like four-segment path (three corners).
-     val side=if(dir.x!=0) (if(random.nextBoolean())Dir.UP else Dir.DOWN)
-      else (if(random.nextBoolean())Dir.LEFT else Dir.RIGHT)
-     val sideLength=random.nextInt(3,6)
-     val backLength=random.nextInt(3,6)
-     val middleLength=random.nextInt(2,sideLength)
-     val start=Pt(sx,sy)
-     val one=Pt(start.x+side.x*sideLength,start.y+side.y*sideLength)
-     val two=Pt(one.x-dir.x*backLength,one.y-dir.y*backLength)
-     val three=Pt(two.x-side.x*middleLength,two.y-side.y*middleLength)
-     val tip=Pt(three.x+dir.x*(length-1),three.y+dir.y*(length-1))
-     Arrow(id,sx,sy,length,dir,listOf(one,two,three,tip))
-    }else if(stage>=12 && shapeRoll<(if(stage>=18)48 else 28)){
-     // Two corners: a real zigzag, not a rigidly translated straight arrow.
-     val side=if(dir.x!=0) (if(random.nextBoolean())Dir.UP else Dir.DOWN)
-      else (if(random.nextBoolean())Dir.LEFT else Dir.RIGHT)
-     val firstLength=random.nextInt(2,5)
-     val sideLength=random.nextInt(2,5)
-     val one=Pt(sx+dir.x*firstLength,sy+dir.y*firstLength)
-     val two=Pt(one.x+side.x*sideLength,one.y+side.y*sideLength)
-     val tip=Pt(two.x+dir.x*(length-1),two.y+dir.y*(length-1))
-     Arrow(id,sx,sy,length,dir,listOf(one,two,tip))
-    }else if(stage>=2 && shapeRoll<75){
-     val middleDir=if(dir.x!=0)if(random.nextBoolean())Dir.UP else Dir.DOWN
-      else if(random.nextBoolean())Dir.LEFT else Dir.RIGHT
-     val turn=Pt(sx+random.nextInt(2,5)*middleDir.x,
-      sy+random.nextInt(2,5)*middleDir.y)
-     val tip=Pt(turn.x+(length-1)*dir.x,turn.y+(length-1)*dir.y)
-     Arrow(id,sx,sy,length,dir,listOf(turn,tip))
-    }else Arrow(id,sx,sy,length,dir)
-    val cells=a.cells()
-    if(cells.size!=a.vertices().zipWithNext().sumOf{(p,q)->
-      kotlin.math.abs(p.x-q.x)+kotlin.math.abs(p.y-q.y)
-     }+1)return@repeat
-    if(cells.any{p->p.x !in 0 until size||p.y !in 0 until height||arrows.any{p in it.cells()}})return@repeat
-    if(!Rules.selfClear(a,size,height))return@repeat
-    if(!Rules.free(a,arrows+a,size,height))return@repeat
-    val unlocked=arrows.filter{old->Rules.blockers(old,listOf(old,a),size,height).isNotEmpty()}
-    val different=unlocked.count{it.dir!=a.dir}
-    val branches=unlocked.map{it.dir}.distinct().size
-    val base=unlocked.size*12+random.nextInt(7)
-    val patternBonus=when(family){
-     PatternFamily.INTRO->-unlocked.size*6
-     PatternFamily.KEY_ARROW->if(unlocked.size>=2)35 else 0
-     PatternFamily.ALTERNATING_CHAIN->different*18
-     PatternFamily.BRANCH->if(branches>=2)45 else different*4
-    }
-    // Prefer a balanced occupied area rather than collapsing all arrows
-    // into a tiny knot. Reward underused thirds, but penalize isolation.
-    val layout=if(stage<=5)0 else {
-     fun band(v:Int)=((v*3)/size).coerceIn(0,2)
-     val occupied=arrows.flatMap{it.cells()}
-     val cx=cells.sumOf{it.x}/cells.size
-     val cy=cells.sumOf{it.y}/cells.size
-     val xBand=band(cx)
-     val yBand=((cy*3)/height).coerceIn(0,2)
-     val xUsage=occupied.count{band(it.x)==xBand}
-     val yUsage=occupied.count{((it.y*3)/height).coerceIn(0,2)==yBand}
-     val xLeast=(0..2).minOf{target->occupied.count{band(it.x)==target}}
-     val yLeast=(0..2).minOf{target->occupied.count{((it.y*3)/height).coerceIn(0,2)==target}}
-     val nearest=if(occupied.isEmpty())0 else cells.minOf{p->
-      occupied.minOf{q->kotlin.math.abs(p.x-q.x)+kotlin.math.abs(p.y-q.y)}
-     }
-     val isolationPenalty=(nearest-4).coerceAtLeast(0)*9
-     val borderPenalty=(kotlin.math.abs(cx-size/2)-size/3).coerceAtLeast(0)*4+
-      (kotlin.math.abs(cy-height/2)-height/3).coerceAtLeast(0)*4
-     val balance=(xLeast-xUsage+yLeast-yUsage)*3
-     balance-isolationPenalty-borderPenalty
-    }
-    val shapeBonus=if(stage>=24 && a.bends.size==4)90 else if(stage>=12 && a.bends.size==3)38 else 0
-    val connectedBonus=if(unlocked.isNotEmpty())unlocked.size*10 else -12
-    val score=base+patternBonus+shapeBonus+connectedBonus+layout
-    if(score>bestScore){best=a;bestScore=score}
+    result.add(Shape(vertices,dir))
    }
-   arrows.add(best?:error("No placement for arrow $id"))
+   for(n in 1..3)add(dir to n)
+   if(stage>=2)for(s in side)for(n in 2..3)for(k in 2..3)
+    add(s to n,dir to k)
+   if(stage>=12)for(s in side)for(n in 2..3)for(k in 2..3)
+    add(dir to n,s to k,dir to 2)
+   if(stage>=24)for(s in side)for(w in 3..5)for(h in 3..4){
+    val inner=w-2
+    // A U-shaped winding with a genuine inward return and a free exit ray.
+    add(s to h,Dir.entries.first{it.x==-dir.x&&it.y==-dir.y} to w,
+     Dir.entries.first{it.x==-s.x&&it.y==-s.y} to (h-1),dir to inner)
+   }
   }
-  return Level(seed,stage,size,arrows,height).also{
-   check(Rules.solve(it)!=null)
-   check(blueprint==null || blueprint.requiredEdges.all{edge->edge.first in it.dependencies.requiredRemovals[edge.second].orEmpty()})
+  return result
+ }
+ private fun construct(stage:Int,seed:Long,aspect:Float):Level {
+  val width=BoardProfile.size(stage)
+  val height=BoardProfile.height(stage,aspect)
+  val count=BoardProfile.count(stage)
+  val blueprint=PatternConstruction.blueprint(stage,minOf(width,height),seed)
+  val arrows=mutableListOf<Arrow>()
+  if(blueprint!=null){
+   val off=Pt((width-minOf(width,height))/2,(height-minOf(width,height))/2)
+   arrows.addAll(blueprint.arrows.map{a->Arrow(a.id,a.x+off.x,a.y+off.y,
+    a.length,a.dir,a.bends.map{Pt(it.x+off.x,it.y+off.y)})})
   }
+  val templates=shapes(stage)
+  val occupied=arrows.flatMapTo(mutableSetOf()){it.cells()}
+  val random=Random(seed xor (stage.toLong()*127773L))
+  // A fixed permutation makes the construction different for every seed,
+  // without relying on a series of random failed complete boards.
+  val order=templates.indices.shuffled(random)
+  val cellsPerArrow=templates.map{shape->
+   val points=shape.offsets
+   points.zipWithNext().sumOf{(a,b)->kotlin.math.abs(a.x-b.x)+kotlin.math.abs(a.y-b.y)}+1
+  }
+  fun choose(id:Int):Arrow?{
+   val remaining=count-id
+   val targetComplexity=when{
+    stage>=24 && id in 3..5->4
+    stage>=12 && id in 3..6->3
+    stage>=2 && id<count/2->2
+    else->1
+   }
+   val usedBands=arrows.flatMap{it.cells()}.groupingBy{
+    (it.x*3/width) to (it.y*3/height)
+   }.eachCount()
+   val candidates=mutableListOf<Pair<Int,Arrow>>()
+   for(index in order){
+    val shape=templates[index]
+    val segments=shape.offsets.size-1
+    if(stage<=5 && segments>2)continue
+    if(id>=count*3/4 && cellsPerArrow[index]>5)continue
+    val minX=shape.offsets.minOf{it.x}
+    val maxX=shape.offsets.maxOf{it.x}
+    val minY=shape.offsets.minOf{it.y}
+    val maxY=shape.offsets.maxOf{it.y}
+    for(y in -minY until height-maxY)for(x in -minX until width-maxX){
+     val a=shape.place(id,x,y)
+     val body=a.cells()
+     if(body.size!=cellsPerArrow[index] || body.any{it in occupied})continue
+     if(!Rules.selfClear(a,width,height))continue
+     // Reverse construction invariant: this arrow exits with all older arrows present.
+     if(!Rules.free(a,arrows+a,width,height))continue
+     val unlocked=arrows.count{old->Rules.exitPath(old,width,height).any{it in body}}
+     val centerX=body.sumOf{it.x}/body.size
+     val centerY=body.sumOf{it.y}/body.size
+     val band=(centerX*3/width) to (centerY*3/height)
+     val coverage=-(usedBands[band]?:0)*2
+     val preference=if(segments==targetComplexity)95 else if(segments>1 && id<count/2)22 else 0
+     val links=if(id<=3)unlocked*12 else unlocked*35
+     val isolation=if(occupied.isEmpty())0 else body.minOf{p->occupied.minOf{q->
+      kotlin.math.abs(p.x-q.x)+kotlin.math.abs(p.y-q.y)
+     }}
+     val distancePenalty=(isolation-4).coerceAtLeast(0)*6
+     val score=preference+links+coverage-distancePenalty+
+      (if(segments>=3)15 else 0)+random.nextInt(12)
+     candidates.add(score to a)
+    }
+   }
+   return candidates.maxByOrNull{it.first}?.second
+  }
+  for(id in arrows.size until count){
+   val a=choose(id)?:error("Cannot construct arrow $id at stage $stage")
+   arrows.add(a)
+   occupied.addAll(a.cells())
+  }
+  val level=Level(seed,stage,width,arrows,height)
+  check(Rules.solve(level)!=null)
+  check(blueprint==null || blueprint.requiredEdges.all{(blocker,blocked)->
+   blocker in level.dependencies.requiredRemovals[blocked].orEmpty()
+  })
+  return level
  }
 }
 class Game(val level:Level,val maxLives:Int=5,val maxHints:Int=3){
