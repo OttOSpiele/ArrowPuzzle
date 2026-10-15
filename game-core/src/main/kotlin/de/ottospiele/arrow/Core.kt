@@ -345,6 +345,24 @@ class Generator {
     stage>=2 && id<count/2->2
     else->1
    }
+   // Reuse geometry of all previously built arrows for this placement step.
+   val priorRays=arrows.map{Rules.exitPath(it,width,height).toSet()}
+   val distances=Array(height){IntArray(width){Int.MAX_VALUE/2}}
+   if(occupied.isNotEmpty()){
+    val queue=ArrayDeque<Pt>()
+    occupied.forEach{p->distances[p.y][p.x]=0;queue.addLast(p)}
+    while(queue.isNotEmpty()){
+     val p=queue.removeFirst()
+     val next=distances[p.y][p.x]+1
+     for(d in Dir.entries){
+      val nx=p.x+d.x;val ny=p.y+d.y
+      if(nx in 0 until width && ny in 0 until height && next<distances[ny][nx]){
+       distances[ny][nx]=next
+       queue.addLast(Pt(nx,ny))
+      }
+     }
+    }
+   }
    val usedBands=arrows.flatMap{it.cells()}.groupingBy{
     (it.x*3/width) to (it.y*3/height)
    }.eachCount()
@@ -371,17 +389,15 @@ class Generator {
      if(body.size!=cellsPerArrow[index] || body.any{it in occupied})continue
      if(!Rules.selfClear(a,width,height))continue
      // Reverse construction invariant: this arrow exits with all older arrows present.
-     if(!Rules.free(a,arrows+a,width,height))continue
-     val unlocked=arrows.count{old->Rules.exitPath(old,width,height).any{it in body}}
+     if(Rules.exitPath(a,width,height).any{it in occupied})continue
+     val unlocked=priorRays.count{ray->body.any{it in ray}}
      val centerX=body.sumOf{it.x}/body.size
      val centerY=body.sumOf{it.y}/body.size
      val band=(centerX*3/width) to (centerY*3/height)
      val coverage=-(usedBands[band]?:0)*2
      val preference=if(segments==targetComplexity)95 else if(segments>1 && id<count/2)22 else 0
      val links=if(id<=3)unlocked*12 else unlocked*35
-     val isolation=if(occupied.isEmpty())0 else body.minOf{p->occupied.minOf{q->
-      kotlin.math.abs(p.x-q.x)+kotlin.math.abs(p.y-q.y)
-     }}
+     val isolation=if(occupied.isEmpty())0 else body.minOf{p->distances[p.y][p.x]}
      val distancePenalty=(isolation-4).coerceAtLeast(0)*6
      val score=preference+links+coverage-distancePenalty+
       (if(segments>=3)15 else 0)+random.nextInt(12)
