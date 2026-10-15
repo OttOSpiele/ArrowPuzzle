@@ -1,6 +1,7 @@
 package de.ottospiele.app
 
 import android.os.Bundle
+import java.util.Properties
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -46,6 +47,14 @@ class MainActivity:ComponentActivity(){
  val screenAspect=remember{
   val metrics=context.resources.displayMetrics
   metrics.widthPixels.toFloat()/metrics.heightPixels.coerceAtLeast(1)
+ }
+ val previewHoldMillis=remember(context){
+  runCatching {
+   val properties=Properties()
+   context.assets.open("game-defaults.properties").use{properties.load(it)}
+   properties.getProperty("arrowPreviewHoldMillis")?.trim()?.toLongOrNull()
+    ?.coerceIn(100L,5000L) ?: 400L
+  }.getOrDefault(400L)
  }
  val saved=remember{LocalSave.read(context)}
  var progress by remember{mutableStateOf(saved?.progress?:Progress())}
@@ -216,7 +225,7 @@ class MainActivity:ComponentActivity(){
   }
 
   Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,invalid,
-   flights.toList(),occupiedEver,traveledCells,Modifier.weight(1f).fillMaxWidth()){
+   flights.toList(),occupiedEver,traveledCells,Modifier.weight(1f).fillMaxWidth(),previewHoldMillis){
    if(dialog.isNotEmpty() || game.lost || (!concurrent && flights.isNotEmpty()) || flights.any{f->f.id==it})return@Board
    val arrow=game.remaining.firstOrNull{a->a.id==it}?:return@Board
    val plan=Rules.plan(arrow,game.level,game.remaining.map{a->a.id}.toSet())
@@ -435,11 +444,11 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
  repeat(15){try{return Game(Generator().generate(stage,Random.nextLong(),aspect),lives,hints)}catch(_:Exception){}}
  error("Cannot generate a valid level")
 }
-@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,onTap:(Int)->Unit){
+@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,previewHoldMillis:Long,onTap:(Int)->Unit){
  val arrows=level.arrows.filter{it.id in remaining}
  var previewId by remember(level){mutableStateOf<Int?>(null)}
  Canvas(modifier.clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(Color.White,Color(0xFFF9FBFF))))
-  .pointerInput(level,remaining,flights.map{it.id}){
+  .pointerInput(level,remaining,flights.map{it.id},previewHoldMillis){
    coroutineScope {
     awaitEachGesture {
     val down=awaitFirstDown(requireUnconsumed=false)
@@ -448,7 +457,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
     val selected=ArrowTouch.select(level,remaining,down.position.x/sx-.5f,down.position.y/sy-.5f)
     var active=selected!=null
     val previewJob=if(selected!=null)launch {
-     delay(1000)
+     delay(previewHoldMillis)
      previewId=selected
     }else null
     var released=false
