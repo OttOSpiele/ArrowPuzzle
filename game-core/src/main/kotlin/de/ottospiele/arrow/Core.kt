@@ -293,7 +293,10 @@ class Generator {
   // retained as a safe fallback while the family catalogue is being expanded.
   val planned=if(stage in 6..16) {
    val graph=DependencyPlanner.plan(stage,seed,count,anchors.size)
+   // One logical plan, two reproducible geometric search orders. A failed
+   // embedding must never force a different level seed or block gameplay.
    GeometricBacktracker.place(graph,stage,seed,width,height,anchors,maxNodes=1200)
+    ?:GeometricBacktracker.place(graph,stage,seed xor 0x5eedL,width,height,anchors,maxNodes=1200)
   } else null
   val raw=if(planned!=null) Level(seed,stage,width,planned.arrows,height)
    else construct(stage,seed,normalized)
