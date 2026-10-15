@@ -379,6 +379,21 @@ class Generator {
   val count=BoardProfile.count(stage)
   val blueprint=PatternConstruction.blueprint(stage,minOf(width,height),seed)
   val arrows=mutableListOf<Arrow>()
+  var realizedGroup:DependencyPlan?=null
+  // In later stages, build a connected, seed-dependent dependency group
+  // BEFORE greedy filling. The group is a DAG, not a hardcoded visual motif.
+  // Its geometry is backed by bounded DFS and individually verified.
+  if(stage>=35) {
+   val groupSize=minOf(7,count)
+   val groupPlan=DependencyPlanner.plan(stage,seed,groupSize)
+   val group=GeometricBacktracker.place(
+    groupPlan,stage,seed,width,height,maxNodes=800
+   )
+   if(group!=null) {
+    arrows.addAll(group.arrows)
+    realizedGroup=groupPlan
+   }
+  }
   if(blueprint!=null){
    val off=Pt((width-minOf(width,height))/2,(height-minOf(width,height))/2)
    arrows.addAll(blueprint.arrows.map{a->Arrow(a.id,a.x+off.x,a.y+off.y,
@@ -485,6 +500,9 @@ class Generator {
   }
   val level=Level(seed,stage,width,arrows,height)
   check(Rules.solve(level)!=null)
+  check(realizedGroup==null || realizedGroup!!.edges.all { (from,to)->
+   from in level.dependencies.requiredRemovals[to].orEmpty()
+  })
   check(blueprint==null || blueprint.requiredEdges.all{(blocker,blocked)->
    blocker in level.dependencies.requiredRemovals[blocked].orEmpty()
   })
