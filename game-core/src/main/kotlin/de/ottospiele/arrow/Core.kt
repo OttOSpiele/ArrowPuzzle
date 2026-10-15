@@ -383,7 +383,7 @@ class Generator {
   // In later stages, build a connected, seed-dependent dependency group
   // BEFORE greedy filling. The group is a DAG, not a hardcoded visual motif.
   // Its geometry is backed by bounded DFS and individually verified.
-  if(stage>=35) {
+  if(enableNested && stage>=35) {
    val groupSize=minOf(5,count)
    val groupPlan=DependencyPlanner.plan(stage,seed,groupSize)
    val group=GeometricBacktracker.place(
