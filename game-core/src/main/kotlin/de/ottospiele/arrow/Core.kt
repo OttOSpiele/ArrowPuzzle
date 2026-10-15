@@ -225,7 +225,9 @@ data class PatternBlueprint(val arrows:List<Arrow>,val requiredEdges:Set<Pair<In
 }
 object PatternConstruction {
  fun blueprint(stage:Int,size:Int,seed:Long=0L):PatternBlueprint?{
-  if(stage<=5)return null
+  // High stages no longer reserve the same three final arrows on every board.
+  // Their dependencies arise from the complete reverse construction instead.
+  if(stage<=5 || stage>=35)return null
   val m=size/2
   val a=Arrow(0,m-5,m-1,2,Dir.RIGHT)
   val b=if(stage>=17)Arrow(1,m+5,m+1,2,Dir.LEFT)
@@ -451,7 +453,14 @@ class Generator {
      val band=(centerX*3/width) to (centerY*3/height)
      val coverage=-(usedBands[band]?:0)*2
      val preference=if(segments==targetComplexity)95 else if(segments>1 && id<count/2)22 else 0
-     val links=if(id<=3)unlocked*12 else unlocked*35
+     // Later stages favor shared unlocking relations over isolated arrows.
+     // Do not make this a hard constraint: the reverse builder must always
+     // retain room for an exit-ready arrow.
+     val links=when {
+      stage>=35 && id>=count/3 -> unlocked*65
+      id<=3 -> unlocked*12
+      else -> unlocked*35
+     }
      val isolation=if(occupied.isEmpty())0 else body.minOf{p->distances[p.y][p.x]}
      val distancePenalty=(isolation-4).coerceAtLeast(0)*6
      val densityWeight=when {
