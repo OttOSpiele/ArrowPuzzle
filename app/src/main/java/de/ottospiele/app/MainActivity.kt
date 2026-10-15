@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.StrokeCap
@@ -435,14 +436,37 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
 }
 @Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,onTap:(Int)->Unit){
  val arrows=level.arrows.filter{it.id in remaining}
+ var previewId by remember(level){mutableStateOf<Int?>(null)}
  Canvas(modifier.clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(Color.White,Color(0xFFF9FBFF))))
   .pointerInput(level,remaining,flights.map{it.id}){
-   detectTapGestures{position->
-    val sx=size.width.toFloat()/level.size
+   awaitEachGesture {
+    val down=awaitFirstDown(requireUnconsumed=false)
+    val sx=size.width.toFloat()/level.width
     val sy=size.height.toFloat()/level.height
-    val x=position.x/sx-.5f
-    val y=position.y/sy-.5f
-    ArrowTouch.select(level,remaining,x,y)?.let(onTap)
+    val selected=ArrowTouch.select(level,remaining,down.position.x/sx-.5f,down.position.y/sy-.5f)
+    var active=selected!=null
+    previewId=selected
+    var released=false
+    do {
+     val event=awaitPointerEvent()
+     val pointer=event.changes.firstOrNull{it.id==down.id}
+     if(pointer==null || !pointer.pressed){
+      released=pointer?.changedToUpIgnoreConsumed()==true
+      break
+     }
+     if(active && selected!=null){
+      val arrow=level.arrows.first{it.id==selected}
+      val px=pointer.position.x/sx-.5f
+      val py=pointer.position.y/sy-.5f
+      val near=arrow.cells().any{p->
+       val dx=p.x-px;val dy=p.y-py
+       dx*dx+dy*dy<=1.35f*1.35f
+      }
+      if(!near){active=false;previewId=null}
+     }
+    }while(true)
+    previewId=null
+    if(active && released && selected!=null)onTap(selected)
    }
   }){
   val sx=size.width/level.width;val sy=size.height/level.height
@@ -476,6 +500,21 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
    }
    drawCircle(if(power>0f)Color(0xFF655AD2) else if(p in currentTrail)Color(0xFFA4A8EE) else Color(0xFFBFCBE7),
     radius=(cell*(if(power>0f).17f else .125f)).coerceAtLeast(1.65f),center=point)
+  }
+  // Draw behind every arrow: full projected exit ray, even through blockers.
+  previewId?.let{id->
+   arrows.firstOrNull{it.id==id}?.let{arrow->
+    val head=arrow.body().last()
+    val exit=Rules.exitPath(arrow,level.width,level.height)
+    val last=exit.lastOrNull()
+    if(last!=null){
+     val origin=Offset((head.x+.5f)*sx,(head.y+.5f)*sy)
+     val finish=Offset((last.x+.5f)*sx,(last.y+.5f)*sy)
+     drawLine(Color(0xFF7366D9).copy(alpha=.60f),origin,finish,
+      strokeWidth=(cell*.10f).coerceAtLeast(2f),
+      pathEffect=PathEffect.dashPathEffect(floatArrayOf(cell*.32f,cell*.20f)))
+    }
+   }
   }
   val allVisible=arrows.filter{a->flights.none{f->f.id==a.id}}.map{it to (it.body() to false)}+flights.mapNotNull{f->level.arrows.firstOrNull{it.id==f.id}?.let{a->a to (f.plan.frame(f.step) to f.failed)}}
   allVisible.forEach{(a,shape)->
