@@ -354,12 +354,18 @@ class Generator {
     val shape=templates[index]
     val segments=shape.offsets.size-1
     if(stage<=5 && segments>2)continue
-    if(id>=count*3/4 && cellsPerArrow[index]>5)continue
+    // Reserve the expansive shapes for early motifs; late filling must be cheap.
+    if(id>=count*3/4 && (segments!=1 || cellsPerArrow[index]>4))continue
+    if(id>=count/2 && segments>2)continue
+    if(id<count/2 && targetComplexity>=3 && segments==2)continue
     val minX=shape.offsets.minOf{it.x}
     val maxX=shape.offsets.maxOf{it.x}
     val minY=shape.offsets.minOf{it.y}
     val maxY=shape.offsets.maxOf{it.y}
     for(y in -minY until height-maxY)for(x in -minX until width-maxX){
+     // Deterministic sub-lattice sampling reduces candidate churn without
+     // introducing random failed whole-board generation passes.
+     if(id<count/2 && (x+y+index+id)%2!=0)continue
      val a=shape.place(id,x,y)
      val body=a.cells()
      if(body.size!=cellsPerArrow[index] || body.any{it in occupied})continue
