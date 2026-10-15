@@ -474,6 +474,21 @@ class Generator {
      val centerY=body.sumOf{it.y}/body.size
      val band=(centerX*3/width) to (centerY*3/height)
      val coverage=-(usedBands[band]?:0)*2
+     // Prefer unused interior cells and paths touching existing arrow bodies.
+     // The condition remains soft; the exit-ray invariant is mandatory.
+     val interiorCells=body.count { p ->
+      p.x>=2 && p.y>=2 && p.x<width-2 && p.y<height-2
+     }
+     val contact=body.sumOf { p ->
+      Dir.entries.count { d -> Pt(p.x+d.x,p.y+d.y) in occupied }
+     }
+     val centerVacancy=if(stage>=35) {
+      val middle=Pt(width/2,height/2)
+      body.count { p ->
+       kotlin.math.abs(p.x-middle.x)<=width/4 &&
+       kotlin.math.abs(p.y-middle.y)<=height/4
+      }
+     } else 0
      val preference=if(segments==targetComplexity)95 else if(segments>1 && id<count/2)22 else 0
      // Later stages favor shared unlocking relations over isolated arrows.
      // Do not make this a hard constraint: the reverse builder must always
@@ -497,7 +512,9 @@ class Generator {
      // puzzle instead of merely accumulating redundant blocker edges.
      val freeReduction=if(stage>=35) newlyBlocked*100 else 0
      val directionBalance=if(stage>=35) -(existingDirections[a.dir]?:0)*4 else 0
-     val score=preference+links+freeReduction+directionBalance+coverage-distancePenalty+
+     val fillInterior=if(stage>=35 && id<count*3/4)
+      interiorCells*9+centerVacancy*12+contact*7 else 0
+     val score=preference+links+freeReduction+directionBalance+fillInterior+coverage-distancePenalty+
       (if(segments>=3)15 else 0)+cellsPerArrow[index]*densityWeight+random.nextInt(12)
      if(score>winningScore){winningScore=score;winner=a}
     }
