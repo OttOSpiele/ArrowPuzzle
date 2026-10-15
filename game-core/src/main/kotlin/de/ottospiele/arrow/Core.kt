@@ -343,6 +343,18 @@ class Generator {
     add(s to h,Dir.entries.first{it.x==-dir.x&&it.y==-dir.y} to w,
      Dir.entries.first{it.x==-s.x&&it.y==-s.y} to (h+2),dir to inner)
    }
+   // Interleaved corridors inspired by dense maze-like puzzles. Each path
+   // remains a single ordered snake; the terminal ray stays outside its
+   // own body. Geometry is still independently checked at placement.
+   if(stage>=35)for(s in side){
+    val opposite=Dir.entries.first{it.x==-dir.x && it.y==-dir.y}
+    val reverse=Dir.entries.first{it.x==-s.x && it.y==-s.y}
+    for(span in 3..4) {
+     // Wide open spiral / nested U, with an outward-facing final segment.
+     add(s to span,opposite to (span+2),reverse to (span+2),
+      dir to (span+4),s to 1,dir to 2)
+    }
+   }
    if(stage>=60)for(s in side) {
     val opposite=Dir.entries.first{it.x==-dir.x && it.y==-dir.y}
     val reverse=Dir.entries.first{it.x==-s.x && it.y==-s.y}
@@ -377,6 +389,7 @@ class Generator {
   }
   fun choose(id:Int):Arrow?{
    val targetComplexity=when{
+    stage>=35 && id in 3..5->6
     stage>=24 && id in 3..5->4
     stage>=12 && id in 3..6->3
     stage>=2 && id<count/2->2
