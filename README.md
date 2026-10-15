@@ -150,6 +150,9 @@ Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbi
 
 ## Dokumentationsstand / Änderungsverlauf
 
+- **15.10.2026 – Korrektur Build #146:** Sechssegmentige Korridorformen führten zu Platzierungssackgassen in hohen Stufen. Konstruktion versucht jetzt deterministisch zunächst den erweiterten Formenkatalog und wiederholt bei Scheitern den vollständigen Aufbau mit dem bisherigen Katalog. Die neuen Muster sind damit weiterhin experimentell und nicht für jedes Level garantiert.
+
+
 - **15.10.2026 – Verschachtelte Korridorformen:** Referenzbilder komplexer Pfeilrätsel als geometrische Anregung ausgewertet. Ab Stufe 35 ergänzen offene sechssegmentige Wickelformen den Katalog, um lange Korridore, U-Kehren und ineinanderliegende Verläufe zu ermöglichen. Reverse-Konstruktion, Selbstüberschneidungsprüfung und Solver bleiben verbindlich. Seed-/Seitenverhältnistests ergänzt; tatsächliche Häufigkeit und 100%-Dichte sind noch nicht garantiert.
 
 
