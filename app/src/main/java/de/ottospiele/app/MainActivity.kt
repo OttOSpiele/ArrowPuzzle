@@ -1,6 +1,9 @@
 package de.ottospiele.app
 
 import android.os.Bundle
+import android.content.pm.ApplicationInfo
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -49,6 +52,8 @@ class MainActivity:ComponentActivity(){
  }
  val defaults=remember(context){GameDefaults.load(context)}
  val previewHoldMillis=defaults.previewHoldMillis
+ val canAdjustStage=defaults.showStageAdjustment &&
+  (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0)
  val saved=remember{LocalSave.read(context)}
  var progress by remember{mutableStateOf(saved?.progress?:Progress())}
  var lives by remember{mutableIntStateOf(saved?.lifeSetting?:defaults.lives)}
@@ -70,6 +75,9 @@ class MainActivity:ComponentActivity(){
  var settings by remember{mutableStateOf(false)}
  var menuOpen by remember{mutableStateOf(false)}
  var aboutOpen by remember{mutableStateOf(false)}
+ var stageInput by remember{mutableStateOf("")}
+ var stageLoading by remember{mutableStateOf(false)}
+ var stageError by remember{mutableStateOf(false)}
  var concurrent by remember{mutableStateOf(saved?.concurrent?:defaults.concurrentArrows)}
  var speed by remember{mutableIntStateOf(saved?.speed?:defaults.animationSpeed)}
  val flights=remember{mutableStateListOf<Flight>()}
@@ -177,6 +185,9 @@ class MainActivity:ComponentActivity(){
     }
     DropdownMenu(expanded=menuOpen,onDismissRequest={menuOpen=false}){
      DropdownMenuItem(text={Text("⚙  Einstellungen")},onClick={menuOpen=false;settings=true})
+     if(canAdjustStage)DropdownMenuItem(text={Text("↕  Stufe anpassen")},onClick={
+      menuOpen=false;stageInput=progress.stage.toString();stageError=false;dialog="stufeAnpassen"
+     })
      DropdownMenuItem(text={Text("ⓘ  Über das Spiel")},onClick={menuOpen=false;aboutOpen=true})
     }
    }
@@ -272,6 +283,51 @@ class MainActivity:ComponentActivity(){
   }
 
  }
+ if(canAdjustStage && dialog=="stufeAnpassen")AlertDialog(
+  onDismissRequest={if(!stageLoading)dialog=""},
+  title={Text("Stufe anpassen (Test)")},
+  text={
+   Column(verticalArrangement=Arrangement.spacedBy(10.dp)){
+    Text("Wähle eine Stufe. Das aktuelle Rätsel und der Stufenfortschritt werden ersetzt.")
+    OutlinedTextField(
+     value=stageInput,
+     onValueChange={value->if(!stageLoading){stageInput=value.filter{it.isDigit()}.take(4);stageError=false}},
+     label={Text("Stufe (1–9999)")},
+     singleLine=true,
+     enabled=!stageLoading,
+     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
+     isError=stageInput.toIntOrNull() !in 1..9999
+    )
+    if(stageError)Text("Rätsel konnte nicht erstellt werden. Bitte erneut versuchen.",
+     color=MaterialTheme.colorScheme.error)
+    if(stageLoading)CircularProgressIndicator()
+   }
+  },
+  confirmButton={
+   Button(
+    enabled=!stageLoading && stageInput.toIntOrNull() in 1..9999,
+    onClick={
+     val selected=stageInput.toIntOrNull()?:return@Button
+     stageLoading=true;stageError=false
+     scope.launch {
+      val ready=runCatching {withContext(Dispatchers.Default){
+       fresh(selected,lives,hints,screenAspect)
+      }}.getOrNull()
+      stageLoading=false
+      if(ready==null){stageError=true}else{
+       stopFlights()
+       progress=Progress(selected,0)
+       game=ready
+       highlighted=null;invalid=null;traveledCells=emptySet();revision++
+       nextGame=null;nextProgress=null;defeatPrepared=null
+       winScreen=false;defeatScreen=false;dialog=""
+      }
+     }
+    }
+   ){Text("Stufe starten")}
+  },
+  dismissButton={TextButton(enabled=!stageLoading,onClick={dialog=""}){Text("Abbrechen")}}
+ )
  if(dialog=="stufeZurueck")AlertDialog(
   onDismissRequest={dialog=""},
   title={Text("Wirklich eine Stufe zurück?",fontWeight=FontWeight.Bold)},
