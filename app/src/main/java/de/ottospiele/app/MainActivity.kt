@@ -176,7 +176,11 @@ class MainActivity:ComponentActivity(){
    .safeDrawingPadding().padding(horizontal=20.dp,vertical=14.dp),
   verticalArrangement=Arrangement.spacedBy(14.dp)
  ){
-  Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+  BoxWithConstraints(Modifier.fillMaxWidth()) {
+   if(maxWidth<650.dp) {
+    Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+      horizontalArrangement=Arrangement.spacedBy(10.dp)) {
    Box {
     FilledTonalIconButton(
      onClick={menuOpen=true},
@@ -192,9 +196,67 @@ class MainActivity:ComponentActivity(){
      DropdownMenuItem(text={Text("ⓘ  Über das Spiel")},onClick={menuOpen=false;aboutOpen=true})
     }
    }
-   Column(Modifier.weight(1f)){
-    Text("OttOSpiele",fontSize=27.sp,fontWeight=FontWeight.Bold,color=Color(0xFF24294B))
-    Text("ARROW PUZZLE",fontSize=11.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF7E84A6),letterSpacing=2.sp)
+   Column(Modifier.weight(1f)) {
+    Text("OttOSpiele",fontSize=25.sp,fontWeight=FontWeight.Bold,color=Color(0xFF24294B),maxLines=1)
+    Text("ARROW PUZZLE",fontSize=11.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF7E84A6),letterSpacing=2.sp,maxLines=1)
+   }
+     }
+     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+      horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+   Button(
+    onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
+    modifier=Modifier.weight(1f).height(58.dp),shape=RoundedCornerShape(17.dp),
+    contentPadding=PaddingValues(horizontal=4.dp),
+    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8),contentColor=Color.White)){
+    Column(horizontalAlignment=Alignment.CenterHorizontally){
+     Text("↻",fontSize=22.sp,fontWeight=FontWeight.Bold)
+     Text("Neustart",fontSize=11.sp,fontWeight=FontWeight.Bold)
+    }
+   }
+   Button(
+    onClick={dialog="stufeZurueck"},
+    modifier=Modifier.weight(1f).height(58.dp),shape=RoundedCornerShape(17.dp),
+    contentPadding=PaddingValues(horizontal=4.dp),
+    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7955CE),contentColor=Color.White)){
+    Column(horizontalAlignment=Alignment.CenterHorizontally){
+     Text("↓",fontSize=22.sp,fontWeight=FontWeight.Bold)
+     Text("Stufe zurück",fontSize=11.sp,fontWeight=FontWeight.Bold,maxLines=1)
+    }
+   }
+   Button(
+    onClick={highlighted=game.hint();invalid=null;revision++},
+    enabled=game.hints!=0 && !game.lost && !game.won,
+    modifier=Modifier.weight(1f).height(58.dp),shape=RoundedCornerShape(17.dp),
+    contentPadding=PaddingValues(horizontal=4.dp),
+    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF158B65),contentColor=Color.White)){
+    Column(horizontalAlignment=Alignment.CenterHorizontally){
+     Text("💡",fontSize=21.sp)
+     Text("Tipp",fontSize=11.sp,fontWeight=FontWeight.Bold)
+    }
+   }
+     }
+    }
+   } else {
+    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+     horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+   Box {
+    FilledTonalIconButton(
+     onClick={menuOpen=true},
+     modifier=Modifier.size(56.dp),
+     colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=Color.White)){
+     Text("☰",fontSize=27.sp,color=Color(0xFF5662A7))
+    }
+    DropdownMenu(expanded=menuOpen,onDismissRequest={menuOpen=false}){
+     DropdownMenuItem(text={Text("⚙  Einstellungen")},onClick={menuOpen=false;settings=true})
+     if(canAdjustStage)DropdownMenuItem(text={Text("↕  Stufe anpassen")},onClick={
+      menuOpen=false;stageInput=progress.stage.toString();stageError=false;dialog="stufeAnpassen"
+     })
+     DropdownMenuItem(text={Text("ⓘ  Über das Spiel")},onClick={menuOpen=false;aboutOpen=true})
+    }
+   }
+   Column(Modifier.weight(1f)) {
+    Text("OttOSpiele",fontSize=25.sp,fontWeight=FontWeight.Bold,color=Color(0xFF24294B),maxLines=1)
+    Text("ARROW PUZZLE",fontSize=11.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF7E84A6),letterSpacing=2.sp,maxLines=1)
    }
    Button(
     onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
@@ -225,6 +287,8 @@ class MainActivity:ComponentActivity(){
     Column(horizontalAlignment=Alignment.CenterHorizontally){
      Text("💡",fontSize=21.sp)
      Text("Tipp",fontSize=11.sp,fontWeight=FontWeight.Bold)
+    }
+   }
     }
    }
   }
