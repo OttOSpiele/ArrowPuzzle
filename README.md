@@ -150,6 +150,9 @@ Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbi
 
 ## Dokumentationsstand / Änderungsverlauf
 
+- **15.10.2026 – Qualitätsoptimierung nach Gerätetests:** Die Screenshots der Stufen 35/45/60 zeigen trotz erster Gruppenplanung weiterhin viele sofort freie Randpfeile und große freie Rasterbereiche. Die geometrische Kandidatenbewertung berücksichtigt ab Stufe 35 nun zusätzlich, wie viele **bislang freie** Pfeile durch einen neu eingefügten Pfeil tatsächlich blockiert werden. Redundante Graphkanten zu bereits blockierten Pfeilen werden dadurch relativ abgewertet; eine geringe Richtungsbalancierung vermindert wiederholte Randpfeil-Ansammlungen. Tests prüfen die wirkliche Anfangsfreiheit anhand der Kollisionsgeometrie über Seeds und Seitenverhältnisse. Qualitätsquoten und vollständige räumliche Verschachtelung sind weiterhin offen.
+
+
 - **15.10.2026 – Geplante vernetzte Startgruppen:** Nach erfolgreichem Build #153 erzeugt der Generator ab Stufe 35 versuchsweise eine seedabhängige, logisch zusammenhängende Gruppe aus fünf Pfeilen über den DependencyPlanner und einen geometrischen DFS mit maximal 160 Knoten. Die Gruppe wird vor der restlichen Belegung platziert und ihre geplanten Abhängigkeiten werden am fertigen Level überprüft. Falls die Suche oder die anschließende vollständige Konstruktion scheitert, wird der bewährte Konstruktor ohne vorgeplante Gruppe verwendet. Die tatsächliche Realisierungsquote und die Zahl anfänglich freier Pfeile sind noch nicht statistisch abgesichert; insbesondere sind verschachtelte Spiralformen und hohe Dichte keine garantierten Eigenschaften.
 
 
