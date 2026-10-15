@@ -150,6 +150,9 @@ Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbi
 
 ## Dokumentationsstand / Änderungsverlauf
 
+- **15.10.2026 – Nutzerfeedback Stufe 45/60:** Screenshotanalyse ergab wiederkehrende Dreier-Restgruppe. Ursache war ein identischer Blueprint-Anker aus drei früh eingebauten und deshalb zuletzt entfernbaren Pfeilen. Ab Stufe 35 wird dieses feste Motiv nicht mehr vorgegeben; die Pfeile entstehen aus der seedabhängigen Rückwärtskonstruktion. Eine höhere Bewertung realisierter Blockierbeziehungen soll unabhängig freie Pfeile reduzieren. Die tatsächliche Anfangsfreiheit und Restgruppenqualität müssen weiterhin quantitativ evaluiert werden. Regressionstest zur Abwesenheit des festen Ankers ergänzt. Keine Garantie gegen einzelne freie Pfeile oder dreigliedrige Restgruppen.
+
+
 - **15.10.2026 – Smartphone-Hochformat:** Die bisher einzeilige, feste Werkzeugleiste drückte den App-Titel auf wenige Pixel Breite und beeinträchtigte die Darstellung des Spielfelds. Unter 650 dp nutzt die App nun zwei Zeilen: Logo/Titel und darunter drei gleichmäßig breite Aktionsbuttons. Tablet-/Breitbildlayout bleibt einzeilig. Android-CI und Geräteprüfung ausstehend.
 
 
