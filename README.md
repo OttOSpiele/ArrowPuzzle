@@ -150,6 +150,9 @@ Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbi
 
 ## Dokumentationsstand / Änderungsverlauf
 
+- **15.10.2026 – Smartphone-Hochformat:** Die bisher einzeilige, feste Werkzeugleiste drückte den App-Titel auf wenige Pixel Breite und beeinträchtigte die Darstellung des Spielfelds. Unter 650 dp nutzt die App nun zwei Zeilen: Logo/Titel und darunter drei gleichmäßig breite Aktionsbuttons. Tablet-/Breitbildlayout bleibt einzeilig. Android-CI und Geräteprüfung ausstehend.
+
+
 - **15.10.2026 – Korrektur Build #146:** Sechssegmentige Korridorformen führten zu Platzierungssackgassen in hohen Stufen. Konstruktion versucht jetzt deterministisch zunächst den erweiterten Formenkatalog und wiederholt bei Scheitern den vollständigen Aufbau mit dem bisherigen Katalog. Die neuen Muster sind damit weiterhin experimentell und nicht für jedes Level garantiert.
 
 
