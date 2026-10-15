@@ -165,6 +165,20 @@ class GameTest {
    assertNotNull(Rules.solve(level))
   }
  }
+ @Test fun stageQualityMetricsMatchActualGeometry() {
+  for(stage in listOf(17,35,45,60)) for(aspect in listOf(.7f,1f,1.5f)) {
+   val level=Generator().generate(stage,17L,aspect)
+   val metrics=PatternAnalysis.analyze(level)
+   val actualFree=level.arrows.count { a ->
+    Rules.blockers(a,level.arrows,level.width,level.height).isEmpty()
+   }
+   assertEquals(actualFree,metrics.initiallyFree)
+   assertTrue(metrics.initiallyFree in 1..level.arrows.size)
+   assertTrue(BoardProfile.actualOccupancy(level)>0f)
+   assertNotNull(Rules.solve(level))
+   assertEquals(level.arrows,Generator().generate(stage,17L,aspect).arrows)
+  }
+ }
  @Test fun highStageGroupPlansAreConnectedAndSeeded() {
   for(stage in listOf(35,60))for(seed in listOf(0L,7L,41L)){
    val plan=DependencyPlanner.plan(stage,seed,5)
