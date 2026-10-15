@@ -201,8 +201,8 @@ object BoardProfile {
  fun count(stage:Int):Int=when {
   stage<=5->stage.coerceAtLeast(1)+3
   stage<=24->(8+(stage-5)).coerceAtMost(20)
-  stage<=44->20+(stage-24)
-  else->(40+(stage-44)/4).coerceAtMost(100)
+  stage<=24->(8+(stage-5)).coerceAtMost(20)
+  else->(20+(stage-24)).coerceAtMost(40)
  }
  /** Long-term aspiration, not a hard promise: higher occupancy must never
   * displace solvability, readable paths, or predictable generation time. */
@@ -339,7 +339,7 @@ class Generator {
     add(s to h,Dir.entries.first{it.x==-dir.x&&it.y==-dir.y} to w,
      Dir.entries.first{it.x==-s.x&&it.y==-s.y} to (h+2),dir to inner)
    }
-   if(stage>=35)for(s in side) {
+   if(stage>=60)for(s in side) {
     val opposite=Dir.entries.first{it.x==-dir.x && it.y==-dir.y}
     val reverse=Dir.entries.first{it.x==-s.x && it.y==-s.y}
     // A readable, self-avoiding five-leg winding; longer paths consume more
@@ -373,7 +373,6 @@ class Generator {
   }
   fun choose(id:Int):Arrow?{
    val targetComplexity=when{
-    stage>=35 && id in 3..(count/3)->6
     stage>=24 && id in 3..5->4
     stage>=12 && id in 3..6->3
     stage>=2 && id<count/2->2
@@ -434,9 +433,9 @@ class Generator {
      val isolation=if(occupied.isEmpty())0 else body.minOf{p->distances[p.y][p.x]}
      val distancePenalty=(isolation-4).coerceAtLeast(0)*6
      val densityWeight=when {
-      stage>=80->10
-      stage>=45->6
-      stage>=24->3
+      stage>=80->3
+      stage>=45->2
+      stage>=24->1
       else->0
      }
      // Reward genuinely occupied cells, not merely long bounding boxes.
