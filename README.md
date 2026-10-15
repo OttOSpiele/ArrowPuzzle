@@ -1,6 +1,6 @@
 # OttOSpiele – Arrow Puzzle
 
-**Status:** Android-Entwicklungsprototyp · **Zweig:** `develop` · **Stand der Dokumentation:** 14.10.2026
+**Status:** Android-Entwicklungsprototyp · **Zweig:** `develop` · **Stand der Dokumentation:** 15.10.2026
 
 Ein offlinefähiges, vollständig werbefreies Pfeil-Denkspiel für Kinder. Das Spiel und seine Anforderungen werden vom Projektverantwortlichen vorgegeben; die bisherige Quellcodeentwicklung und diese Dokumentation erfolgten unter Verwendung von OpenAI ChatGPT (GPT-6). Ein erfolgreiches CI-Build ist keine Bestätigung der vollständigen funktionalen, rechtlichen oder kindgerechten Eignung.
 
@@ -67,7 +67,7 @@ Die Mustervorlagen sollen zuerst logische Blockierungsgraphen beschreiben, ansch
 | Android / Jetpack Compose | Startbar, Debug-APK über GitHub Actions | Gerätetests und UI-Politur |
 | Pfeilgeometrie | Gerade und einfach geknickte Pfeile; Datenmodell unterstützt weitere Knicke | Mehrfach geknickte und spiralförmige Pfeile gezielt generieren und überprüfen |
 | Kollisionslogik | Schlangen-Ausfahrpfad an der Spitze und vorberechnete ID-Abhängigkeitsmatrix | Erweiterte geometrische Fälle |
-| Generator/Solver | Rückwärts-konstruktiv lösbare Level, Solver, Seed-Determinismus und ab Stufe 6 echte geometrische Blueprint-Muster mit geprüften Graphkanten | Variationen statt festem Motiv, Kombinationen, Schwierigkeitseichung |
+| Generator/Solver | Rückwärts-konstruktiv lösbare Level; vollständiger logischer DAG-Planer und begrenztes geometrisches DFS-Backtracking als Versuch für Stufen 6–16 mit konstruktivem Fallback | Verlässliche Einbettung jedes Plans für alle Stufen, Mehrfachkanten, Spiralen, Dichte und Schwierigkeitseichung |
 | Analyse | Schlüsselpfeil-, Richtungswechsel-, Verzweigungs- und Kettenmetriken beeinflussen Kandidatenauswahl | Verlässliche Musterquoten und Qualitätstests über viele Seeds |
 | Spielregeln | Herzen 3/5, Tipps 0/1/3/5, Stufenprogression, Neustart/Stufe zurück, parallele Züge | Unbegrenzte Herzen/Tipps, Sonderfalltests, Speicherung |
 | Speicherung | Versionierter privater Snapshot mit Fortschritt, Optionen, aktivem Rätsel, Leben, Tipps und Fehlerhistorie | Gerätetests und künftige Speichermigration |
@@ -75,6 +75,14 @@ Die Mustervorlagen sollen zuerst logische Blockierungsgraphen beschreiben, ansch
 | Elternbereich/Donationware | Einfache Einstellungen vorhanden | Schutz, Spendenoption, rechtliche Prüfung |
 
 **Hinweis:** Die frühere prototypische Pattern-Engine darf nicht mit der aktuell veröffentlichten Android-Codebasis gleichgesetzt werden. Die explizite Komposition der Muster ist noch ein offener Entwicklungsschritt. Die App ist nicht releasefähig.
+
+## Abhängigkeitsplaner und geometrisches Backtracking (15.10.2026)
+
+Der neue `DependencyPlanner` plant zuerst einen vollständigen, seedabhängigen DAG: Für jeden nach dem ersten Pfeil einzusetzenden Pfeil wird eine logische Blockierbeziehung zu einem bereits geplanten Pfeil definiert. Die Planung ist unabhängig von Rasterkoordinaten und Seitenverhältnis. `GeometricBacktracker` sucht anschließend deterministisch nach kollisionsfreien orthogonalen Geometrien, prüft die vorgesehenen Kanten auf dem echten Ausfahrstrahl und nimmt erfolglose Platzierungen durch rekursives Backtracking zurück. Die umgekehrte Aufbaufolge sichert während der Suche die Lösbarkeit; am Ende validiert zusätzlich `Rules.solve` das Ergebnis.
+
+**Experimentelle Integration:** Aktuell wird dieses Verfahren auf Stufen 6–16 mit begrenztem Suchbudget versucht. Wenn keine geometrische Einbettung gelingt, greift weiterhin der bisherige konstruktive Generator. Andere Stufen verwenden noch ausschließlich den bisherigen Generator. Die logische Planung ist vollständig, **eine vollständige erfolgreiche geometrische Umsetzung jedes Plans ist derzeit nicht garantiert**. Bereits vorhandene Blueprint-Motive werden als Anker übernommen. Das Seed-Verhalten bleibt reproduzierbar; vorhandene Seed-Ausgaben können sich dadurch ändern.
+
+**Offen:** Geometrische Einbettung ohne Rückfall für alle Stufen und Seitenverhältnisse, mehrere Abhängigkeitskanten pro Pfeil, tiefere kombinierte Muster, gezielte Spiralkonstruktion statt lediglich komplexerer Mehrfachknicke, höhere Belegungsdichte mit quantitativen Mindestquoten und belastbare Performancegrenzen. Auch eine systematische Schwierigkeitskalibrierung steht aus.
 
 ## APK auf einem Android-Tablet testen
 
@@ -117,6 +125,9 @@ Rechtliche Quellen (Stand 14.10.2026):
 Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbindlich ist seit der Nutzerkorrektur ausschließlich das Schlangenmodell:** Der Körper folgt seiner eigenen Linie um Ecken; nur vor der Pfeilspitze werden neue Spielfeldzellen betreten. Ältere Einträge unten sind Entwicklungshistorie und keine aktuelle Spezifikation.
 
 ## Dokumentationsstand / Änderungsverlauf
+
+- **15.10.2026 – TODO 1/2, erste Integration:** Seedabhängiger vollständiger logischer DAG-Planer, geometrisches Backtracking mit Rücknahme von Platzierungen, experimentelle Anbindung für Stufen 6–16 und Regressionstests für Seeds, Stufen und Seitenverhältnisse. Bei fehlgeschlagener Einbettung verbleibt bewusst der bewährte konstruktive Fallback; vollständige geometrische Graphumsetzung, garantierte Spiralen und hohe Vernetzungsquote sind noch offen.
+
 
 - **14.10.2026 – Initiale Anforderungen:** Werbefreies Pfeilrätsel, konfigurierbare Leben und Tipps, Levelgenerierung, Progression und Monster.
 - **14.10.2026 – Fachliche Präzisierungen:** Dasselbe Rätsel nach Niederlage wiederholen; nur aktuellen Stufenfortschritt erhalten.
