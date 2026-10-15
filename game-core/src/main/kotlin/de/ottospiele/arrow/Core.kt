@@ -268,7 +268,23 @@ class Generator {
  fun generate(stage:Int,seed:Long,aspect:Float=1f):Level {
   val portrait=aspect<1f
   val normalized=if(portrait)1f/aspect.coerceAtLeast(.2f) else aspect
-  val raw=construct(stage,seed,normalized)
+  val width=BoardProfile.size(stage)
+  val height=BoardProfile.height(stage,normalized)
+  val count=BoardProfile.count(stage)
+  val blue=PatternConstruction.blueprint(stage,minOf(width,height),seed)
+  val anchors=blue?.let { blueprint ->
+   val off=Pt((width-minOf(width,height))/2,(height-minOf(width,height))/2)
+   blueprint.arrows.map { a -> Arrow(a.id,a.x+off.x,a.y+off.y,
+    a.length,a.dir,a.bends.map { Pt(it.x+off.x,it.y+off.y) }) }
+  }.orEmpty()
+  // Attempt a complete graph embedding first. The legacy reverse builder is
+  // retained as a safe fallback while the family catalogue is being expanded.
+  val planned=if(stage in 6..16) {
+   val graph=DependencyPlanner.plan(stage,seed,count,anchors.size)
+   GeometricBacktracker.place(graph,stage,seed,width,height,anchors,maxNodes=1200)
+  } else null
+  val raw=if(planned!=null) Level(seed,stage,width,planned.arrows,height)
+   else construct(stage,seed,normalized)
   return if(portrait)rotatePortrait(raw) else raw
  }
  private fun rotatePortrait(level:Level):Level {
