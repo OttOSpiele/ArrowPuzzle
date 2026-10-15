@@ -419,6 +419,12 @@ class Generator {
    }
    // Reuse geometry of all previously built arrows for this placement step.
    val priorRays=arrows.map{Rules.exitPath(it,width,height).toSet()}
+   // Reward blocking arrows that are STILL free. Blocking an already blocked
+   // arrow adds an edge but does not reduce the number of easy opening moves.
+   val freeRays=arrows.filter { a ->
+    Rules.exitPath(a,width,height).none { it in occupied && it !in a.cells() }
+   }.map { Rules.exitPath(it,width,height).toSet() }
+   val existingDirections=arrows.groupingBy { it.dir }.eachCount()
    val distances=Array(height){IntArray(width){Int.MAX_VALUE/2}}
    if(occupied.isNotEmpty()){
     val queue=ArrayDeque<Pt>()
@@ -463,6 +469,7 @@ class Generator {
      // Reverse construction invariant: this arrow exits with all older arrows present.
      if(Rules.exitPath(a,width,height).any{it in occupied})continue
      val unlocked=priorRays.count{ray->body.any{it in ray}}
+     val newlyBlocked=freeRays.count{ray->body.any{it in ray}}
      val centerX=body.sumOf{it.x}/body.size
      val centerY=body.sumOf{it.y}/body.size
      val band=(centerX*3/width) to (centerY*3/height)
@@ -486,7 +493,11 @@ class Generator {
      }
      // Reward genuinely occupied cells, not merely long bounding boxes.
      // Prefer connected dependencies even in densely packed stages.
-     val score=preference+links+coverage-distancePenalty+
+     // Key arrows that close several currently open exit paths make a real
+     // puzzle instead of merely accumulating redundant blocker edges.
+     val freeReduction=if(stage>=35) newlyBlocked*100 else 0
+     val directionBalance=if(stage>=35) -(existingDirections[a.dir]?:0)*4 else 0
+     val score=preference+links+freeReduction+directionBalance+coverage-distancePenalty+
       (if(segments>=3)15 else 0)+cellsPerArrow[index]*densityWeight+random.nextInt(12)
      if(score>winningScore){winningScore=score;winner=a}
     }
