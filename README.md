@@ -65,7 +65,7 @@ Die Mustervorlagen sollen zuerst logische Blockierungsgraphen beschreiben, ansch
 | --- | --- | --- |
 | Kotlin/JVM-Spielkern | Vorhanden, CI-Tests erfolgreich | Erweiterte Validierung und Lasttests |
 | Android / Jetpack Compose | Startbar, Debug-APK über GitHub Actions | Gerätetests und UI-Politur |
-| Pfeilgeometrie | Gerade, geknickte und in späteren Stufen längere Wickelformen; geometrische Selbstüberschneidung wird geprüft | Gezielte Spiralen, verlässliche Formvielfalt und Gerätevalidierung |
+| Pfeilgeometrie | Gerade, geknickte und in späteren Stufen experimentelle längere Wickelformen; geometrische Selbstüberschneidung wird geprüft | Gezielte Spiralen, verlässliche Formvielfalt und Gerätevalidierung |
 | Kollisionslogik | Schlangen-Ausfahrpfad an der Spitze und vorberechnete ID-Abhängigkeitsmatrix | Erweiterte geometrische Fälle |
 | Generator/Solver | Rückwärts-konstruktiv lösbare Level; vollständiger logischer DAG-Planer und begrenztes geometrisches DFS-Backtracking als Versuch für Stufen 6–16 mit konstruktivem Fallback | Verlässliche Einbettung jedes Plans für alle Stufen, Mehrfachkanten, Spiralen, Dichte und Schwierigkeitseichung |
 | Analyse | Schlüsselpfeil-, Richtungswechsel-, Verzweigungs- und Kettenmetriken beeinflussen Kandidatenauswahl | Verlässliche Musterquoten und Qualitätstests über viele Seeds |
@@ -78,7 +78,7 @@ Die Mustervorlagen sollen zuerst logische Blockierungsgraphen beschreiben, ansch
 
 ## Schrittweise dichtere Level und längere Pfeile (15.10.2026)
 
-Die frühen Stufen behalten die bisherigen Rastergrößen und Pfeilzahlen. Ab Stufe 25 können längere gerade Pfeile entstehen; ab Stufe 35 ergänzt der Katalog längere selbstüberschneidungsfrei zu prüfende Wickel- und Schlangenformen. Ab Stufe 45 wächst die Pfeilzahl behutsam über das bisherige Maximum von 40 hinaus (Obergrenze aktuell 100 Pfeile). Die Wahl der Geometrie bewertet nun für höhere Stufen stärker die **wirklich belegten Rasterzellen**. Verknüpfungen über Ausfahrstrahlen bleiben ein wichtiges Bewertungskriterium. Seed, Seitenverhältnis, Kollisionsprüfung und Solver werden weiterhin verwendet.
+Die frühen Stufen behalten die bisherigen Rastergrößen und Pfeilzahlen. Ab Stufe 25 können längere gerade Pfeile entstehen; ab Stufe 60 enthält der Katalog experimentelle längere Wickel- und Schlangenformen. Die Pfeilzahl bleibt aus Stabilitätsgründen zunächst auf 40 begrenzt; eine weitere Erhöhung erfordert zunächst eine belastbare dichtebewusste Backtracking-Platzierung. Die Wahl der Geometrie bewertet nun für höhere Stufen stärker die **wirklich belegten Rasterzellen**. Verknüpfungen über Ausfahrstrahlen bleiben ein wichtiges Bewertungskriterium. Seed, Seitenverhältnis, Kollisionsprüfung und Solver werden weiterhin verwendet.
 
 Die Funktion `BoardProfile.targetOccupancy(stage)` dokumentiert eine langsam steigende **angestrebte**, nicht erzwungene Flächenbelegung von später bis zu 100 %; `actualOccupancy(level)` misst die tatsächlich belegten Zellen. Das Maximum wird ausdrücklich **nicht garantiert**: bei eng gepackten Rätseln können zu wenige konfliktfreie Positionen bleiben, und zu hohe Dichte kann Lesbarkeit oder Lösbarkeit beeinträchtigen. Ziel ist eine langfristig kindgerechte Progression für Sechsjährige, nicht eine frühe Maximierung des Schwierigkeitsgrads.
 
@@ -134,7 +134,10 @@ Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbi
 
 ## Dokumentationsstand / Änderungsverlauf
 
-- **15.10.2026 – Weiterentwicklung Dichte und Formen:** Größerer Längen- und Wickelformenkatalog für spätere Stufen, behutsam wachsende Pfeilzahl jenseits Stufe 44, steigende Flächenbelegungspräferenz und instrumentierte Ist-/Zielbelegung. 100 % ist bisher lediglich ein langfristiger Zielwert, keine zugesicherte Generatoreigenschaft; Performance- und Gerätetests bleiben erforderlich.
+- **15.10.2026 – CI-Regressionskorrektur:** Build #119 scheiterte in zwei Generator-Tests durch geometrische Platzierungssackgassen. Die zuvor verfrühte Erhöhung der Pfeilzahl wurde zurückgenommen (weiterhin maximal 40), besonders komplexe Wickelformen beginnen erst ab Stufe 60; die Dichtegewichtung wurde reduziert. Zielwerte bis 100 % bleiben ausdrücklich Planungsgrößen, keine realisierte Füllgarantie.
+
+
+- **15.10.2026 – Weiterentwicklung Dichte und Formen:** Größerer Längenkatalog, experimentelle Wickelformen ab Stufe 60, weiterhin auf 40 begrenzte Pfeilzahl und vorsichtige Flächenbelegungspräferenz und instrumentierte Ist-/Zielbelegung. 100 % ist bisher lediglich ein langfristiger Zielwert, keine zugesicherte Generatoreigenschaft; Performance- und Gerätetests bleiben erforderlich.
 
 
 - **15.10.2026 – TODO 1/2, erste Integration:** Seedabhängiger vollständiger logischer DAG-Planer, geometrisches Backtracking mit Rücknahme von Platzierungen, experimentelle Anbindung für Stufen 6–16 und Regressionstests für Seeds, Stufen und Seitenverhältnisse. Bei fehlgeschlagener Einbettung verbleibt bewusst der bewährte konstruktive Fallback; vollständige geometrische Graphumsetzung, garantierte Spiralen und hohe Vernetzungsquote sind noch offen.
