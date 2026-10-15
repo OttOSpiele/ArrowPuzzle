@@ -69,11 +69,12 @@ internal object LocalSave {
     val root=JSONObject(json)
     val stage=root.optInt("stage",1).coerceIn(1,100000)
     val progress=Progress(stage,root.optInt("done",0).coerceIn(0,Progress(stage).required()-1))
-    val life=root.optInt("lifeSetting",5).takeIf{it in listOf(3,5,10)}?:5
-    val hint=root.optInt("hintSetting",3).takeIf{it in listOf(0,1,3,5)}?:3
+    val defaults=GameDefaults.load(context)
+    val life=root.optInt("lifeSetting",defaults.lives).takeIf{it in listOf(3,5,10)}?:defaults.lives
+    val hint=root.optInt("hintSetting",defaults.hints).takeIf{it in listOf(0,1,3,5)}?:defaults.hints
     val newGame=Game(Generator().generate(stage,java.util.Random().nextLong()),life,hint)
-    SavedSession(progress,life,hint,root.optBoolean("concurrent",true),
-     root.optInt("speed",1).coerceIn(0,3),newGame,false,false)
+    SavedSession(progress,life,hint,root.optBoolean("concurrent",defaults.concurrentArrows),
+     root.optInt("speed",defaults.animationSpeed).coerceIn(0,3),newGame,false,false)
    }catch(secondary:Exception){
     Log.w(TAG,"Cannot recover stage/settings either",secondary)
     null
