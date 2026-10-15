@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MPL-2.0
 package de.ottospiele.arrow
 import kotlin.random.Random
 data class Pt(val x:Int,val y:Int)
