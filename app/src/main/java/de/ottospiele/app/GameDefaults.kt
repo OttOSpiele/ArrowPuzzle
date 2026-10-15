@@ -9,7 +9,8 @@ internal data class GameDefaults(
  val lives:Int=5,
  val hints:Int=3,
  val concurrentArrows:Boolean=true,
- val animationSpeed:Int=1
+ val animationSpeed:Int=1,
+ val showStageAdjustment:Boolean=true
 ) {
  companion object {
   fun load(context:Context):GameDefaults {
@@ -32,7 +33,12 @@ internal data class GameDefaults(
     lives=int("defaultLives",setOf(3,5,10),5),
     hints=int("defaultHints",setOf(0,1,3,5),3),
     concurrentArrows=concurrent,
-    animationSpeed=int("defaultAnimationSpeed",setOf(0,1,2,3),1)
+    animationSpeed=int("defaultAnimationSpeed",setOf(0,1,2,3),1),
+    showStageAdjustment=when(props.getProperty("showStageAdjustment")?.trim()?.lowercase()) {
+     "true" -> true
+     "false" -> false
+     else -> true
+    }
    )
   }
  }
