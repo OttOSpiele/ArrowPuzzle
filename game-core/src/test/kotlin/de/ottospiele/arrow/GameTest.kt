@@ -55,6 +55,18 @@ class GameTest {
    }
   }
  }
+ @Test fun nestedCorridorsStaySolvableAndReproducible() {
+  for(stage in listOf(35,45)) for(seed in listOf(0L,3L)) {
+   val first=Generator().generate(stage,seed,1.2f)
+   val again=Generator().generate(stage,seed,1.2f)
+   assertEquals(first.arrows,again.arrows)
+   assertNotNull(Rules.solve(first))
+   assertTrue(first.arrows.all { a ->
+    a.body().size==a.cells().size &&
+     Rules.selfClear(a,first.width,first.height)
+   })
+  }
+ }
  @Test fun highStageOccupancyTargetsAreGradualAndBounded() {
   assertTrue(BoardProfile.targetOccupancy(1)<BoardProfile.targetOccupancy(25))
   assertTrue(BoardProfile.targetOccupancy(25)<BoardProfile.targetOccupancy(80))
