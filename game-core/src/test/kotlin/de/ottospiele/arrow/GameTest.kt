@@ -44,8 +44,8 @@ class GameTest {
   assertTrue(BoardProfile.targetOccupancy(25)<BoardProfile.targetOccupancy(80))
   assertEquals(1f,BoardProfile.targetOccupancy(300))
   assertEquals(40,BoardProfile.count(44))
-  assertTrue(BoardProfile.count(100)>BoardProfile.count(44))
-  assertTrue(BoardProfile.count(300)<=100)
+  assertEquals(40,BoardProfile.count(100))
+  assertEquals(40,BoardProfile.count(300))
  }
  @Test fun denseStagesStayReproducibleSolvableAndNonOverlapping(){
   for(stage in listOf(24,35,45)) for(seed in listOf(0L,7L)) {
