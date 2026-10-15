@@ -165,6 +165,18 @@ class GameTest {
    assertNotNull(Rules.solve(level))
   }
  }
+ @Test fun innerGapPackingKeepsLevelsSolvableAndDeterministic() {
+  for(stage in listOf(35,45,60)) for(seed in listOf(0L,11L)) {
+   val level=Generator().generate(stage,seed,1.4f)
+   assertEquals(level.arrows,Generator().generate(stage,seed,1.4f).arrows)
+   assertNotNull(Rules.solve(level))
+   val occupied=level.arrows.flatMap { it.cells() }.toSet()
+   assertEquals(level.arrows.sumOf { it.cells().size },occupied.size)
+   assertTrue(occupied.any { p ->
+    p.x in 2 until level.width-2 && p.y in 2 until level.height-2
+   })
+  }
+ }
  @Test fun stageQualityMetricsMatchActualGeometry() {
   for(stage in listOf(17,35,45,60)) for(aspect in listOf(.7f,1f,1.5f)) {
    val level=Generator().generate(stage,17L,aspect)
