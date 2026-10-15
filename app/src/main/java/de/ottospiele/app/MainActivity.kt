@@ -161,15 +161,50 @@ class MainActivity:ComponentActivity(){
    .safeDrawingPadding().padding(horizontal=20.dp,vertical=14.dp),
   verticalArrangement=Arrangement.spacedBy(14.dp)
  ){
-  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
-   Column {
+  Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+   Column(Modifier.weight(1f)){
     Text("OttOSpiele",fontSize=27.sp,fontWeight=FontWeight.Bold,color=Color(0xFF24294B))
     Text("ARROW PUZZLE",fontSize=11.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF7E84A6),letterSpacing=2.sp)
    }
-   FilledTonalIconButton(onClick={settings=true},colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=Color.White)){
+   Button(
+    onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
+    modifier=Modifier.width(122.dp).height(58.dp),shape=RoundedCornerShape(17.dp),
+    contentPadding=PaddingValues(horizontal=4.dp),
+    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8),contentColor=Color.White)){
+    Column(horizontalAlignment=Alignment.CenterHorizontally){
+     Text("↻",fontSize=22.sp,fontWeight=FontWeight.Bold)
+     Text("Neustart",fontSize=11.sp,fontWeight=FontWeight.Bold)
+    }
+   }
+   Button(
+    onClick={dialog="stufeZurueck"},
+    modifier=Modifier.width(136.dp).height(58.dp),shape=RoundedCornerShape(17.dp),
+    contentPadding=PaddingValues(horizontal=4.dp),
+    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7955CE),contentColor=Color.White)){
+    Column(horizontalAlignment=Alignment.CenterHorizontally){
+     Text("↓",fontSize=22.sp,fontWeight=FontWeight.Bold)
+     Text("Stufe zurück",fontSize=11.sp,fontWeight=FontWeight.Bold,maxLines=1)
+    }
+   }
+   FilledTonalIconButton(
+    onClick={settings=true},
+    modifier=Modifier.size(56.dp),
+    colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=Color.White)){
     Text("⚙",fontSize=22.sp,color=Color(0xFF5662A7))
    }
+   Button(
+    onClick={highlighted=game.hint();invalid=null;revision++},
+    enabled=game.hints!=0 && !game.lost && !game.won,
+    modifier=Modifier.width(122.dp).height(58.dp),shape=RoundedCornerShape(17.dp),
+    contentPadding=PaddingValues(horizontal=4.dp),
+    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF158B65),contentColor=Color.White)){
+    Column(horizontalAlignment=Alignment.CenterHorizontally){
+     Text("💡",fontSize=21.sp)
+     Text("Tipp",fontSize=11.sp,fontWeight=FontWeight.Bold)
+    }
+   }
   }
+
   Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,invalid,
    flights.toList(),occupiedEver,traveledCells,Modifier.weight(1f).fillMaxWidth()){
    if(dialog.isNotEmpty() || game.lost || (!concurrent && flights.isNotEmpty()) || flights.any{f->f.id==it})return@Board
@@ -223,40 +258,31 @@ class MainActivity:ComponentActivity(){
     }
    }
   }
-  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-   Button(
-    onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
-    modifier=Modifier.weight(1f).height(60.dp),shape=RoundedCornerShape(18.dp),
-    contentPadding=PaddingValues(horizontal=4.dp),
-    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8),contentColor=Color.White)){
-    Column(horizontalAlignment=Alignment.CenterHorizontally){
-     Text("↻",fontSize=24.sp,fontWeight=FontWeight.Bold)
-     Text("Neustart",fontWeight=FontWeight.Bold,fontSize=12.sp,maxLines=1)
-    }
+
+ }
+ if(dialog=="stufeZurueck")AlertDialog(
+  onDismissRequest={dialog=""},
+  title={Text("Wirklich eine Stufe zurück?",fontWeight=FontWeight.Bold)},
+  text={
+   Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)){
+    Text("⭐  ↓  ⭐",fontSize=48.sp,color=Color(0xFF7955CE))
+    Text("Du spielst gerade Stufe ${progress.stage}.",fontSize=18.sp)
+    Text("Wenn du zurückgehst, startest du Stufe ${(progress.stage-1).coerceAtLeast(1)} mit einem neuen Rätsel. Dein Fortschritt in dieser Stufe geht verloren.",fontSize=16.sp)
+    Text("Möchtest du lieber weiterspielen?",fontSize=16.sp,fontWeight=FontWeight.SemiBold)
    }
-   Button(
-    onClick={highlighted=game.hint();invalid=null;revision++},
-    enabled=game.hints!=0 && !game.lost && !game.won,
-    modifier=Modifier.weight(1f).height(60.dp),shape=RoundedCornerShape(18.dp),
-    contentPadding=PaddingValues(horizontal=4.dp),
-    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF158B65),contentColor=Color.White)){
-    Column(horizontalAlignment=Alignment.CenterHorizontally){
-     Text("💡",fontSize=22.sp)
-     Text("Tipp",fontWeight=FontWeight.Bold,fontSize=12.sp,maxLines=1)
-    }
+  },
+  confirmButton={
+   Button(onClick={dialog=""},colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){
+    Text("Fortsetzen",fontWeight=FontWeight.Bold)
    }
-   Button(
-    onClick={progress=progress.easier();replace(progress.stage);dialog=""},
-    modifier=Modifier.weight(1.15f).height(60.dp),shape=RoundedCornerShape(18.dp),
-    contentPadding=PaddingValues(horizontal=4.dp),
-    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7955CE),contentColor=Color.White)){
-    Column(horizontalAlignment=Alignment.CenterHorizontally){
-     Text("↓",fontSize=23.sp,fontWeight=FontWeight.Bold)
-     Text("Stufe zurück",fontWeight=FontWeight.Bold,fontSize=11.sp,maxLines=1)
-    }
+  },
+  dismissButton={
+   Button(onClick={dialog="";progress=progress.easier();replace(progress.stage)},
+    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7955CE))){
+    Text("Stufe zurück",fontWeight=FontWeight.Bold)
    }
   }
- }
+ )
  if(settings)AlertDialog(
   onDismissRequest={settings=false},
   title={Text("Spieleinstellungen")},
