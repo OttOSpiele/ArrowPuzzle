@@ -150,6 +150,9 @@ Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbi
 
 ## Dokumentationsstand / Änderungsverlauf
 
+- **15.10.2026 – Geplante vernetzte Startgruppen:** Nach erfolgreichem Build #153 erzeugt der Generator ab Stufe 35 versuchsweise eine seedabhängige, logisch zusammenhängende Gruppe aus fünf Pfeilen über den DependencyPlanner und einen geometrischen DFS mit maximal 160 Knoten. Die Gruppe wird vor der restlichen Belegung platziert und ihre geplanten Abhängigkeiten werden am fertigen Level überprüft. Falls die Suche oder die anschließende vollständige Konstruktion scheitert, wird der bewährte Konstruktor ohne vorgeplante Gruppe verwendet. Die tatsächliche Realisierungsquote und die Zahl anfänglich freier Pfeile sind noch nicht statistisch abgesichert; insbesondere sind verschachtelte Spiralformen und hohe Dichte keine garantierten Eigenschaften.
+
+
 - **15.10.2026 – Nutzerfeedback Stufe 45/60:** Screenshotanalyse ergab wiederkehrende Dreier-Restgruppe. Ursache war ein identischer Blueprint-Anker aus drei früh eingebauten und deshalb zuletzt entfernbaren Pfeilen. Ab Stufe 35 wird dieses feste Motiv nicht mehr vorgegeben; die Pfeile entstehen aus der seedabhängigen Rückwärtskonstruktion. Eine höhere Bewertung realisierter Blockierbeziehungen soll unabhängig freie Pfeile reduzieren. Die tatsächliche Anfangsfreiheit und Restgruppenqualität müssen weiterhin quantitativ evaluiert werden. Regressionstest zur Abwesenheit des festen Ankers ergänzt. Keine Garantie gegen einzelne freie Pfeile oder dreigliedrige Restgruppen.
 
 
