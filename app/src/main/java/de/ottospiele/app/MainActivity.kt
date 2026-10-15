@@ -1,7 +1,6 @@
 package de.ottospiele.app
 
 import android.os.Bundle
-import java.util.Properties
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -48,19 +47,13 @@ class MainActivity:ComponentActivity(){
   val metrics=context.resources.displayMetrics
   metrics.widthPixels.toFloat()/metrics.heightPixels.coerceAtLeast(1)
  }
- val previewHoldMillis=remember(context){
-  runCatching {
-   val properties=Properties()
-   context.assets.open("game-defaults.properties").use{properties.load(it)}
-   properties.getProperty("arrowPreviewHoldMillis")?.trim()?.toLongOrNull()
-    ?.coerceIn(100L,5000L) ?: 400L
-  }.getOrDefault(400L)
- }
+ val defaults=remember(context){GameDefaults.load(context)}
+ val previewHoldMillis=defaults.previewHoldMillis
  val saved=remember{LocalSave.read(context)}
  var progress by remember{mutableStateOf(saved?.progress?:Progress())}
- var lives by remember{mutableIntStateOf(saved?.lifeSetting?:5)}
- var hints by remember{mutableIntStateOf(saved?.hintSetting?:3)}
- var game by remember{mutableStateOf(saved?.game?:fresh(1,5,3,screenAspect))}
+ var lives by remember{mutableIntStateOf(saved?.lifeSetting?:defaults.lives)}
+ var hints by remember{mutableIntStateOf(saved?.hintSetting?:defaults.hints)}
+ var game by remember{mutableStateOf(saved?.game?:fresh(1,defaults.lives,defaults.hints,screenAspect))}
  var revision by remember{mutableIntStateOf(0)}
  var highlighted by remember{mutableStateOf<Int?>(null)}
  var invalid by remember{mutableStateOf<Int?>(null)}
@@ -77,8 +70,8 @@ class MainActivity:ComponentActivity(){
  var settings by remember{mutableStateOf(false)}
  var menuOpen by remember{mutableStateOf(false)}
  var aboutOpen by remember{mutableStateOf(false)}
- var concurrent by remember{mutableStateOf(saved?.concurrent?:true)}
- var speed by remember{mutableIntStateOf(saved?.speed?:1)}
+ var concurrent by remember{mutableStateOf(saved?.concurrent?:defaults.concurrentArrows)}
+ var speed by remember{mutableIntStateOf(saved?.speed?:defaults.animationSpeed)}
  val flights=remember{mutableStateListOf<Flight>()}
  val scope=rememberCoroutineScope()
  val jobs=remember{mutableMapOf<Int,Job>()}
