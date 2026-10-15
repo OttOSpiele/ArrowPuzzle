@@ -7,7 +7,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -451,7 +452,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
      val event=awaitPointerEvent()
      val pointer=event.changes.firstOrNull{it.id==down.id}
      if(pointer==null || !pointer.pressed){
-      released=pointer?.changedToUpIgnoreConsumed()==true
+      released=pointer!=null && !pointer.pressed
       break
      }
      if(active && selected!=null){
