@@ -150,6 +150,9 @@ Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbi
 
 ## Dokumentationsstand / Änderungsverlauf
 
+- **15.10.2026 – Innenlücken-Füllung, erste Optimierung:** Ab Stufe 35 werden bei der Pfeilplatzierung bislang ungenutzte innere Rasterzellen, zentrumsnahe Abdeckung und Nachbarschaft zu bestehenden Pfeilen zusätzlich bewertet. Die Bewertung bleibt weich; Ausfahrwegfreiheit und Solver müssen weiterhin erfüllt sein. Ziel ist weniger ausschließlich randorientierte Pfeilbelegung. Die Konstruktion ist weiterhin greedy mit sicherem Fallback; systematisches Füllen aller freien Innenregionen und garantierte Zielbelegungsquoten stehen noch aus.
+
+
 - **15.10.2026 – Qualitätsoptimierung nach Gerätetests:** Die Screenshots der Stufen 35/45/60 zeigen trotz erster Gruppenplanung weiterhin viele sofort freie Randpfeile und große freie Rasterbereiche. Die geometrische Kandidatenbewertung berücksichtigt ab Stufe 35 nun zusätzlich, wie viele **bislang freie** Pfeile durch einen neu eingefügten Pfeil tatsächlich blockiert werden. Redundante Graphkanten zu bereits blockierten Pfeilen werden dadurch relativ abgewertet; eine geringe Richtungsbalancierung vermindert wiederholte Randpfeil-Ansammlungen. Tests prüfen die wirkliche Anfangsfreiheit anhand der Kollisionsgeometrie über Seeds und Seitenverhältnisse. Qualitätsquoten und vollständige räumliche Verschachtelung sind weiterhin offen.
 
 
