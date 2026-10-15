@@ -4,6 +4,16 @@
 
 Ein offlinefähiges, vollständig werbefreies Pfeil-Denkspiel für Kinder. Das Spiel und seine Anforderungen werden vom Projektverantwortlichen vorgegeben; die bisherige Quellcodeentwicklung und diese Dokumentation erfolgten unter Verwendung von OpenAI ChatGPT (GPT-6). Ein erfolgreiches CI-Build ist keine Bestätigung der vollständigen funktionalen, rechtlichen oder kindgerechten Eignung.
 
+## Lizenz, Rechteinhaber und Projektidentität
+
+**Rechteinhaber: Benjamin Lilienthal.** Der Quellcode der neu veröffentlichten Projektversionen steht unter der **Mozilla Public License 2.0 (MPL-2.0)**, siehe [LICENSE](LICENSE). Die MPL erlaubt auch kommerzielle Weiterverwendung unter ihren Lizenzbedingungen; Änderungen an MPL-lizenzierten Quelldateien unterliegen bei entsprechender Weitergabe weiterhin der MPL.
+
+**OttOSpiele-Kennzeichen und die eigene kreative Spielidentität sind nicht pauschal für fremde Projekte freigegeben.** [TRADEMARKS.md](TRADEMARKS.md) regelt die Verwendung von Namen/Logos; [ASSETS_LICENSE.md](ASSETS_LICENSE.md) beschreibt die gesonderte Zuordnung ausdrücklich gekennzeichneter eigener Grafiken, Figuren und anderer kreativer Assets. Der offene Programmcode soll auch mit neutralen Ersatzassets verwendbar bleiben. Eine Veröffentlichung der APK gewährt keine generelle Markenlizenz.
+
+Der vorherige Entwicklungsstand wurde öffentlich unter GPLv2 veröffentlicht. **Frühere GPLv2-Lizenzrechte bestehen fort**; der Wechsel wirkt nicht rückwirkend. Siehe [Lizenzhistorie](docs/LICENSING_HISTORY.md) und [NOTICE.md](NOTICE.md).
+
+Die Entwicklung erfolgte nach Angaben des Projektverantwortlichen bisher auf Grundlage der eigenen Anforderungen mit wesentlicher Unterstützung von OpenAI ChatGPT. Es wurde kein fremder Quellcode wissentlich übernommen. Das ist keine Garantie der Rechtefreiheit, der Urheberrechtsschutzfähigkeit jedes KI-Ergebnisses oder der Rechteklärung für zukünftige Abhängigkeiten und Assets. Details: [KI-Provenienz](docs/AI_PROVENANCE.md).
+
 ## Spielidee und ursprünglicher Anforderungsauftrag (sinngemäß zusammengefasst)
 
 Der ursprüngliche Auftrag vom 14.10.2026 beschreibt eine Android-Adaption des bekannten Pfeil-Entwirr-Spiels: Aus einem Spielfeld mit teils verwinkelten, orthogonalen Pfeilen werden diejenigen angetippt, die entlang ihrer Pfeilrichtung ohne Zusammenstoß das Spielfeld verlassen können. Das Spiel soll ohne Werbung, möglichst vollständig offline und kostenfrei als Donationware erhältlich sein. Unbegrenzt viele Level sollen automatisch generiert werden, mit behutsam zunehmender Schwierigkeit.
@@ -139,6 +149,9 @@ Rechtliche Quellen (Stand 14.10.2026):
 Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbindlich ist seit der Nutzerkorrektur ausschließlich das Schlangenmodell:** Der Körper folgt seiner eigenen Linie um Ecken; nur vor der Pfeilspitze werden neue Spielfeldzellen betreten. Ältere Einträge unten sind Entwicklungshistorie und keine aktuelle Spezifikation.
 
 ## Dokumentationsstand / Änderungsverlauf
+
+- **15.10.2026 – Lizenzumstellung:** Neue Quellcodeversionen unter MPL-2.0; Benjamin Lilienthal als benannter Rechteinhaber, separate Kennzeichen- und Asset-Richtlinien, unveränderte historische GPLv2-Nutzungsrechte, dokumentierte KI-Provenienz und gesonderte Fremdrechteprüfung.
+
 
 - **15.10.2026 – Debug-Stufenauswahl:** Hamburgermenü „Stufe anpassen“ ausschließlich bei debuggbarer App und aktiviertem Parameter `showStageAdjustment`; Zahleneingabe, neue Generierung im Hintergrund und Zurücksetzen des Stufenfortschritts für gezielte Generator-Tests.
 
