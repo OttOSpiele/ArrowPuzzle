@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.StrokeCap
@@ -28,6 +27,7 @@ import de.ottospiele.arrow.*
 import kotlin.math.abs
 import kotlin.random.Random
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
@@ -446,7 +446,10 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
     val sy=size.height.toFloat()/level.height
     val selected=ArrowTouch.select(level,remaining,down.position.x/sx-.5f,down.position.y/sy-.5f)
     var active=selected!=null
-    previewId=selected
+    val previewJob=if(selected!=null)launch {
+     delay(1000)
+     previewId=selected
+    }else null
     var released=false
     do {
      val event=awaitPointerEvent()
@@ -463,9 +466,10 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
        val dx=p.x-px;val dy=p.y-py
        dx*dx+dy*dy<=1.35f*1.35f
       }
-      if(!near){active=false;previewId=null}
+      if(!near){active=false;previewJob?.cancel();previewId=null}
      }
     }while(true)
+    previewJob?.cancel()
     previewId=null
     if(active && released && selected!=null)onTap(selected)
    }
@@ -511,9 +515,8 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
     if(last!=null){
      val origin=Offset((head.x+.5f)*sx,(head.y+.5f)*sy)
      val finish=Offset((last.x+.5f)*sx,(last.y+.5f)*sy)
-     drawLine(Color(0xFF7366D9).copy(alpha=.60f),origin,finish,
-      strokeWidth=(cell*.10f).coerceAtLeast(2f),
-      pathEffect=PathEffect.dashPathEffect(floatArrayOf(cell*.32f,cell*.20f)))
+     drawLine(Color(0xFF7366D9).copy(alpha=.24f),origin,finish,
+      strokeWidth=(cell*.055f).coerceAtLeast(1.2f))
     }
    }
   }
