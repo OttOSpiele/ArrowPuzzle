@@ -440,7 +440,8 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
  var previewId by remember(level){mutableStateOf<Int?>(null)}
  Canvas(modifier.clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(Color.White,Color(0xFFF9FBFF))))
   .pointerInput(level,remaining,flights.map{it.id}){
-   awaitEachGesture {
+   coroutineScope {
+    awaitEachGesture {
     val down=awaitFirstDown(requireUnconsumed=false)
     val sx=size.width.toFloat()/level.width
     val sy=size.height.toFloat()/level.height
@@ -472,6 +473,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
     previewJob?.cancel()
     previewId=null
     if(active && released && selected!=null)onTap(selected)
+    }
    }
   }){
   val sx=size.width/level.width;val sy=size.height/level.height
