@@ -39,6 +39,25 @@ class GameTest {
    }
   }
  }
+ @Test fun highStageOccupancyTargetsAreGradualAndBounded() {
+  assertTrue(BoardProfile.targetOccupancy(1)<BoardProfile.targetOccupancy(25))
+  assertTrue(BoardProfile.targetOccupancy(25)<BoardProfile.targetOccupancy(80))
+  assertEquals(1f,BoardProfile.targetOccupancy(300))
+  assertEquals(40,BoardProfile.count(44))
+  assertTrue(BoardProfile.count(100)>BoardProfile.count(44))
+  assertTrue(BoardProfile.count(300)<=100)
+ }
+ @Test fun denseStagesStayReproducibleSolvableAndNonOverlapping(){
+  for(stage in listOf(24,35,45)) for(seed in listOf(0L,7L)) {
+   val level=Generator().generate(stage,seed,1.35f)
+   assertEquals(BoardProfile.count(stage),level.arrows.size)
+   assertNotNull(Rules.solve(level))
+   assertEquals(level.arrows,Generator().generate(stage,seed,1.35f).arrows)
+   assertTrue(BoardProfile.actualOccupancy(level) in 0f..1f)
+   assertEquals(level.arrows.sumOf{it.cells().size},
+    level.arrows.flatMap{it.cells()}.distinct().size)
+  }
+ }
  @Test fun touchPrefersRemovableArrowsInOverlappingRegions(){
   val blocked=Arrow(0,2,4,2,Dir.RIGHT)
   val free=Arrow(1,5,4,2,Dir.UP)
