@@ -165,8 +165,21 @@ class GameTest {
    assertNotNull(Rules.solve(level))
   }
  }
+ @Test fun highStagesDoNotHardcodeThreeArrowEndgame() {
+  for(stage in listOf(35,45,60)){
+   assertNull(PatternConstruction.blueprint(stage,BoardProfile.size(stage)))
+  }
+  // Validate actual endgame diversity across seeds, not merely the absence
+  // of an explicit blueprint object.
+  val endings=(0L..3L).map { seed ->
+   val level=Generator().generate(45,seed,1.4f)
+   assertNotNull(Rules.solve(level))
+   level.arrows.take(3).map { a -> a.cells().size to a.dir }
+  }
+  assertTrue(endings.distinct().size>=2,"Early construction remains identical")
+ }
  @Test fun constructedGraphPatternsAreRealDependencies(){
-  for(stage in listOf(6,8,9,12,16,17,25,46)){
+  for(stage in listOf(6,8,9,12,16,17,25)){
    val blue=PatternConstruction.blueprint(stage,BoardProfile.size(stage))
    assertNotNull(blue)
    for(seed in 0L..3L){
