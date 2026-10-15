@@ -165,6 +165,19 @@ class GameTest {
    assertNotNull(Rules.solve(level))
   }
  }
+ @Test fun highStageGroupPlansAreConnectedAndSeeded() {
+  for(stage in listOf(35,60))for(seed in listOf(0L,7L,41L)){
+   val plan=DependencyPlanner.plan(stage,seed,5)
+   assertEquals(4,plan.edges.size)
+   assertTrue(plan.edges.all { (from,to)->from>to })
+   // Every vertex can reach an earlier one through its parent;
+   // this is a connected logical group regardless of physical orientation.
+   assertEquals((1 until 5).toSet(),plan.targets.keys)
+   val level=Generator().generate(stage,seed,1.3f)
+   assertNotNull(Rules.solve(level))
+   assertEquals(level.arrows,Generator().generate(stage,seed,1.3f).arrows)
+  }
+ }
  @Test fun highStagesDoNotHardcodeThreeArrowEndgame() {
   for(stage in listOf(35,45,60)){
    assertNull(PatternConstruction.blueprint(stage,BoardProfile.size(stage)))
