@@ -296,7 +296,7 @@ class MainActivity:ComponentActivity(){
      singleLine=true,
      enabled=!stageLoading,
      keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
-     isError=stageInput.toIntOrNull() !in 1..9999
+     isError=stageInput.toIntOrNull()?.let { it in 1..9999 } != true
     )
     if(stageError)Text("Rätsel konnte nicht erstellt werden. Bitte erneut versuchen.",
      color=MaterialTheme.colorScheme.error)
@@ -305,7 +305,7 @@ class MainActivity:ComponentActivity(){
   },
   confirmButton={
    Button(
-    enabled=!stageLoading && stageInput.toIntOrNull() in 1..9999,
+    enabled=!stageLoading && stageInput.toIntOrNull()?.let { it in 1..9999 } == true,
     onClick={
      val selected=stageInput.toIntOrNull()?:return@Button
      stageLoading=true;stageError=false
