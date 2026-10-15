@@ -150,6 +150,9 @@ Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbi
 
 ## Dokumentationsstand / Änderungsverlauf
 
+- **15.10.2026 – Generator-Ausbau (inkrementell):** Geometrisches DFS priorisiert jetzt Kandidaten mit vielen Verknüpfungen zu vorhandenen Ausfahrstrahlen und größerer tatsächlicher Zellbelegung. Bei erfolgloser Einbettung des logischen Plans erfolgt für Stufen 6–16 ein zweiter deterministisch variierter Geometrieversuch desselben Graphen, bevor der bewährte konstruktive Fallback greift. Regressionstest für deterministische und geometrisch korrekte Graphrealisierung ergänzt. Noch keine garantierte Planrealisierung, Spiral- oder Dichtequote.
+
+
 - **15.10.2026 – Lizenzumstellung:** Neue Quellcodeversionen unter MPL-2.0; Benjamin Lilienthal als benannter Rechteinhaber, separate Kennzeichen- und Asset-Richtlinien, unveränderte historische GPLv2-Nutzungsrechte, dokumentierte KI-Provenienz und gesonderte Fremdrechteprüfung.
 
 
