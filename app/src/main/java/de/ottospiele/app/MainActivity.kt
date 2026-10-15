@@ -64,6 +64,8 @@ class MainActivity:ComponentActivity(){
  var prepareError by remember{mutableStateOf(false)}
  var preparationAttempt by remember{mutableIntStateOf(0)}
  var settings by remember{mutableStateOf(false)}
+ var menuOpen by remember{mutableStateOf(false)}
+ var aboutOpen by remember{mutableStateOf(false)}
  var concurrent by remember{mutableStateOf(saved?.concurrent?:true)}
  var speed by remember{mutableIntStateOf(saved?.speed?:1)}
  val flights=remember{mutableStateListOf<Flight>()}
@@ -162,6 +164,18 @@ class MainActivity:ComponentActivity(){
   verticalArrangement=Arrangement.spacedBy(14.dp)
  ){
   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+   Box {
+    FilledTonalIconButton(
+     onClick={menuOpen=true},
+     modifier=Modifier.size(56.dp),
+     colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=Color.White)){
+     Text("☰",fontSize=27.sp,color=Color(0xFF5662A7))
+    }
+    DropdownMenu(expanded=menuOpen,onDismissRequest={menuOpen=false}){
+     DropdownMenuItem(text={Text("⚙  Einstellungen")},onClick={menuOpen=false;settings=true})
+     DropdownMenuItem(text={Text("ⓘ  Über das Spiel")},onClick={menuOpen=false;aboutOpen=true})
+    }
+   }
    Column(Modifier.weight(1f)){
     Text("OttOSpiele",fontSize=27.sp,fontWeight=FontWeight.Bold,color=Color(0xFF24294B))
     Text("ARROW PUZZLE",fontSize=11.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF7E84A6),letterSpacing=2.sp)
@@ -185,12 +199,6 @@ class MainActivity:ComponentActivity(){
      Text("↓",fontSize=22.sp,fontWeight=FontWeight.Bold)
      Text("Stufe zurück",fontSize=11.sp,fontWeight=FontWeight.Bold,maxLines=1)
     }
-   }
-   FilledTonalIconButton(
-    onClick={settings=true},
-    modifier=Modifier.size(56.dp),
-    colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=Color.White)){
-    Text("⚙",fontSize=22.sp,color=Color(0xFF5662A7))
    }
    Button(
     onClick={highlighted=game.hint();invalid=null;revision++},
@@ -282,6 +290,12 @@ class MainActivity:ComponentActivity(){
     Text("Stufe zurück",fontWeight=FontWeight.Bold)
    }
   }
+ )
+ if(aboutOpen)AlertDialog(
+  onDismissRequest={aboutOpen=false},
+  title={Text("Über Arrow Puzzle")},
+  text={Text("OttOSpiele – Arrow Puzzle\n\nEin Rätselspiel mit Pfeilen für Kinder. Finde die freien Pfeile und lasse sie aus dem Spielfeld fahren.\n\nOffline spielbar, ohne Werbung.")},
+  confirmButton={TextButton(onClick={aboutOpen=false}){Text("Schließen")}}
  )
  if(settings)AlertDialog(
   onDismissRequest={settings=false},
