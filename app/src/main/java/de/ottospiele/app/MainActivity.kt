@@ -520,7 +520,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
      val origin=Offset((head.x+.5f)*sx,(head.y+.5f)*sy)
      val finish=Offset((last.x+.5f)*sx,(last.y+.5f)*sy)
      drawLine(Color(0xFF7366D9).copy(alpha=.24f),origin,finish,
-      strokeWidth=(cell*.055f).coerceAtLeast(1.2f))
+      strokeWidth=(cell*.23f).coerceAtLeast(3.3f))
     }
    }
   }
