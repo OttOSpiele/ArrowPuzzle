@@ -4,6 +4,21 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class GameTest {
+ @Test fun geometricPlannerPreservesSeedUnderAlternativeSearch() {
+  for(seed in listOf(1L,2L,9L)) {
+   val graph=DependencyPlanner.plan(9,seed,3)
+   val first=GeometricBacktracker.place(graph,9,seed,12,12,maxNodes=1800)
+   val again=GeometricBacktracker.place(graph,9,seed,12,12,maxNodes=1800)
+   assertEquals(first?.arrows,again?.arrows)
+   if(first!=null) {
+    val level=Level(seed,9,12,first.arrows)
+    assertNotNull(Rules.solve(level))
+    assertTrue(graph.edges.all { (from,to)->
+     from in level.dependencies.requiredRemovals[to].orEmpty()
+    })
+   }
+  }
+ }
  @Test fun dependencyPlannerProducesCompleteAcyclicGraph() {
   for(stage in listOf(1,6,9,17,25))for(seed in listOf(0L,1L,42L,2026L)){
    val count=BoardProfile.count(stage)
