@@ -179,7 +179,16 @@ Im GitHub-Actions-Artefakt `arrow-generator-benchmark` werden abgelegt:
 
 Die PDF wird **aus den exportierten Levelkoordinaten** gezeichnet und nicht durch erneute (potenziell andere) Generierung. Die Benchmarkphase ist von der APK-Veröffentlichung entkoppelt: Fehler werden im Benchmark ausgewiesen, verhindern aber die Debug-APK nicht; die Reports werden auch bei Fehlern hochgeladen. Die Level-PDF dient der Entwicklerkontrolle, nicht als Spielanleitung.
 
+## Eigenständiger Exact-Cover-Generator (18.10.2026)
+
+Der neue `game-core/.../ExactCoverGenerator.kt` ist unabhängig vom bisherigen greedy Reverse-Builder. Für kleine Raster (bis 12×12) enumeriert er geradlinige und L-förmige Pfeilkandidaten. Ein DFS wählt jeweils die freie Zelle mit den wenigsten kompatiblen Kandidaten (MRV), belegt sämtliche Zellen eines Kandidaten, entfernt dadurch implizit überlappende Kandidaten und setzt bei Sackgassen zurück. Erst ein **vollständiger** Zellcover wird durch `Rules.solve` auf tatsächliche Pfeil-Lösbarkeit geprüft. Die Suche ist durch ein explizites Knotenbudget begrenzt. Die Tests prüfen vollständige Belegung, Lösbarkeit und Seed-Reproduzierbarkeit auf kleinen Referenzrastern.
+
+**Architekturgrenze:** Dies ist ein unabhängiger, kleiner Constraint-Solver als tragfähiger Grundbaustein, noch keine produktive Lösung für Stufen 35–100. Größere Bretter benötigen Constraint-Propagation, freie Regionszerlegung, Verknüpfungsplanung und Qualitätsziele. Der Legacy-Generator bleibt unverändert als bisheriger App-Pfad und Fallback. Keine weiteren Greedy-Gewichte als Entwicklungsstrategie.
+
 ## Dokumentationsstand / Änderungsverlauf
+
+- **18.10.2026 – Eigenständiger Exact-Cover-Prototyp:** Neuer zellbasierter MRV-/DFS-Solver mit vollständiger Rasterbelegung und abschließender Lösbarkeitsprüfung für kleine Raster. Produktionsintegration erst nach Benchmark und regionaler Skalierung.
+
 
 - **18.10.2026 – Generator-Verbesserung nach Benchmark #188:** Vor dem Abbruch einer Pfeilplatzierung prüft der Reverse-Builder jetzt auch solche geometrisch gültigen Formen und Positionen, die der schnelle Standardheuristikpfad aus Performancegründen ausschließt. Die regionale Kandidatensuche zieht zentrale Innenlücken gezielt in ihren Suchpool ein und mischt diese mit global gestreuten Kandidaten. Eine Regression für Stufe 44, Seed 15855, Seitenverhältnis 1,65 adressiert den im Benchmark entdeckten Fehler. Dies ist eine inkrementelle Robustheits-/Innenflächenverbesserung; der vollständige regionale Exact-Cover-Solver und eine garantierte Dichteprogression sind weiterhin offen.
 
