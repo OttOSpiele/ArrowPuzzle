@@ -370,10 +370,26 @@ class Generator {
   }
   return result
  }
- private fun construct(stage:Int,seed:Long,aspect:Float):Level =
-  if(stage>=35) runCatching { constructOnce(stage,seed,aspect,true) }
-   .getOrElse { constructOnce(stage,seed,aspect,false).copy(fallbackGeneration=true) }
-  else constructOnce(stage,seed,aspect,false)
+ private fun construct(stage:Int,seed:Long,aspect:Float):Level {
+  if(stage<35)return constructOnce(stage,seed,aspect,false)
+  // Retry distinct deterministic construction permutations. Keep the public
+  // seed unchanged: the generated board remains reproducible from that seed.
+  // All rescue boards are clearly marked as fallback-generated.
+  val attempts=listOf(
+   seed to true,
+   seed to false,
+   (seed xor 0x5EED1234L) to false,
+   (seed xor 0x1A2B3C4DL) to false,
+   (seed xor 0x4F77AA11L) to false
+  )
+  var last:Throwable?=null
+  for((index,attempt) in attempts.withIndex()){
+   val board=runCatching{constructOnce(stage,attempt.first,aspect,attempt.second)}
+    .onFailure{last=it}.getOrNull()?:continue
+   return board.copy(seed=seed,fallbackGeneration=index>0)
+  }
+  throw IllegalStateException("Cannot construct stage $stage seed $seed after deterministic fallbacks",last)
+ }
 
  private fun constructOnce(stage:Int,seed:Long,aspect:Float,enableNested:Boolean):Level {
   val width=BoardProfile.size(stage)
