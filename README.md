@@ -209,6 +209,14 @@ Der CI-Benchmark vergleicht zusätzlich bei 8×8 und 12×12 Versuche mit festgel
 
 Weiter offen bleiben Regionszerlegung, skalierbare Constraint-Propagation, zielgerichtete geometrische Komplexität und ein verlässlicher hoher Erfolgsanteil bei vorgegebener Pfeilanzahl. Der App-Generator bleibt unverändert.
 
+## Exact-Cover: geometrische Mindestanforderungen (18.10.2026)
+
+Neu: `ExactCoverGenerator.generate(..., targetArrows, minWindingArrows)` erlaubt neben der exakt gewünschten Pfeilanzahl eine **harte Mindestzahl mehrfach geknickter Pfeile**. Ein fertiges Raster wird nur akzeptiert, wenn sämtliche Constraints erfüllt sind; andernfalls meldet der Solver einen ergebnislosen/budgeterschöpften Suchlauf, ohne auf den alten Generator auszuweichen. Die Suche priorisiert benötigte Windungen bei der Kandidatenauswahl und verwirft Ziel-Pfeilzahlen, die mit den verbleibenden Slots unmöglich werden.
+
+Die bisherige feste Annahme von maximal 16 belegten Zellen je Pfeil wurde durch die maximale tatsächliche Kandidatenbelegung ersetzt. Im CI-Benchmark verlangen 8×8- und 12×12-Testfälle mit Ziel-Pfeilanzahl zusätzlich zwei Windungen. `exact-cover.csv` zeigt neu `requested_windings` und `actual_windings`, um Erfolgsquote und Geometrie ausdrücklich zu messen. Die Testfälle für die neue Constraint-Kombination sind ergänzt.
+
+Weiter ausstehend: Regionszerlegung, Komponenten-Propagation, bessere Erfolgsquoten großer Zielfelder und produktive App-Integration. Unbegrenzte Suchgarantien bestehen nicht.
+
 ## Dokumentationsstand / Änderungsverlauf
 
 - **18.10.2026 – Eigenständiger Exact-Cover-Prototyp:** Neuer zellbasierter MRV-/DFS-Solver mit vollständiger Rasterbelegung und abschließender Lösbarkeitsprüfung für kleine Raster. Produktionsintegration erst nach Benchmark und regionaler Skalierung.
