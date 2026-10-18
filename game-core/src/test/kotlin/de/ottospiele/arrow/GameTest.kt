@@ -177,6 +177,24 @@ class GameTest {
    })
   }
  }
+ @Test fun regionalRepairNeverWorsensValidLevel() {
+  for(stage in listOf(35,45)) for(seed in listOf(0L,3L)) {
+   val original=Generator().generate(stage,seed,1.3f)
+   val repaired=RegionalPacker.improve(original,seed,maxNodes=32)
+   assertNotNull(Rules.solve(repaired.level))
+   assertEquals(original.arrows.size,repaired.level.arrows.size)
+   assertEquals(repaired.level,RegionalPacker.improve(original,seed,maxNodes=32).level)
+   assertTrue(LevelQualityAnalyzer.analyze(repaired.level).score(stage)+0.001 >=
+    LevelQualityAnalyzer.analyze(original).score(stage))
+  }
+ }
+ @Test fun fallbackMarkerDoesNotAlterLevelRules() {
+  val base=Generator().generate(3,15L)
+  val fallback=base.copy(fallbackGeneration=true)
+  assertEquals(Rules.solve(base),Rules.solve(fallback))
+  assertEquals(base.dependencies,fallback.dependencies)
+  assertTrue(fallback.fallbackGeneration)
+ }
  @Test fun levelQualityIsStableAndReportsActualOccupancy() {
   for(stage in listOf(3,17,35,45,80))for(seed in listOf(0L,11L)) {
    val board=Generator().generate(stage,seed,1.35f)
