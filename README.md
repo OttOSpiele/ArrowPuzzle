@@ -191,6 +191,14 @@ Der unabhängige `ExactCoverGenerator` akzeptiert jetzt Testbretter bis zu 20×2
 
 **Unverändert offen:** Die Testfelder dürfen bei erschöpftem Budget `Result.level=null` liefern. Produktionsgröße, garantierte Erfolgsquoten, Flächenregionen und tiefere Constraint-Propagation stehen weiterhin aus. Der Legacy-Pfad der App wurde nicht umgeschaltet.
 
+## Exact-Cover-Benchmark in der CI (18.10.2026)
+
+Zusätzlich zum bisherigen Legacy-Levelkatalog wird der unabhängige Exact-Cover-Generator bei jedem erfolgreichen Build in einem **separaten, zeitlich begrenzten** Gradle-Lauf untersucht (`:game-core:benchmarkExactCover`). Getestet werden die Raster **8×8, 12×12, 16×16 und 20×20**, standardmäßig mit zwei festen Seeds pro Raster und höchstens 600 DFS-Knoten je Versuch. Mehr Stichproben lassen sich mit `-PexactCoverSeeds=N` und `-PexactCoverNodes=N` anfordern.
+
+Die Resultate landen gemeinsam mit der bisherigen PDF im CI-Artefakt `arrow-generator-benchmark`: `exact-cover.csv` enthält Erfolg, Solver-Suchknoten, Zeit, Knotenbudget, eventuelle Fehlermeldung und bei Erfolg die Qualität des tatsächlich vollständig belegten und lösbaren Rasters. `exact-cover-summary.txt` fasst die Erfolgsquoten nach Rastergröße zusammen. Ein ausgeschöpftes Suchbudget ist ein dokumentiertes Messergebnis, kein APK-Buildfehler. Auch für diese Phase gibt es eine siebenminütige Laufzeitbegrenzung; bei einem Timeout können die Benchmarkdateien fehlen.
+
+**Noch keine Produktivschaltung:** Der unabhängige Exact-Cover-Generator bleibt experimentell. Erst Messdaten zeigen, welche Größen zuverlässig und schnell erreicht werden und welche weitere Constraint-Propagation bzw. Regionszerlegung nötig ist.
+
 ## Dokumentationsstand / Änderungsverlauf
 
 - **18.10.2026 – Eigenständiger Exact-Cover-Prototyp:** Neuer zellbasierter MRV-/DFS-Solver mit vollständiger Rasterbelegung und abschließender Lösbarkeitsprüfung für kleine Raster. Produktionsintegration erst nach Benchmark und regionaler Skalierung.
