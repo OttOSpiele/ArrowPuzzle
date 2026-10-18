@@ -14,14 +14,14 @@ object ExactCoverBenchmark {
   val seeds=(args.getOrNull(1)?.toIntOrNull()?:2).coerceIn(1,20)
   val budget=(args.getOrNull(2)?.toIntOrNull()?:600).coerceIn(1,100000)
   val boards=listOf(8,12,16,20)
-  val lines=mutableListOf("size,seed,node_budget,visited_nodes,elapsed_ms,success,exhausted,arrows,occupancy_pct,initially_free,longest_chain,quality,error")
+  val lines=mutableListOf("size,seed,node_budget,visited_nodes,elapsed_ms,success,exhausted,arrows,occupancy_pct,initially_free,longest_chain,quality,error,requested_arrows")
   val drawings=mutableListOf<String>()
   var success=0
-  for(size in boards)for(index in 0 until seeds) {
+  for(size in boards)for(index in 0 until seeds)for(target in listOf<Int?>(null,if(size<=12) size*size/4 else null).distinct()) {
    val seed=17L+index*7919L
    val started=System.nanoTime()
    try {
-    val result=ExactCoverGenerator.generate(size,size,seed,stage=35,maxNodes=budget)
+    val result=ExactCoverGenerator.generate(size,size,seed,stage=35,maxNodes=budget,targetArrows=target)
     val elapsed=(System.nanoTime()-started)/1_000_000
     val level=result.level
     if(level!=null) {
@@ -29,7 +29,7 @@ object ExactCoverBenchmark {
      val q=LevelQualityAnalyzer.analyze(level)
      fun fmt(value:Double)=String.format(Locale.ROOT,"%.3f",value)
      lines.add(listOf(size,seed,budget,result.nodes,elapsed,true,false,level.arrows.size,
-      fmt(q.occupancy*100),q.initiallyFree,q.longestChain,fmt(q.score(35)),"").joinToString(","))
+      fmt(q.occupancy*100),q.initiallyFree,q.longestChain,fmt(q.score(35)),"",target?:"").joinToString(","))
      val paths=level.arrows.joinToString("|") { a ->
       a.vertices().joinToString(";") { p -> "${p.x}:${p.y}" }
      }
@@ -38,12 +38,12 @@ object ExactCoverBenchmark {
       .joinToString("\t"))
      success++
     } else {
-     lines.add("$size,$seed,$budget,${result.nodes},$elapsed,false,${result.exhausted},,,,,,")
+     lines.add(listOf(size,seed,budget,result.nodes,elapsed,false,result.exhausted,"","","","","","",target?:"").joinToString(","))
     }
    } catch(error:Exception) {
     val elapsed=(System.nanoTime()-started)/1_000_000
     val message=(error::class.simpleName+":"+error.message).replace(',',';').replace('\n',' ')
-    lines.add("$size,$seed,$budget,,$elapsed,false,false,,,,,,$message")
+    lines.add(listOf(size,seed,budget,"",elapsed,false,false,"","","","","",message,target?:"").joinToString(","))
    }
   }
   File(directory,"exact-cover-boards.tsv").writeText(
@@ -53,7 +53,7 @@ object ExactCoverBenchmark {
   val summary=buildString {
    appendLine("Independent Exact-Cover Generator")
    appendLine("sizes=${boards.joinToString(",")} seeds_per_size=$seeds node_budget=$budget")
-   appendLine("completed=$success attempted=${boards.size*seeds}")
+   appendLine("completed=$success attempted=${lines.size-1}")
    for(size in boards) {
     val subset=lines.drop(1).filter{it.substringBefore(',')==size.toString()}
     val passed=subset.count{it.split(',').getOrNull(5)=="true"}
