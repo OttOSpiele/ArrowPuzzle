@@ -36,7 +36,7 @@ object RegionalPacker {
    val cells=a.cells()
    cells.size==a.body().size && cells.all{it.x in 0 until width && it.y in 0 until height} &&
     Rules.selfClear(a,width,height)
-  }.shuffled(random)
+  }.shuffled(random).take(600)
   val paths=feasible.map{it to Rules.exitPath(it,width,height).toSet()}
   val added=mutableListOf<Arrow>()
   var visited=0
