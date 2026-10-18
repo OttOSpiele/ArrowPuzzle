@@ -4,6 +4,19 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class GameTest {
+ @Test fun exactCoverWindingConstraintNeverReturnsInvalidResult() {
+  val r=ExactCoverGenerator.generate(8,8,17L,maxNodes=1000,targetArrows=16,minWindingArrows=2)
+  r.level?.let { level ->
+   assertEquals(16,level.arrows.size)
+   assertTrue(level.arrows.count { it.vertices().size>=5 }>=2)
+   assertEquals(64,level.arrows.flatMap { it.cells() }.toSet().size)
+   assertNotNull(Rules.solve(level))
+  }
+  assertThrows(IllegalArgumentException::class.java) {
+   ExactCoverGenerator.generate(8,8,17L,targetArrows=2,minWindingArrows=3)
+  }
+ }
+
  @Test fun exactCoverArrowCountConstraintAndDeterminism() {
   val first=ExactCoverGenerator.generate(8,8,17L,maxNodes=1200,targetArrows=16)
   val second=ExactCoverGenerator.generate(8,8,17L,maxNodes=1200,targetArrows=16)
