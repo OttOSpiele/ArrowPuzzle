@@ -185,6 +185,12 @@ Der neue `game-core/.../ExactCoverGenerator.kt` ist unabhängig vom bisherigen g
 
 **Architekturgrenze:** Dies ist ein unabhängiger, kleiner Constraint-Solver als tragfähiger Grundbaustein, noch keine produktive Lösung für Stufen 35–100. Größere Bretter benötigen Constraint-Propagation, freie Regionszerlegung, Verknüpfungsplanung und Qualitätsziele. Der Legacy-Generator bleibt unverändert als bisheriger App-Pfad und Fallback. Keine weiteren Greedy-Gewichte als Entwicklungsstrategie.
 
+## Exact-Cover-Skalierung (18.10.2026)
+
+Der unabhängige `ExactCoverGenerator` akzeptiert jetzt Testbretter bis zu 20×20 Zellen. Neben der MRV-Zellwahl prüft eine partielle Graph-Constraint-Propagation nach jedem hinzugefügten Pfeil, ob die bereits belegten Pfeile einen irreversiblen Freigabezyklus bilden. Ein solcher Suchzweig wird sofort abgebrochen. Jede vollständige Lösung bleibt weiterhin durch `Rules.solve` validierungspflichtig; das Knotenbudget schützt vor unbegrenzter Suche. Regressionstests üben zusätzlich 8×8 und 10×8 mit begrenztem Budget aus.
+
+**Unverändert offen:** Die Testfelder dürfen bei erschöpftem Budget `Result.level=null` liefern. Produktionsgröße, garantierte Erfolgsquoten, Flächenregionen und tiefere Constraint-Propagation stehen weiterhin aus. Der Legacy-Pfad der App wurde nicht umgeschaltet.
+
 ## Dokumentationsstand / Änderungsverlauf
 
 - **18.10.2026 – Eigenständiger Exact-Cover-Prototyp:** Neuer zellbasierter MRV-/DFS-Solver mit vollständiger Rasterbelegung und abschließender Lösbarkeitsprüfung für kleine Raster. Produktionsintegration erst nach Benchmark und regionaler Skalierung.
