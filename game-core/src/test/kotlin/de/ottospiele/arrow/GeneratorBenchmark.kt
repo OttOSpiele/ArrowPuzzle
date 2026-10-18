@@ -16,6 +16,7 @@ object GeneratorBenchmark {
   val aspects=listOf(.65f,1.0f,1.65f)
   val lines=mutableListOf("stage,seed,aspect,success,elapsed_ms,width,height,arrows,occupancy_pct,free,connected,longest_chain,key_arrows,largest_interior_void,fallback,quality,error")
   val generator=Generator()
+  val boards=mutableListOf<String>()
   var succeeded=0
   var failed=0
   for(stage in stages)for(i in 0 until seedCount) {
@@ -32,6 +33,14 @@ object GeneratorBenchmark {
      level.arrows.size,dec(m.occupancy*100),m.initiallyFree,m.connectedArrows,
      m.longestChain,m.keyArrows,m.largestInteriorVoid,level.fallbackGeneration,
      dec(m.score(stage)),"").joinToString(","))
+    // Geometry export: one board per TSV row, paths as ordered vertices.
+    // Separate file ensures PDF renderer can draw exactly the generated data.
+    val encoded=level.arrows.joinToString("|") { a ->
+     a.vertices().joinToString(";") { p -> "${p.x}:${p.y}" }
+    }
+    boards.add(listOf(stage,seed,aspect,level.width,level.height,
+     level.fallbackGeneration,dec(m.occupancy*100),m.initiallyFree,
+     m.longestChain,dec(m.score(stage)),encoded).joinToString("\t"))
     succeeded++
    } catch(e:Exception) {
     val elapsed=(System.nanoTime()-start)/1_000_000
@@ -40,6 +49,9 @@ object GeneratorBenchmark {
     failed++
    }
   }
+  File(output,"boards.tsv").writeText(
+   "stage\tseed\taspect\twidth\theight\tfallback\toccupancy_pct\tfree\tchain\tquality\tpaths\n"+
+    boards.joinToString("\n")+"\n")
   File(output,"levels.csv").writeText(lines.joinToString("\n")+"\n")
   val summary=buildString {
    appendLine("Arrow Puzzle generator benchmark")
