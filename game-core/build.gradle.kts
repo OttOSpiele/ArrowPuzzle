@@ -12,3 +12,13 @@ tasks.register<JavaExec>("benchmarkLevels") {
  args(layout.buildDirectory.dir("benchmark").get().asFile.absolutePath,
   (project.findProperty("benchmarkSeeds") ?: "7").toString())
 }
+
+tasks.register<JavaExec>("benchmarkExactCover") {
+ group = "verification"
+ dependsOn(tasks.testClasses)
+ classpath = sourceSets.test.get().runtimeClasspath
+ mainClass.set("de.ottospiele.arrow.ExactCoverBenchmark")
+ args(layout.buildDirectory.dir("benchmark").get().asFile.absolutePath,
+  (project.findProperty("exactCoverSeeds") ?: "2").toString(),
+  (project.findProperty("exactCoverNodes") ?: "600").toString())
+}
