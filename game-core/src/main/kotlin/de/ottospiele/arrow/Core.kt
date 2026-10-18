@@ -411,7 +411,7 @@ class Generator {
    val points=shape.offsets
    points.zipWithNext().sumOf{(a,b)->kotlin.math.abs(a.x-b.x)+kotlin.math.abs(a.y-b.y)}+1
   }
-  fun choose(id:Int):Arrow?{
+  fun choose(id:Int,relaxed:Boolean=false):Arrow?{
    val targetComplexity=when{
     enableNested && stage>=35 && id in 3..5->6
     stage>=24 && id in 3..5->4
@@ -453,9 +453,9 @@ class Generator {
     val segments=shape.offsets.size-1
     if(stage<=5 && segments>2)continue
     // Reserve the expansive shapes for early motifs; late filling must be cheap.
-    if(id>=count*3/4 && (segments!=1 || cellsPerArrow[index]>4))continue
-    if(id>=count/2 && segments>2)continue
-    if(id<count/2 && targetComplexity>=3 && segments==2)continue
+    if(!relaxed && id>=count*3/4 && (segments!=1 || cellsPerArrow[index]>4))continue
+    if(!relaxed && id>=count/2 && segments>2)continue
+    if(!relaxed && id<count/2 && targetComplexity>=3 && segments==2)continue
     val minX=shape.offsets.minOf{it.x}
     val maxX=shape.offsets.maxOf{it.x}
     val minY=shape.offsets.minOf{it.y}
@@ -463,7 +463,7 @@ class Generator {
     for(y in -minY until height-maxY)for(x in -minX until width-maxX){
      // Deterministic sub-lattice sampling reduces candidate churn without
      // introducing random failed whole-board generation passes.
-     if(id<count/2 && (x+y+index+id)%2!=0)continue
+     if(!relaxed && id<count/2 && (x+y+index+id)%2!=0)continue
      val a=shape.place(id,x,y)
      val body=a.cells()
      if(body.size!=cellsPerArrow[index] || body.any{it in occupied})continue
@@ -521,7 +521,9 @@ class Generator {
      if(score>winningScore){winningScore=score;winner=a}
     }
    }
-   return winner
+   // The normal heuristic may run out of short boundary arrows. Before
+   // abandoning the board, search the FULL valid shape/position domain.
+   return winner ?: if(!relaxed)choose(id,true) else null
   }
   for(id in arrows.size until count){
    val a=choose(id)?:error("Cannot construct arrow $id at stage $stage")
