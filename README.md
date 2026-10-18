@@ -199,6 +199,16 @@ Die Resultate landen gemeinsam mit der bisherigen PDF im CI-Artefakt `arrow-gene
 
 **Noch keine Produktivschaltung:** Der unabhängige Exact-Cover-Generator bleibt experimentell. Erst Messdaten zeigen, welche Größen zuverlässig und schnell erreicht werden und welche weitere Constraint-Propagation bzw. Regionszerlegung nötig ist.
 
+## Exact Cover: Pfeilanzahl, Windungen und visueller Benchmark (18.10.2026)
+
+Der unabhängige `ExactCoverGenerator` unterstützt nun die optionale Vorgabe `targetArrows` für eine **exakte** Pfeilanzahl. Eine vollständige Rasterbelegung wird nur akzeptiert, wenn die Zahl der Pfeile genau dem Ziel entspricht und der Solver eine gültige Reihenfolge liefert. Teilbelegungen oder Ergebnisse mit abweichender Pfeilanzahl gelten als erfolglose Suche (Budgetlimit kann weiterhin erreicht werden).
+
+Der geometrische Kandidatenraum umfasst nun neben Geraden und L-Formen auch ausgewählte viersegmentige Windungen mit mehreren Richtungswechseln; die Kandidaten werden pro Startzelle/Richtung einmalig erzeugt. Das allein garantiert weder komplizierte Formen im Endergebnis noch bestimmte Schwierigkeitswerte: Die geometrische Suche wählt weiterhin die erste zulässige Lösung.
+
+Der CI-Benchmark vergleicht zusätzlich bei 8×8 und 12×12 Versuche mit festgelegter Pfeilanzahl (jeweils etwa ein Pfeil pro vier Zellen) gegen den freien Modus. `exact-cover.csv` enthält nun `requested_arrows`; fehlgeschlagene Constraints zählen als echte Messwerte und nicht als APK-Fehler. Aus dem Geometrieexport `exact-cover-boards.tsv` erzeugt die CI einen eigenen **`exact-cover-levels.pdf`**, getrennt von der Legacy-PDF. Alle Ausgaben liegen im bisherigen GitHub-Actions-Artefakt `arrow-generator-benchmark`.
+
+Weiter offen bleiben Regionszerlegung, skalierbare Constraint-Propagation, zielgerichtete geometrische Komplexität und ein verlässlicher hoher Erfolgsanteil bei vorgegebener Pfeilanzahl. Der App-Generator bleibt unverändert.
+
 ## Dokumentationsstand / Änderungsverlauf
 
 - **18.10.2026 – Eigenständiger Exact-Cover-Prototyp:** Neuer zellbasierter MRV-/DFS-Solver mit vollständiger Rasterbelegung und abschließender Lösbarkeitsprüfung für kleine Raster. Produktionsintegration erst nach Benchmark und regionaler Skalierung.
