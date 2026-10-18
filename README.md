@@ -217,6 +217,14 @@ Die bisherige feste Annahme von maximal 16 belegten Zellen je Pfeil wurde durch 
 
 Weiter ausstehend: Regionszerlegung, Komponenten-Propagation, bessere Erfolgsquoten großer Zielfelder und produktive App-Integration. Unbegrenzte Suchgarantien bestehen nicht.
 
+## Exact Cover: Regionen und Schwierigkeits-Constraints (18.10.2026)
+
+Der unabhängige `ExactCoverGenerator` prüft während des Backtrackings die vierfach zusammenhängenden freien Regionen. Eine isolierte Einzelzelle ist nicht belegbar; bei vorgegebener Pfeilanzahl werden außerdem pro Region notwendige Unter- und Obergrenzen der noch benötigten Pfeile aufsummiert. Diese Kriterien sind **notwendige Bedingungen**, kein vollständiger Beweis dafür, dass eine Region später belegbar ist.
+
+Neu sind die optionalen **harten Ergebnis-Constraints** `maxInitiallyFree` und `minChainLength`. Erst ein vollständig belegtes, lösbares Rätsel, dessen Qualitätsmetriken die Vorgaben erfüllen, wird akzeptiert. Die Suche darf weiterhin mit `level=null` enden. Die Benchmark-Zielkonfiguration verlangt bei jeder Rastergröße exakt `size²/4` Pfeile, mindestens zwei Windungen, maximal die Hälfte dieser Pfeile anfänglich frei und eine Kettentiefe von mindestens `size/2`. Dazu wird ein freier Vergleichsmodus ohne diese Constraints ausgeführt.
+
+Die CI prüft jetzt standardmäßig zehn feste Seeds pro Größe statt zwei. Bei vier Rastergrößen und zwei Modi ergeben sich 80 Vergleichsversuche, jeweils mit 600 Knoten Suchbudget sowie bestehendem Gesamttimeout der Benchmark-Phase. Größere Stichproben sind **keine Erfolgsgarantie**; der Vergleich der Modi muss anhand von Erfolg, Suchknoten und Laufzeiten erfolgen. Der Legacy-Generator und der App-Pfad bleiben unverändert.
+
 ## Dokumentationsstand / Änderungsverlauf
 
 - **18.10.2026 – Eigenständiger Exact-Cover-Prototyp:** Neuer zellbasierter MRV-/DFS-Solver mit vollständiger Rasterbelegung und abschließender Lösbarkeitsprüfung für kleine Raster. Produktionsintegration erst nach Benchmark und regionaler Skalierung.
