@@ -16,11 +16,13 @@ object ExactCoverGenerator {
  data class Result(val level:Level?,val nodes:Int,val exhausted:Boolean)
  private data class Placement(val arrow:Arrow,val cells:Set<Pt>)
 
- fun generate(width:Int,height:Int,seed:Long,stage:Int=35,maxNodes:Int=50000,targetArrows:Int?=null,minWindingArrows:Int=0):Result {
+ fun generate(width:Int,height:Int,seed:Long,stage:Int=35,maxNodes:Int=50000,targetArrows:Int?=null,minWindingArrows:Int=0,maxInitiallyFree:Int?=null,minChainLength:Int=0):Result {
   require(width in 2..20 && height in 2..20)
   require(maxNodes>0)
   require(targetArrows==null || targetArrows in 1..width*height)
   require(minWindingArrows in 0..(targetArrows?:width*height))
+  require(maxInitiallyFree==null || maxInitiallyFree>=0)
+  require(minChainLength>=0)
   val random=Random(seed)
   val placements=mutableListOf<Placement>()
   var number=0
@@ -94,6 +96,37 @@ object ExactCoverGenerator {
    }
    return arrows.indices.all { visit(it) }
   }
+  fun regionsFeasible():Boolean {
+   val seen=BooleanArray(width*height)
+   var minimum=0
+   var maximum=0
+   for(root in used.indices) {
+    if(used[root] || seen[root])continue
+    val queue=ArrayDeque<Int>()
+    queue.add(root)
+    seen[root]=true
+    var count=0
+    while(queue.isNotEmpty()) {
+     val cell=queue.removeFirst()
+     count++
+     val x=cell%width
+     val y=cell/width
+     val adjacent=intArrayOf(if(x>0)cell-1 else -1,if(x<width-1)cell+1 else -1,if(y>0)cell-width else -1,if(y<height-1)cell+width else -1)
+     for(next in adjacent)if(next>=0 && !used[next] && !seen[next]) {
+      seen[next]=true
+      queue.add(next)
+     }
+    }
+    if(count<2)return false
+    minimum+=(count+maxCells-1)/maxCells
+    maximum+=count/2
+   }
+   if(targetArrows!=null) {
+    val slots=targetArrows-chosen.size
+    if(slots<minimum || slots>maximum)return false
+   }
+   return true
+  }
   var nodes=0
   var best:Level?=null
   fun search(remaining:Int) {
@@ -105,7 +138,10 @@ object ExactCoverGenerator {
      candidates[index].arrow.copy(id=id)
     }
     val trial=Level(seed,stage,width,arrows,height)
-    if(Rules.solve(trial)!=null)best=trial
+    if(Rules.solve(trial)!=null) {
+     val q=LevelQualityAnalyzer.analyze(trial)
+     if((maxInitiallyFree==null || q.initiallyFree<=maxInitiallyFree) && q.longestChain>=minChainLength)best=trial
+    }
     return
    }
    if(targetArrows!=null) {
@@ -140,7 +176,7 @@ object ExactCoverGenerator {
     }
     cells.forEach{used[it]=true}
     chosen.add(index)
-    if(partialAcyclic())search(remaining-cells.size)
+    if(partialAcyclic() && regionsFeasible())search(remaining-cells.size)
     chosen.removeAt(chosen.lastIndex)
     cells.forEach{used[it]=false}
     if(best!=null)return
