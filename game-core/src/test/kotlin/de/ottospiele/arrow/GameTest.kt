@@ -177,6 +177,19 @@ class GameTest {
    })
   }
  }
+ @Test fun levelQualityIsStableAndReportsActualOccupancy() {
+  for(stage in listOf(3,17,35,45,80))for(seed in listOf(0L,11L)) {
+   val board=Generator().generate(stage,seed,1.35f)
+   val q=LevelQualityAnalyzer.analyze(board)
+   assertEquals(BoardProfile.actualOccupancy(board).toDouble(),q.occupancy,0.0001)
+   assertEquals(PatternAnalysis.analyze(board).initiallyFree,q.initiallyFree)
+   assertTrue(q.initiallyFree in 1..board.arrows.size)
+   assertTrue(q.connectedArrows in 0..board.arrows.size)
+   assertTrue(q.largestInteriorVoid>=0)
+   assertEquals(q,LevelQualityAnalyzer.analyze(board))
+   assertNotNull(Rules.solve(board))
+  }
+ }
  @Test fun stageQualityMetricsMatchActualGeometry() {
   for(stage in listOf(17,35,45,60)) for(aspect in listOf(.7f,1f,1.5f)) {
    val level=Generator().generate(stage,17L,aspect)
