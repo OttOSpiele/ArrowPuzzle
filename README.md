@@ -166,7 +166,23 @@ Dies ist eine **regionale Constraint-Reparatur**, aber noch **kein vollständige
 
 **Unauffällige Testmarkierung:** Ist die erweiterte Konstruktion gescheitert und musste der ältere Konstruktionspfad verwendet werden (`Level.fallbackGeneration=true`), zeichnet die App die Rasterpunkte in dezentem Sandton statt Blaugrau. Es gibt bewusst weder ein Label noch zusätzliche Bedienelemente. Das Merkmal überlebt die Portraitrotation, das lokale Speichern und die Vorausberechnung. Historisch gespeicherte Level ohne Kennzeichen werden standardmäßig als normal angezeigt. Die Anzeige dient ausschließlich der visuellen Entwicklungskontrolle und ist kein allgemeines Gütesiegel; ein Level ohne Sandton muss nicht durch regionale Reparatur verbessert worden sein.
 
+## Automatischer Generator-Benchmark und Level-PDF (18.10.2026)
+
+Jeder erfolgreiche Android-CI-Build führt anschließend `gradle :game-core:benchmarkLevels` aus. Standardmäßig entstehen **112 Referenzlevel** (16 Stufen × 7 deterministische Seeds), mit wechselndem Seitenverhältnis. Der Gradle-Parameter `-PbenchmarkSeeds=100` erlaubt einen ausführlichen Lauf mit 100 Seeds **pro** Referenzstufe; dies kann entsprechend deutlich länger dauern.
+
+Im GitHub-Actions-Artefakt `arrow-generator-benchmark` werden abgelegt:
+
+- `levels.csv`: sämtliche Versuche inklusive fehlgeschlagener Generierungen, Laufzeiten, Abhängigkeits- und Dichtekennzahlen;
+- `boards.tsv`: tatsächlich erzeugte Pfeil-Geometrien als maschinenlesbarer Export;
+- `generated-levels.pdf`: visueller Katalog, zwei Raster pro A4-Querformatseite, mit Original-Pfeilpfaden, Stufe, Seed, Belegung, freien Pfeilen, Kettentiefe und sandfarbener Fallback-Markierung;
+- `summary.txt`: Anzahl erfolgreicher und fehlgeschlagener Generierungen.
+
+Die PDF wird **aus den exportierten Levelkoordinaten** gezeichnet und nicht durch erneute (potenziell andere) Generierung. Die Benchmarkphase ist von der APK-Veröffentlichung entkoppelt: Fehler werden im Benchmark ausgewiesen, verhindern aber die Debug-APK nicht; die Reports werden auch bei Fehlern hochgeladen. Die Level-PDF dient der Entwicklerkontrolle, nicht als Spielanleitung.
+
 ## Dokumentationsstand / Änderungsverlauf
+
+- **18.10.2026 – CI-Levelkatalog:** Referenzlevel-Benchmark mit CSV, vollständigem Geometrieexport, Zusammenfassung und visuellem Levelkatalog als PDF in GitHub-Actions-Artefakten.
+
 
 - **18.10.2026 – Regionale Constraint-Reparatur:** Begrenztes geometrisches Backtracking zur Neuordnung von vier zuletzt konstruierten Pfeilen, ausschließlich bei besserem Qualitätswert und gültigem Solver. Fallback-Level sind anhand dezent sandfarbener Rasterpunkte erkennbar; Merkmal ist in Level-Spielstand und Cache gespeichert. Ein vollständiger Exact-Cover-Generator steht weiterhin aus.
 
