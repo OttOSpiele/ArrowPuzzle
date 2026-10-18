@@ -16,10 +16,11 @@ object ExactCoverGenerator {
  data class Result(val level:Level?,val nodes:Int,val exhausted:Boolean)
  private data class Placement(val arrow:Arrow,val cells:Set<Pt>)
 
- fun generate(width:Int,height:Int,seed:Long,stage:Int=35,maxNodes:Int=50000,targetArrows:Int?=null):Result {
+ fun generate(width:Int,height:Int,seed:Long,stage:Int=35,maxNodes:Int=50000,targetArrows:Int?=null,minWindingArrows:Int=0):Result {
   require(width in 2..20 && height in 2..20)
   require(maxNodes>0)
   require(targetArrows==null || targetArrows in 1..width*height)
+  require(minWindingArrows in 0..(targetArrows?:width*height))
   val random=Random(seed)
   val placements=mutableListOf<Placement>()
   var number=0
@@ -64,6 +65,8 @@ object ExactCoverGenerator {
   }
   val order=placements.indices.shuffled(random)
   val candidates=order.map{placements[it]}
+  val maxCells=candidates.maxOf { it.cells.size }
+  val winding=BooleanArray(candidates.size) { candidates[it].arrow.vertices().size>=5 }
   val byCell=Array(width*height){mutableListOf<Int>()}
   candidates.forEachIndexed { index,placement ->
    for(p in placement.cells)byCell[p.y*width+p.x].add(index)
@@ -97,6 +100,7 @@ object ExactCoverGenerator {
    if(best!=null || nodes>=maxNodes)return
    if(remaining==0) {
     if(targetArrows!=null && chosen.size!=targetArrows)return
+    if(chosen.count { winding[it] }<minWindingArrows)return
     val arrows=chosen.mapIndexed{ id,index ->
      candidates[index].arrow.copy(id=id)
     }
@@ -106,8 +110,10 @@ object ExactCoverGenerator {
    }
    if(targetArrows!=null) {
     val missing=targetArrows-chosen.size
-    if(missing<=0 || remaining<missing*2 || remaining>missing*16)return
+    if(missing<=0 || remaining<missing*2 || remaining>missing*maxCells)return
    }
+   val windingCount=chosen.count { winding[it] }
+   if(targetArrows!=null && windingCount+(targetArrows-chosen.size)<minWindingArrows)return
    var selected=-1
    var viable:IntArray?=null
    // Minimum-remaining-values constraint: select the hardest free cell.
@@ -122,13 +128,15 @@ object ExactCoverGenerator {
     }
    }
    if(selected<0)return
-   for(index in viable!!) {
+   val ordered=if(minWindingArrows>0 && windingCount<minWindingArrows)viable!!.sortedByDescending { winding[it] } else viable!!.toList()
+   for(index in ordered) {
     if(++nodes>maxNodes)return
     val cells=candidates[index].cells.map{it.y*width+it.x}
+    if(targetArrows!=null && windingCount+(if(winding[index])1 else 0)+targetArrows-chosen.size-1<minWindingArrows)continue
     if(targetArrows!=null) {
      val left=remaining-cells.size
      val slots=targetArrows-chosen.size-1
-     if(left<slots*2 || left>slots*16)continue
+     if(left<slots*2 || left>slots*maxCells)continue
     }
     cells.forEach{used[it]=true}
     chosen.add(index)
