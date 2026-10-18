@@ -148,7 +148,20 @@ Rechtliche Quellen (Stand 14.10.2026):
 
 Frühe Tests gingen fälschlich von einer starren Pfeilverschiebung aus. **Verbindlich ist seit der Nutzerkorrektur ausschließlich das Schlangenmodell:** Der Körper folgt seiner eigenen Linie um Ecken; nur vor der Pfeilspitze werden neue Spielfeldzellen betreten. Ältere Einträge unten sind Entwicklungshistorie und keine aktuelle Spezifikation.
 
+## Generatorqualität und Level-Vorbereitung (18.10.2026)
+
+Neue Metrik `LevelQualityAnalyzer` ermittelt aus der tatsächlichen Geometrie Rasterbelegung, anfänglich freie Pfeile, vernetzte Pfeile, Kettentiefe, Schlüsselpfeile und die größte vollständig eingeschlossene freie Fläche. Die heuristische Qualitätsbewertung ersetzt nicht `Rules.solve`.
+
+`PreparedLevels` speichert bis zu zwei vollständig vom Solver geprüfte Kandidaten für die nächste Stufe lokal in Android SharedPreferences, getrennt vom aktuellen Spielstand und nach Stufe und Seitenverhältnis getrennt. Die App versucht während der laufenden Stufe, für jeden Slot zwei deterministische Kandidaten zu berechnen und den höher bewerteten zu speichern. Ein bereits gespeichertes Level wird nach einem Neustart wieder geladen. Schlägt die Vorberechnung fehl, bleibt die normale direkte Generierung als Fallback verfügbar.
+
+Ein **4-dp-Fortschrittsbalken** erscheint unten im Spielbereich, oberhalb der Systemnavigation. Die weiße Füllung zeigt ausschließlich den Anteil erfolgreich validierter und gespeicherter Slots an (0/2, 1/2, 2/2), **keine erfundene prozentuale Restlaufzeit** des Backtrackings. Die Vorbereitung arbeitet über Coroutines außerhalb des UI-Threads. Der Balken bleibt außerhalb des interaktiven Spielfeldes.
+
+**Noch offen:** Echter regionaler Constraint-/Exact-Cover-Flächenplaner, gezielte Reparatur von Innenlücken, verbindliche Qualitätsgrenzen, umfangreicher Benchmark mit Laufzeitgrenzen und anschließend Minispiel-Übergänge. Der vorliegende Stand ist ein inkrementeller erster Baustein, nicht die abgeschlossene Neugestaltung des Levelgenerators. Optionales lokales ML bleibt zurückgestellt.
+
 ## Dokumentationsstand / Änderungsverlauf
+
+- **18.10.2026 – Qualitätsmetriken und Vorausberechnung:** Levelqualität wird anhand tatsächlicher Raster- und Graphparameter analysiert. Die App berechnet und speichert bis zu zwei validierte Folgelevel lokal und visualisiert gespeicherte Slots durch einen schmalen weißen Fortschrittsbalken am unteren Rand. Constraint-Flächenzerlegung, Minispiele und ML sind weiterhin offene Schritte.
+
 
 - **15.10.2026 – Innenlücken-Füllung, erste Optimierung:** Ab Stufe 35 werden bei der Pfeilplatzierung bislang ungenutzte innere Rasterzellen, zentrumsnahe Abdeckung und Nachbarschaft zu bestehenden Pfeilen zusätzlich bewertet. Die Bewertung bleibt weich; Ausfahrwegfreiheit und Solver müssen weiterhin erfüllt sein. Ziel ist weniger ausschließlich randorientierte Pfeilbelegung. Die Konstruktion ist weiterhin greedy mit sicherem Fallback; systematisches Füllen aller freien Innenregionen und garantierte Zielbelegungsquoten stehen noch aus.
 
