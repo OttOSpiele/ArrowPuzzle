@@ -23,7 +23,7 @@ data class Arrow(val id:Int,val x:Int,val y:Int,val length:Int,val dir:Dir,val b
   }
  }
 }
-data class Level(val seed:Long,val stage:Int,val size:Int,val arrows:List<Arrow>,val height:Int=size){
+data class Level(val seed:Long,val stage:Int,val size:Int,val arrows:List<Arrow>,val height:Int=size,val fallbackGeneration:Boolean=false){
  val width:Int get()=size
  val dependencies:LevelDependencies by lazy { Rules.dependencies(this) }
 }
@@ -301,7 +301,9 @@ class Generator {
     ?:GeometricBacktracker.place(graph,stage,seed xor 0x5eedL,width,height,anchors,maxNodes=1200)
   } else null
   val raw=if(planned!=null) Level(seed,stage,width,planned.arrows,height)
-   else construct(stage,seed,normalized)
+   else construct(stage,seed,normalized).let { board ->
+    if(stage in 6..16)board.copy(fallbackGeneration=true) else board
+   }
   return if(portrait)rotatePortrait(raw) else raw
  }
  private fun rotatePortrait(level:Level):Level {
@@ -311,7 +313,7 @@ class Generator {
    val dir=Dir.entries.first{it.x==-a.dir.y && it.y==a.dir.x}
    Arrow(a.id,p.x,p.y,a.length,dir,a.bends.map(::turn))
   }
-  return Level(level.seed,level.stage,level.height,arrows,level.width)
+  return Level(level.seed,level.stage,level.height,arrows,level.width,level.fallbackGeneration)
  }
  private data class Shape(val offsets:List<Pt>,val direction:Dir){
   fun place(id:Int,x:Int,y:Int):Arrow{
@@ -370,7 +372,7 @@ class Generator {
  }
  private fun construct(stage:Int,seed:Long,aspect:Float):Level =
   if(stage>=35) runCatching { constructOnce(stage,seed,aspect,true) }
-   .getOrElse { constructOnce(stage,seed,aspect,false) }
+   .getOrElse { constructOnce(stage,seed,aspect,false).copy(fallbackGeneration=true) }
   else constructOnce(stage,seed,aspect,false)
 
  private fun constructOnce(stage:Int,seed:Long,aspect:Float,enableNested:Boolean):Level {
