@@ -16,17 +16,18 @@ object ExactCoverGenerator {
  data class Result(val level:Level?,val nodes:Int,val exhausted:Boolean)
  private data class Placement(val arrow:Arrow,val cells:Set<Pt>)
 
- fun generate(width:Int,height:Int,seed:Long,stage:Int=35,maxNodes:Int=50000):Result {
+ fun generate(width:Int,height:Int,seed:Long,stage:Int=35,maxNodes:Int=50000,targetArrows:Int?=null):Result {
   require(width in 2..20 && height in 2..20)
   require(maxNodes>0)
+  require(targetArrows==null || targetArrows in 1..width*height)
   val random=Random(seed)
   val placements=mutableListOf<Placement>()
   var number=0
   for(y in 0 until height)for(x in 0 until width)for(dir in Dir.entries) {
    val limit=when(dir){Dir.LEFT->x+1;Dir.RIGHT->width-x;Dir.UP->y+1;Dir.DOWN->height-y}
-   for(length in 2..minOf(limit,6)) {
+   for(length in 2..minOf(limit,if(targetArrows!=null)10 else 6)) {
     val tail=Pt(x,y)
-    val tip=Pt(x+dir.x*(length-1),y+dir.y*(length-1))
+
     val arrow=Arrow(number++,tail.x,tail.y,length,dir)
     placements.add(Placement(arrow,arrow.cells()))
     // Orthogonal L paths are independent candidate geometries, rather than
@@ -40,6 +41,25 @@ object ExactCoverGenerator {
        placements.add(Placement(bent,bent.cells()))
      }
     }
+   // Three-leg meanders: orthogonal first, then a reverse or forward
+   // return, finishing in the designated tip direction.
+   // Generate a bounded family to avoid quadratic candidate explosion.
+   if(width>=6 && height>=6 && stage>=24) {
+    val sides=Dir.entries.filter { it.x*dir.x+it.y*dir.y==0 }
+    for(side in sides)for(lateral in 2..3)for(run in 2..4) {
+     val p1=Pt(x+side.x*lateral,y+side.y*lateral)
+     val p2=Pt(p1.x+dir.x*run,p1.y+dir.y*run)
+     val p3=Pt(p2.x-side.x,p2.y-side.y)
+     val p4=Pt(p3.x+dir.x*2,p3.y+dir.y*2)
+     val vertices=listOf(p1,p2,p3,p4)
+     if(vertices.all { it.x in 0 until width && it.y in 0 until height }) {
+      val winding=Arrow(number++,x,y,3,dir,vertices)
+      if(winding.cells().size==winding.body().size &&
+         Rules.selfClear(winding,width,height))
+       placements.add(Placement(winding,winding.cells()))
+     }
+    }
+   }
   }}
   val order=placements.indices.shuffled(random)
   val candidates=order.map{placements[it]}
@@ -75,12 +95,17 @@ object ExactCoverGenerator {
   fun search(remaining:Int) {
    if(best!=null || nodes>=maxNodes)return
    if(remaining==0) {
+    if(targetArrows!=null && chosen.size!=targetArrows)return
     val arrows=chosen.mapIndexed{ id,index ->
      candidates[index].arrow.copy(id=id)
     }
     val trial=Level(seed,stage,width,arrows,height)
     if(Rules.solve(trial)!=null)best=trial
     return
+   }
+   if(targetArrows!=null) {
+    val missing=targetArrows-chosen.size
+    if(missing<=0 || remaining<missing*2 || remaining>missing*16)return
    }
    var selected=-1
    var viable:IntArray?=null
@@ -99,6 +124,11 @@ object ExactCoverGenerator {
    for(index in viable!!) {
     if(++nodes>maxNodes)return
     val cells=candidates[index].cells.map{it.y*width+it.x}
+    if(targetArrows!=null) {
+     val left=remaining-cells.size
+     val slots=targetArrows-chosen.size-1
+     if(left<slots*2 || left>slots*16)continue
+    }
     cells.forEach{used[it]=true}
     chosen.add(index)
     if(partialAcyclic())search(remaining-cells.size)
