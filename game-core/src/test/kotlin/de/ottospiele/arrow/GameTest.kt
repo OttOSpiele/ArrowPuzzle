@@ -4,6 +4,17 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class GameTest {
+ @Test fun exactCoverSupportsLargerBoardAndPrunesDependencyCycles() {
+  for((w,h) in listOf(8 to 8,10 to 8)) {
+   val result=ExactCoverGenerator.generate(w,h,17L,maxNodes=30000)
+   assertTrue(result.nodes<=30001)
+   result.level?.let { level ->
+    assertEquals(w*h,level.arrows.flatMap { it.cells() }.toSet().size)
+    assertNotNull(Rules.solve(level))
+   }
+  }
+ }
+
  @Test fun exactCoverGeneratorSolvesSmallBoardsWithoutEmptyCells() {
   for((w,h) in listOf(4 to 4,6 to 4,6 to 6)) {
    val result=ExactCoverGenerator.generate(w,h,17L,maxNodes=60000)
