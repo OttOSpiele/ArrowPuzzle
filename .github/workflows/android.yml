@@ -104,6 +104,9 @@ jobs:
           else
             echo "No benchmark geometry output available."
           fi
+          if [ -s game-core/build/benchmark/exact-cover-boards.tsv ]; then
+            python3 tools/render_generator_benchmark.py game-core/build/benchmark exact-cover-boards.tsv exact-cover-levels.pdf
+          fi
 
       - name: Upload generator benchmark (CSV + PDF)
         if: always()
