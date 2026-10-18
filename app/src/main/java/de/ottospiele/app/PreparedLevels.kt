@@ -31,7 +31,7 @@ internal object PreparedLevels {
        Pt(point.getInt(0),point.getInt(1))
       })
     }
-    Level(item.getLong("seed"),stage,item.getInt("width"),list,item.getInt("height"))
+    Level(item.getLong("seed"),stage,item.getInt("width"),list,item.getInt("height"),item.optBoolean("fallbackGeneration",false))
      .also { require(Rules.solve(it)!=null) }
    }
   }.getOrElse { emptyList() }
@@ -49,7 +49,8 @@ internal object PreparedLevels {
      .put("length",a.length).put("dir",a.dir.name).put("bends",bends))
    }
    items.put(JSONObject().put("seed",level.seed).put("width",level.width)
-    .put("height",level.height).put("arrows",arrows))
+    .put("height",level.height).put("fallbackGeneration",level.fallbackGeneration)
+    .put("arrows",arrows))
   }
   root.put("levels",items)
   context.getSharedPreferences(PREF,Context.MODE_PRIVATE).edit()
