@@ -181,6 +181,9 @@ Die PDF wird **aus den exportierten Levelkoordinaten** gezeichnet und nicht durc
 
 ## Dokumentationsstand / Änderungsverlauf
 
+- **18.10.2026 – Generator-Verbesserung nach Benchmark #188:** Vor dem Abbruch einer Pfeilplatzierung prüft der Reverse-Builder jetzt auch solche geometrisch gültigen Formen und Positionen, die der schnelle Standardheuristikpfad aus Performancegründen ausschließt. Die regionale Kandidatensuche zieht zentrale Innenlücken gezielt in ihren Suchpool ein und mischt diese mit global gestreuten Kandidaten. Eine Regression für Stufe 44, Seed 15855, Seitenverhältnis 1,65 adressiert den im Benchmark entdeckten Fehler. Dies ist eine inkrementelle Robustheits-/Innenflächenverbesserung; der vollständige regionale Exact-Cover-Solver und eine garantierte Dichteprogression sind weiterhin offen.
+
+
 - **18.10.2026 – CI-Levelkatalog:** Referenzlevel-Benchmark mit CSV, vollständigem Geometrieexport, Zusammenfassung und visuellem Levelkatalog als PDF in GitHub-Actions-Artefakten.
 
 
