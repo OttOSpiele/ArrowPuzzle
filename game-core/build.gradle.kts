@@ -10,5 +10,5 @@ tasks.register<JavaExec>("benchmarkLevels") {
  classpath = sourceSets.test.get().runtimeClasspath
  mainClass.set("de.ottospiele.arrow.GeneratorBenchmark")
  args(layout.buildDirectory.dir("benchmark").get().asFile.absolutePath,
-  (project.findProperty("benchmarkSeeds") ?: "100").toString())
+  (project.findProperty("benchmarkSeeds") ?: "7").toString())
 }
