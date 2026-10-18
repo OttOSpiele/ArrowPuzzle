@@ -534,7 +534,10 @@ class Generator {
   check(blueprint==null || blueprint.requiredEdges.all{(blocker,blocked)->
    blocker in level.dependencies.requiredRemovals[blocked].orEmpty()
   })
-  return level
+  // Regional constraint repair is deliberately bounded. It only replaces
+  // late blockers and never accepts an unverified or lower-quality layout.
+  return if(stage>=35 && enableNested)
+   RegionalPacker.improve(level,seed,maxNodes=48).level else level
  }
 }
 class Game(val level:Level,val maxLives:Int=5,val maxHints:Int=3){
