@@ -36,7 +36,15 @@ object RegionalPacker {
    val cells=a.cells()
    cells.size==a.body().size && cells.all{it.x in 0 until width && it.y in 0 until height} &&
     Rules.selfClear(a,width,height)
-  }.shuffled(random).take(600)
+  }
+  // Sampling only randomly heavily underrepresents the central gaps.
+  // Preserve a mixed pool: half center-covering shapes, half global shapes.
+  val center=Pt(width/2,height/2)
+  val ranked=feasible.sortedByDescending { a ->
+   a.cells().count { p -> abs(p.x-center.x)<=width/4 &&
+    abs(p.y-center.y)<=height/4 }
+  }
+  val pool=(ranked.take(450)+feasible.shuffled(random).take(450)).distinct()
   val paths=feasible.map{it to Rules.exitPath(it,width,height).toSet()}
   val added=mutableListOf<Arrow>()
   var visited=0
