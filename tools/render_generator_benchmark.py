@@ -84,11 +84,13 @@ def draw_board(pdf, row, x, y, width, height):
 
 def main():
     folder = Path(sys.argv[1] if len(sys.argv) > 1 else "game-core/build/benchmark")
-    with (folder / "boards.tsv").open(encoding="utf-8", newline="") as fp:
+    input_name = sys.argv[2] if len(sys.argv) > 2 else "boards.tsv"
+    output_name = sys.argv[3] if len(sys.argv) > 3 else "generated-levels.pdf"
+    with (folder / input_name).open(encoding="utf-8", newline="") as fp:
         boards = list(csv.DictReader(fp, delimiter="\t"))
     if not boards:
         raise SystemExit("No boards in benchmark geometry export")
-    pdf_path = folder / "generated-levels.pdf"
+    pdf_path = folder / output_name
     pdf = canvas.Canvas(str(pdf_path), pagesize=landscape(A4), pageCompression=1)
     page_w, page_h = landscape(A4)
     margin = 22
@@ -97,10 +99,10 @@ def main():
     tile_h = page_h - 72
     for offset in range(0, len(boards), 2):
         page_index = offset//2 + 1
-        pdf.setTitle("Arrow Puzzle - Generator-Levelkatalog")
+        pdf.setTitle("Arrow Puzzle - " + output_name)
         pdf.setFillColor(colors.HexColor("#202B3D"))
         pdf.setFont("Helvetica-Bold", 16)
-        pdf.drawString(margin, page_h - 27, "Arrow Puzzle  |  Generator-Referenzlevel")
+        pdf.drawString(margin, page_h - 27, "Arrow Puzzle  |  " + ("Exact-Cover-Level" if "exact-cover" in output_name else "Generator-Referenzlevel"))
         pdf.setFont("Helvetica", 9)
         pdf.setFillColor(colors.HexColor("#758399"))
         pdf.drawRightString(page_w-margin, page_h-25,
