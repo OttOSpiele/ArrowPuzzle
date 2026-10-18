@@ -663,7 +663,8 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
    }
   }
   for(y in 0 until level.height)for(x in 0 until level.width){
-   drawCircle(Color(0xFFCED7ED),radius=(cell*.115f).coerceAtLeast(1.65f),
+   drawCircle(if(level.fallbackGeneration)Color(0xFFE4C58D) else Color(0xFFCED7ED),
+    radius=(cell*.115f).coerceAtLeast(1.65f),
     center=Offset(ox+(x+.5f)*sx,oy+(y+.5f)*sy))
   }
   (ever+traveled+currentTrail+glow.keys).forEach{p->
