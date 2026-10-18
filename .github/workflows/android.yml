@@ -86,6 +86,12 @@ jobs:
         continue-on-error: true
         run: gradle --no-daemon :game-core:benchmarkLevels
 
+      - name: Benchmark independent Exact Cover
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 7
+        run: timeout 360s gradle --no-daemon :game-core:benchmarkExactCover
+
       - name: Install PDF renderer
         if: always()
         run: python3 -m pip install --disable-pip-version-check 'reportlab>=4.2,<5'
