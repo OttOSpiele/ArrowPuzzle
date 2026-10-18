@@ -158,7 +158,18 @@ Ein **4-dp-Fortschrittsbalken** erscheint unten im Spielbereich, oberhalb der Sy
 
 **Noch offen:** Echter regionaler Constraint-/Exact-Cover-Flächenplaner, gezielte Reparatur von Innenlücken, verbindliche Qualitätsgrenzen, umfangreicher Benchmark mit Laufzeitgrenzen und anschließend Minispiel-Übergänge. Der vorliegende Stand ist ein inkrementeller erster Baustein, nicht die abgeschlossene Neugestaltung des Levelgenerators. Optionales lokales ML bleibt zurückgestellt.
 
+## Regionales Backtracking und Fallback-Kennzeichnung (18.10.2026)
+
+`RegionalPacker` ergänzt den bisherigen Generator experimentell ab Stufe 35: Nach vollständiger und lösbarer Rückwärtskonstruktion werden die zuletzt eingebauten vier Pfeile entfernt und in einem begrenzten geometrischen DFS neu eingepasst. Kandidaten müssen innerhalb des Rasters liegen, kollisionsfrei sein und ihren Ausfahrstrahl gegenüber allen bereits platzierten Pfeilen freihalten. Ein neues Ergebnis wird nur akzeptiert, wenn es weiterhin lösbar ist und der gemessene Qualitätswert steigt. Das Suchbudget beträgt in der integrierten Erprobung 48 besuchte Knoten. Der bisherige Generator bleibt verfügbar.
+
+Dies ist eine **regionale Constraint-Reparatur**, aber noch **kein vollständiger Exact-Cover-Algorithmus** für sämtliche freien Rasterzellen. Große innere Freiflächen lassen sich damit möglicherweise verbessern, aber noch nicht zuverlässig vollständig füllen. Auch eine garantierte höhere Belegung gibt es noch nicht.
+
+**Unauffällige Testmarkierung:** Ist die erweiterte Konstruktion gescheitert und musste der ältere Konstruktionspfad verwendet werden (`Level.fallbackGeneration=true`), zeichnet die App die Rasterpunkte in dezentem Sandton statt Blaugrau. Es gibt bewusst weder ein Label noch zusätzliche Bedienelemente. Das Merkmal überlebt die Portraitrotation, das lokale Speichern und die Vorausberechnung. Historisch gespeicherte Level ohne Kennzeichen werden standardmäßig als normal angezeigt. Die Anzeige dient ausschließlich der visuellen Entwicklungskontrolle und ist kein allgemeines Gütesiegel; ein Level ohne Sandton muss nicht durch regionale Reparatur verbessert worden sein.
+
 ## Dokumentationsstand / Änderungsverlauf
+
+- **18.10.2026 – Regionale Constraint-Reparatur:** Begrenztes geometrisches Backtracking zur Neuordnung von vier zuletzt konstruierten Pfeilen, ausschließlich bei besserem Qualitätswert und gültigem Solver. Fallback-Level sind anhand dezent sandfarbener Rasterpunkte erkennbar; Merkmal ist in Level-Spielstand und Cache gespeichert. Ein vollständiger Exact-Cover-Generator steht weiterhin aus.
+
 
 - **18.10.2026 – Qualitätsmetriken und Vorausberechnung:** Levelqualität wird anhand tatsächlicher Raster- und Graphparameter analysiert. Die App berechnet und speichert bis zu zwei validierte Folgelevel lokal und visualisiert gespeicherte Slots durch einen schmalen weißen Fortschrittsbalken am unteren Rand. Constraint-Flächenzerlegung, Minispiele und ML sind weiterhin offene Schritte.
 
