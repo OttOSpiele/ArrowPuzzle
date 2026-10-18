@@ -7,7 +7,7 @@ class GameTest {
  @Test fun exactCoverGeneratorSolvesSmallBoardsWithoutEmptyCells() {
   for((w,h) in listOf(4 to 4,6 to 4,6 to 6)) {
    val result=ExactCoverGenerator.generate(w,h,17L,maxNodes=60000)
-   val level=assertNotNull(result.level,"Exact cover failed for ${w}x${h}")
+   val level=result.level ?: error("Exact cover failed for ${w}x${h}")
    assertEquals(w*h,level.arrows.flatMap{it.cells()}.toSet().size)
    assertNotNull(Rules.solve(level))
    assertEquals(level,ExactCoverGenerator.generate(w,h,17L,maxNodes=60000).level)
