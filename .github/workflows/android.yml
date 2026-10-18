@@ -88,7 +88,7 @@ jobs:
 
       - name: Install PDF renderer
         if: always()
-        run: python3 -m pip install --disable-pip-version-check reportlab==4.4.9
+        run: python3 -m pip install --disable-pip-version-check 'reportlab>=4.2,<5'
 
       - name: Render visual generator catalog
         if: always()
