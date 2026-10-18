@@ -41,7 +41,8 @@ object ExactCoverGenerator {
        placements.add(Placement(bent,bent.cells()))
      }
     }
-   // Three-leg meanders: orthogonal first, then a reverse or forward
+   }
+   // Multi-bend meanders: orthogonal first, then a reverse or forward
    // return, finishing in the designated tip direction.
    // Generate a bounded family to avoid quadratic candidate explosion.
    if(width>=6 && height>=6 && stage>=24) {
@@ -60,7 +61,7 @@ object ExactCoverGenerator {
      }
     }
    }
-  }}
+  }
   val order=placements.indices.shuffled(random)
   val candidates=order.map{placements[it]}
   val byCell=Array(width*height){mutableListOf<Int>()}
