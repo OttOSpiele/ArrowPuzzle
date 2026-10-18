@@ -177,6 +177,12 @@ class GameTest {
    })
   }
  }
+ @Test fun benchmarkSeed44SurvivesGreedyPacking() {
+  // Previously failed in CI benchmark #188 at arrow 36.
+  val level=Generator().generate(44,15855L,1.65f)
+  assertNotNull(Rules.solve(level))
+  assertEquals(BoardProfile.count(44),level.arrows.size)
+ }
  @Test fun regionalRepairNeverWorsensValidLevel() {
   for(stage in listOf(35,45)) for(seed in listOf(0L,3L)) {
    val original=Generator().generate(stage,seed,1.3f)
