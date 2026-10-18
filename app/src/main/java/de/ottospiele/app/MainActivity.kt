@@ -73,6 +73,9 @@ class MainActivity:ComponentActivity(){
  var nextProgress by remember{mutableStateOf<Progress?>(null)}
  var prepareError by remember{mutableStateOf(false)}
  var preparationAttempt by remember{mutableIntStateOf(0)}
+ var prepDone by remember{mutableIntStateOf(0)}
+ var prepTotal by remember{mutableIntStateOf(2)}
+ var prepStage by remember{mutableIntStateOf(0)}
  var settings by remember{mutableStateOf(false)}
  var menuOpen by remember{mutableStateOf(false)}
  var aboutOpen by remember{mutableStateOf(false)}
@@ -96,6 +99,36 @@ class MainActivity:ComponentActivity(){
   jobs.clear();flights.clear()
  }
  fun replace(stage:Int){stopFlights();game=fresh(stage,lives,hints,screenAspect);highlighted=null;invalid=null;traveledCells=emptySet();revision++}
+ // Cooperative precomputation. Only saved and solver-validated levels count
+ // toward the progress bar; search backtracking itself has unknown duration.
+ LaunchedEffect(progress.stage,progress.done,screenAspect) {
+  val target=progress.win().stage
+  prepStage=target
+  prepTotal=2
+  val existing=withContext(Dispatchers.IO) {
+   PreparedLevels.read(context,target,screenAspect)
+  }.filter { it.seed!=game.level.seed }.take(2).toMutableList()
+  prepDone=existing.size
+  for(index in existing.size until prepTotal) {
+   val candidate=withContext(Dispatchers.Default) {
+    // Prefer the best valid level of two candidates, within a fixed
+    // per-slot effort budget, not an unbounded quality search.
+    val candidates=(0 until 2).mapNotNull { attempt ->
+     runCatching {
+      val seed=target.toLong()*1000003L + index*733L + attempt*41L
+      Generator().generate(target,seed,screenAspect)
+     }.getOrNull()
+    }
+    candidates.filter { Rules.solve(it)!=null }
+     .maxByOrNull { LevelQualityAnalyzer.analyze(it).score(target) }
+   } ?: break
+   existing.add(candidate)
+   withContext(Dispatchers.IO) {
+    PreparedLevels.write(context,target,screenAspect,existing)
+   }
+   prepDone=existing.size
+  }
+ }
  LaunchedEffect(winScreen,preparationAttempt){
   if(!winScreen)return@LaunchedEffect
   nextGame=null
@@ -105,7 +138,12 @@ class MainActivity:ComponentActivity(){
   delay(450)
   try {
    val target=progress.win()
-   val ready=withContext(Dispatchers.Default){fresh(target.stage,lives,hints,screenAspect)}
+   val ready=withContext(Dispatchers.Default){
+    val prepared=PreparedLevels.read(context,target.stage,screenAspect)
+     .firstOrNull { it.seed!=game.level.seed }
+    if(prepared!=null)Game(prepared,lives,hints)
+    else fresh(target.stage,lives,hints,screenAspect)
+   }
    nextProgress=target
    nextGame=ready
   }catch(_:Exception){prepareError=true}
@@ -345,6 +383,15 @@ class MainActivity:ComponentActivity(){
      Text("💡  ${game.hints}  Tipps",fontWeight=FontWeight.Medium,color=Color(0xFF5F66A9))
     }
    }
+  }
+  // 4 dp preparation strip, placed above Android system navigation and
+  // outside the game canvas so it never intercepts board touches.
+  Box(Modifier.fillMaxWidth().height(4.dp)
+   .background(Color(0xFFD6D9E9),RoundedCornerShape(2.dp))) {
+   Box(Modifier.fillMaxWidth(
+    if(prepStage==progress.win().stage) prepDone.toFloat()/prepTotal.coerceAtLeast(1)
+    else 0f
+   ).fillMaxHeight().background(Color.White,RoundedCornerShape(2.dp)))
   }
 
  }
