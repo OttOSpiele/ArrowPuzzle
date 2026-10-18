@@ -17,7 +17,7 @@ object ExactCoverGenerator {
  private data class Placement(val arrow:Arrow,val cells:Set<Pt>)
 
  fun generate(width:Int,height:Int,seed:Long,stage:Int=35,maxNodes:Int=50000):Result {
-  require(width in 2..12 && height in 2..12)
+  require(width in 2..20 && height in 2..20)
   require(maxNodes>0)
   val random=Random(seed)
   val placements=mutableListOf<Placement>()
@@ -49,6 +49,27 @@ object ExactCoverGenerator {
   }
   val used=BooleanArray(width*height)
   val chosen=mutableListOf<Int>()
+  // A cycle between already selected arrows cannot be undone by adding
+  // more arrows. Prune such branches before expensive completion search.
+  fun partialAcyclic():Boolean {
+   val arrows=chosen.mapIndexed { id,index -> candidates[index].arrow.copy(id=id) }
+   val owners=mutableMapOf<Pt,Int>()
+   for(a in arrows)for(p in a.cells())owners[p]=a.id
+   val edges=arrows.associate { a ->
+    a.id to Rules.exitPath(a,width,height).mapNotNull { owners[it] }
+     .filter { it!=a.id }.toSet()
+   }
+   val states=IntArray(arrows.size)
+   fun visit(id:Int):Boolean {
+    if(states[id]==1)return false
+    if(states[id]==2)return true
+    states[id]=1
+    for(next in edges[id].orEmpty())if(!visit(next))return false
+    states[id]=2
+    return true
+   }
+   return arrows.indices.all { visit(it) }
+  }
   var nodes=0
   var best:Level?=null
   fun search(remaining:Int) {
@@ -80,7 +101,7 @@ object ExactCoverGenerator {
     val cells=candidates[index].cells.map{it.y*width+it.x}
     cells.forEach{used[it]=true}
     chosen.add(index)
-    search(remaining-cells.size)
+    if(partialAcyclic())search(remaining-cells.size)
     chosen.removeAt(chosen.lastIndex)
     cells.forEach{used[it]=false}
     if(best!=null)return
