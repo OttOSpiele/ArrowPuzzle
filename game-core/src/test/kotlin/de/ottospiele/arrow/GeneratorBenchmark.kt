@@ -6,7 +6,7 @@ import java.util.Locale
 
 /**
  * Standalone CI benchmark: records EVERY attempted board, including failures.
- * Run with Gradle :game-core:benchmarkLevels; outputs build/benchmark/*.csv.
+ * Run with Gradle :game-core:benchmarkLevels; outputs CSV files in build/benchmark.
  */
 object GeneratorBenchmark {
  @JvmStatic fun main(args:Array<String>) {
