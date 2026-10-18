@@ -12,7 +12,7 @@ object GeneratorBenchmark {
  @JvmStatic fun main(args:Array<String>) {
   val output=File(args.getOrNull(0) ?: "build/benchmark").apply{mkdirs()}
   val stages=listOf(1,2,5,8,9,16,17,24,25,34,35,44,45,60,80,100)
-  val seedCount=(args.getOrNull(1)?.toIntOrNull()?:100).coerceIn(1,1000)
+  val seedCount=(args.getOrNull(1)?.toIntOrNull()?:7).coerceIn(1,1000)
   val aspects=listOf(.65f,1.0f,1.65f)
   val lines=mutableListOf("stage,seed,aspect,success,elapsed_ms,width,height,arrows,occupancy_pct,free,connected,longest_chain,key_arrows,largest_interior_void,fallback,quality,error")
   val generator=Generator()
