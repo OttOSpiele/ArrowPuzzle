@@ -15,6 +15,7 @@ object ExactCoverBenchmark {
   val budget=(args.getOrNull(2)?.toIntOrNull()?:600).coerceIn(1,100000)
   val boards=listOf(8,12,16,20)
   val lines=mutableListOf("size,seed,node_budget,visited_nodes,elapsed_ms,success,exhausted,arrows,occupancy_pct,initially_free,longest_chain,quality,error")
+  val drawings=mutableListOf<String>()
   var success=0
   for(size in boards)for(index in 0 until seeds) {
    val seed=17L+index*7919L
@@ -29,6 +30,12 @@ object ExactCoverBenchmark {
      fun fmt(value:Double)=String.format(Locale.ROOT,"%.3f",value)
      lines.add(listOf(size,seed,budget,result.nodes,elapsed,true,false,level.arrows.size,
       fmt(q.occupancy*100),q.initiallyFree,q.longestChain,fmt(q.score(35)),"").joinToString(","))
+     val paths=level.arrows.joinToString("|") { a ->
+      a.vertices().joinToString(";") { p -> "${p.x}:${p.y}" }
+     }
+     drawings.add(listOf(35,seed,1f,size,size,false,
+      fmt(q.occupancy*100),q.initiallyFree,q.longestChain,fmt(q.score(35)),paths)
+      .joinToString("\t"))
      success++
     } else {
      lines.add("$size,$seed,$budget,${result.nodes},$elapsed,false,${result.exhausted},,,,,,")
@@ -39,6 +46,9 @@ object ExactCoverBenchmark {
     lines.add("$size,$seed,$budget,,$elapsed,false,false,,,,,,$message")
    }
   }
+  File(directory,"exact-cover-boards.tsv").writeText(
+   "stage\tseed\taspect\twidth\theight\tfallback\toccupancy_pct\tfree\tchain\tquality\tpaths\n"+
+   drawings.joinToString("\n")+"\n")
   File(directory,"exact-cover.csv").writeText(lines.joinToString("\n")+"\n")
   val summary=buildString {
    appendLine("Independent Exact-Cover Generator")
