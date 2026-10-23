@@ -48,7 +48,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 
 private val generationMutex=Mutex()
 
-private data class Flight(val id:Int,val plan:MovePlan,val failed:Boolean,val step:Int=0)
+private data class Flight(val id:Int,val plan:MovePlan,val failed:Boolean,val step:Int=0,val impactOffset:Float=0f)
 
 class MainActivity:ComponentActivity(){
  override fun onCreate(savedInstanceState:Bundle?){
@@ -252,6 +252,7 @@ class MainActivity:ComponentActivity(){
    onAgain={
     stopFlights()
     game.retry()
+    failedArrowIds=emptySet()
     traveledCells=emptySet();highlighted=null;invalid=null;revision++
     defeatScreen=false;defeatMode="choice";defeatPrepared=null
    },
@@ -427,7 +428,15 @@ class MainActivity:ComponentActivity(){
      flights[index]=flights[index].copy(step=step)
     }
     if(failed){
-     delay(75)
+     // A blocker immediately in front of the arrow produces allowedSteps=0.
+     // Animate a short elastic bump so even this collision is clearly visible.
+     for(offset in listOf(.17f,.37f,.22f,-.10f,0f)){
+      delay(55)
+      val index=flights.indexOfFirst{f->f.id==it}
+      if(index<0)return@launch
+      flights[index]=flights[index].copy(impactOffset=offset)
+     }
+     delay(55)
      for(step in plan.allowedSteps-1 downTo 0){
       delay((duration/2).coerceAtLeast(5L))
       val index=flights.indexOfFirst{f->f.id==it}
@@ -877,7 +886,8 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f,legacyEnabled:Bo
   allVisible.forEach{(a,shape)->
    val points=shape.first
    if(points.isEmpty())return@forEach
-   val vertices=points.map{Offset(ox+(it.x+.5f)*sx,oy+(it.y+.5f)*sy)}
+   val impact=flights.firstOrNull{it.id==a.id}?.impactOffset?:0f
+   val vertices=points.map{Offset(ox+(it.x+.5f+impact*a.dir.x)*sx,oy+(it.y+.5f+impact*a.dir.y)*sy)}
    val tip=vertices.last()
    val color=if(flights.any{it.id==a.id})if(shape.second)Color(0xFFE85161)else Color(0xFF7468EB) else when {a.id in failedArrowIds->Color(0xFFCB4D64);a.id==hinted->Color(0xFF21A679);else->Color(0xFF28385D)}
    val stroke=(cell*.20f).coerceAtLeast(2.5f);val wing=cell*.42f
