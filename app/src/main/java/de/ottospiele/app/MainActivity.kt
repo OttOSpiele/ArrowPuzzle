@@ -196,7 +196,7 @@ class MainActivity:ComponentActivity(){
   }catch(_:Exception){defeatMode="error"}
  }
 
- if(winScreen && miniOpen){
+ if(winScreen && miniOpen && progress.stage>=10){
   PuzzleItScreen(
    config=defaults.puzzleIt,
    preparationReady=nextGame!=null && nextProgress!=null,
@@ -218,7 +218,7 @@ class MainActivity:ComponentActivity(){
    nextStage=nextProgress?.stage,
    ready=nextGame!=null,
    failed=prepareError,
-   miniAvailable=miniPending,
+   miniAvailable=miniPending && progress.stage>=10,
    onPlay={miniOpen=true;solvedSinceMini=0},
    onRetry={preparationAttempt++},
    onContinue={
