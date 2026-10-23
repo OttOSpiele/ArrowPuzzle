@@ -89,12 +89,12 @@ internal fun PuzzleItScreen(
    Canvas(Modifier.fillMaxSize().pointerInput(round.seed,round.phase) {
     detectDragGestures(
      onDragStart=start@{at->
-      if(round.phase!=PuzzleItPhase.PUZZLE_ACTIVE)return@start
+      if(controller.round.phase!=PuzzleItPhase.PUZZLE_ACTIVE)return@start
       val geometry=PuzzleItLayout(size.width.toFloat(),size.height.toFloat())
-      val index=round.pieces.indices.reversed().firstOrNull { i->
+      val index=controller.round.pieces.indices.reversed().firstOrNull { i->
        val piece=controller.round.pieces[i]
        !piece.fixed && containsPuzzlePiece(controller.round,i,at,geometry,piece)
-      } ?:return@detectDragGestures
+      } ?:return@start
       dragIndex=index
       val p=controller.round.pieces[index]
       grip=Offset(at.x-geometry.scatterX-p.left*geometry.tile,
@@ -124,10 +124,10 @@ internal fun PuzzleItScreen(
      },
      onDrag=drag@{change,delta->
       val i=dragIndex
-      if(i<0)return@detectDragGestures
+      if(i<0)return@drag
       change.consume()
       val geometry=PuzzleItLayout(size.width.toFloat(),size.height.toFloat())
-      val p=round.pieces[i]
+      val p=controller.round.pieces[i]
       // Keep the full shape, including outward tabs, inside the available canvas.
       val maxX=((size.width-geometry.scatterX)/geometry.tile-1.23f).coerceAtLeast(0f)
       val maxY=((size.height-geometry.scatterY)/geometry.tile-1.23f).coerceAtLeast(0f)
