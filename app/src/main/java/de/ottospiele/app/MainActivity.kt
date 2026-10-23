@@ -112,6 +112,7 @@ class MainActivity:ComponentActivity(){
   val nextStage=currentStage+1
   val goals=listOf(currentStage to (progress.required()+2),nextStage to 2)
   prepStage=currentStage
+  prepDone=0
   prepTotal=goals.sumOf { it.second }
   val started=System.nanoTime()
   val budgetNs=defaults.preparationExactBudgetMillis*1_000_000L
@@ -520,11 +521,12 @@ class MainActivity:ComponentActivity(){
      if(later==0)"–" else "${fallbacks*100/later} %"
     })
     Text("Generierung: Ø ${mean} ms, Maximum ${maximum} ms")
-    Text("Fehler: ${diagnosticEvents.count{it.outcome!="success"}}")
+    Text("Exact-Cover-Versuche ohne Ergebnis: ${diagnosticEvents.count{it.outcome=="rejected"}}")
+    Text("Generierungsfehler: ${diagnosticEvents.count{it.outcome=="error"}}")
     Text("Letzte Generierungen:")
     Column(Modifier.heightIn(max=170.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())){
      diagnosticEvents.takeLast(8).asReversed().forEach{event->
-      Text("Stufe ${event.stage} · ${event.width}×${event.height} · ${event.elapsedMs} ms · ${event.generator}",fontSize=12.sp)
+      Text("Stufe ${event.stage} · ${event.width}×${event.height} · ${event.elapsedMs} ms · ${event.generator} · ${event.outcome}",fontSize=12.sp)
      }
     }
    }},
