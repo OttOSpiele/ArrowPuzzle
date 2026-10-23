@@ -111,7 +111,7 @@ class MainActivity:ComponentActivity(){
  }
  fun replaceWith(ready:Game){stopFlights();game=ready;highlighted=null;invalid=null;traveledCells=emptySet();revision++}
  // Keep a full current-stage reserve (+2) and a small next-stage starter reserve.
- // Each empty cache slot gets its own cooperative Exact Cover time budget.
+ // Preparation is not stopped by an elapsed wall-clock time limit.
  LaunchedEffect(progress.stage,progress.done,screenAspect) {
   val currentStage=progress.stage
   val nextStage=currentStage+1
@@ -130,11 +130,9 @@ class MainActivity:ComponentActivity(){
      if(target>=9) {
       val candidates=mutableListOf<Level>()
       repeat(defaults.preparationExactAttemptsPerSlot) {
-       run {
-        val seed=Random.nextLong()
-        if(seed!=game.level.seed && cached.none { it.seed==seed })
-         generateExactMeasured(target,seed,screenAspect)?.let { candidates.add(it) }
-       }
+       val seed=Random.nextLong()
+       if(seed!=game.level.seed && cached.none { it.seed==seed })
+        generateExactMeasured(target,seed,screenAspect)?.let { candidates.add(it) }
       }
       chosen=DifficultyProfiles.choose(target,candidates)
      }
