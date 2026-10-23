@@ -58,6 +58,27 @@ object ExactCoverBenchmark {
    }
   }
   File(directory,"exact-cover-difficulty.csv").writeText(profileRows.joinToString("\n")+"\n")
+  val profileData=profileRows.drop(1).map { it.split(",") }
+  val report=buildString {
+   appendLine("Difficulty profile evaluation (same generated boards scored at reference stages)")
+   appendLine("These are profile-fit diagnostics, not actual consecutive game-stage levels.")
+   for(stage in listOf(1,8,16,35,60,80)) {
+    val selected=profileData.filter { it[3]==stage.toString() }
+    val fitted=selected.count { it[10]=="true" }
+    val mean=selected.map { it[11].toDouble() }.average()
+    appendLine("stage=$stage total=${selected.size} all_fit=$fitted mean_score=${String.format(Locale.ROOT,"%.2f",mean)}")
+   }
+   // Difference in fit of each fixed board between adjacent reference stages.
+   val jumps=profileData.groupBy { it[0]+"|"+it[1]+"|"+it[2] }.values
+    .flatMap { group ->
+     group.sortedBy { it[3].toInt() }.zipWithNext().map { (before,after) ->
+      kotlin.math.abs(after[11].toDouble()-before[11].toDouble())
+     }
+    }
+   appendLine("max_adjacent_reference_fit_delta=${String.format(Locale.ROOT,"%.2f",jumps.maxOrNull()?:0.0)}")
+  }
+  File(directory,"exact-cover-difficulty-summary.txt").writeText(report)
+  println(report)
   File(directory,"exact-cover-boards.tsv").writeText(
    "stage\tseed\taspect\twidth\theight\tfallback\toccupancy_pct\tfree\tchain\tquality\tpaths\n"+
    drawings.joinToString("\n")+"\n")
