@@ -164,49 +164,13 @@ class MainActivity:ComponentActivity(){
   jobs.clear();flights.clear()
  }
  fun replaceWith(ready:Game){stopFlights();game=ready;highlighted=null;invalid=null;traveledCells=emptySet();revision++}
- // Resume an unfinished reserve via Puzzle It, without replacing the active puzzle.
- // An installed app with a valid, fully prepared save starts normally.
- LaunchedEffect(progress.stage,progress.done,winScreen,defeatScreen,screenAspect,solvedSinceMini) {
-  if(winScreen || defeatScreen || saved==null)return@LaunchedEffect
-  val goals=if(progress.stage>=10)goalsUntilNextMini(progress,solvedSinceMini,true)
-   else listOf(progress.stage to (progress.required()-progress.done-1).coerceAtLeast(0))
-  val missing=withContext(Dispatchers.IO) {
-   goals.any{(stage,needed)->PreparedLevels.read(context,stage,screenAspect).size<needed}
-  }
-  if(missing && !winScreen && !defeatScreen) {
-   val persisted=miniPrefs.edit()
-    .putInt("preparing_target_stage",progress.stage)
-    .putInt("preparing_target_done",progress.done)
-    .putBoolean("preparing_resume_current",true).commit()
-   if(persisted){
-    stopFlights()
-    forcedNextProgress=progress
-    nextGame=game;nextProgress=progress;resumeCurrentAfterMini=true
-    solvedSinceMini=0;miniPending=true;miniOpen=true;winScreen=true
-    haptics.miniGameEntered()
-   }
-  }
- }
- // A missing transition reserve must never cause a blocking generator screen.
- // Enter Puzzle It automatically and finish the current round before returning.
- LaunchedEffect(winScreen,miniOpen,forcedNextProgress,screenAspect) {
-  if(!winScreen || miniOpen)return@LaunchedEffect
-  val target=forcedNextProgress?:progress.win()
-  val required=if(target.stage>=10)goalsUntilNextMini(target,0,false)
-   else listOf(target.stage to (target.required()-target.done))
-  val missing=withContext(Dispatchers.IO) {
-   required.any{(stage,needed)->PreparedLevels.read(context,stage,screenAspect).size<needed}
-  }
-  if(missing && winScreen && !miniOpen){
-   val persisted=miniPrefs.edit()
-    .putInt("preparing_target_stage",target.stage)
-    .putInt("preparing_target_done",target.done)
-    .remove("preparing_resume_current").commit()
-   if(persisted){
-    forcedNextProgress=target
-    miniPending=true;miniOpen=true;solvedSinceMini=0
-    haptics.miniGameEntered()
-   }
+ // A cache deficit during an active puzzle does not interrupt play. A mandatory
+ // mini-game runs at a stage boundary only when the four-puzzle rule is met,
+ // or for an explicit debug jump, retry-new-puzzle or stage downgrade.
+ LaunchedEffect(winScreen,miniOpen,miniPending,forcedNextProgress) {
+  if(winScreen && !miniOpen && (miniPending || forcedNextProgress!=null)) {
+   miniOpen=true
+   haptics.miniGameEntered()
   }
  }
  // Prepare only the missing puzzles until the NEXT mini-game, across stage boundaries.
