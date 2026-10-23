@@ -42,8 +42,9 @@ class IntegrationRegressionTest {
  }
 
  @Test fun windingConstraintStartsWhenMultiBendCandidatesExist() {
-  for(stage in 17..23)assertEquals(0,LevelGeneration.requiredWindingArrows(stage),"stage $stage")
-  for(stage in listOf(24,35,80))assertEquals(2,LevelGeneration.requiredWindingArrows(stage),"stage $stage")
+  for(stage in 17..27)assertEquals(0,LevelGeneration.requiredWindingArrows(stage),"stage $stage")
+  for(stage in 28..39)assertEquals(1,LevelGeneration.requiredWindingArrows(stage),"stage $stage")
+  for(stage in listOf(40,60,80))assertEquals(2,LevelGeneration.requiredWindingArrows(stage),"stage $stage")
  }
 
  @Test fun tutorialStagesAreDeterministicAndSolvable() {
@@ -57,6 +58,14 @@ class IntegrationRegressionTest {
   }
  }
 
+ @Test fun exactCoverDisplayFootprintIsSparseAndCentered() {
+  for(stage in listOf(9,16,17,24,25,40,80)) {
+   val profile=StageGenerationProfile.forStage(stage,1f)
+   assertTrue(profile.coveredWidth<profile.width)
+   assertTrue(profile.coveredHeight<profile.height)
+   assertEquals(profile.coveredWidth*profile.coveredHeight/4,profile.targetArrows)
+  }
+ }
  @Test fun stageGeometryGrowsGradually() {
   val sizes=(9..80).map{StageGenerationProfile.forStage(it).width}
   assertTrue(sizes.zipWithNext().all{(a,b)->b>=a && b-a<=1})
