@@ -13,7 +13,8 @@ internal data class GameDefaults(
  val animationSpeed:Int=1,
  val preparationExactAttemptsPerSlot:Int=8,
  val legacyEnabled:Boolean=true,
- val showStageAdjustment:Boolean=true
+ val showStageAdjustment:Boolean=true,
+ val puzzleIt:PuzzleItConfig=PuzzleItConfig()
 ) {
  companion object {
   fun load(context:Context):GameDefaults {
@@ -31,6 +32,17 @@ internal data class GameDefaults(
     "false" -> false
     else -> true
    }
+   fun floatRange(key:String,min:Float,max:Float,def:Float)=
+    props.getProperty(key)?.trim()?.toFloatOrNull()?.takeIf{it in min..max}?:def
+   fun longRange(key:String,min:Long,max:Long,def:Long)=
+    props.getProperty(key)?.trim()?.toLongOrNull()?.takeIf{it in min..max}?:def
+   fun intRange(key:String,min:Int,max:Int,def:Int)=
+    props.getProperty(key)?.trim()?.toIntOrNull()?.takeIf{it in min..max}?:def
+   fun boolean(key:String,def:Boolean)=when(props.getProperty(key)?.trim()?.lowercase()){
+    "true"->true
+    "false"->false
+    else->def
+   }
    return GameDefaults(
     previewHoldMillis=preview,
     lives=int("defaultLives",setOf(3,5,10),5),
@@ -44,11 +56,14 @@ internal data class GameDefaults(
      "false"->false
      else->true
     },
-    showStageAdjustment=when(props.getProperty("showStageAdjustment")?.trim()?.lowercase()) {
-     "true" -> true
-     "false" -> false
-     else -> true
-    }
+    showStageAdjustment=boolean("showStageAdjustment",true),
+    puzzleIt=PuzzleItConfig(
+     snapRatio=floatRange("puzzle.snapToleranceRatio",.05f,.4f,.15f),
+     successMs=longRange("puzzle.successAnimationMs",800L,1200L,1000L),
+     minVisibleRatio=floatRange("puzzle.minVisibleAreaRatio",.25f,.9f,.40f),
+     maxAttempts=intRange("puzzle.maxPlacementAttempts",1,1000,100),
+     preventRepeat=boolean("puzzle.preventImmediateNumberRepeat",true)
+    )
    )
   }
  }
