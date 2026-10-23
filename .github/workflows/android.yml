@@ -92,6 +92,12 @@ jobs:
         timeout-minutes: 7
         run: timeout 360s gradle --no-daemon :game-core:benchmarkExactCover
 
+      - name: Compare exact cover with frozen build 221
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 8
+        run: timeout 450s gradle --no-daemon :game-core:benchmarkExactCoverAB
+
       - name: Install PDF renderer
         if: always()
         run: python3 -m pip install --disable-pip-version-check 'reportlab>=4.2,<5'
