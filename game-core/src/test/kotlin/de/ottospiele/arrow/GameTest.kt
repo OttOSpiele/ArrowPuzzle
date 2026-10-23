@@ -4,6 +4,22 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class GameTest {
+ @Test fun difficultyProfilesProgressGraduallyAndAreDeterministic() {
+  val early=DifficultyProfiles.forStage(1)
+  val late=DifficultyProfiles.forStage(80)
+  assertTrue(early.freeRange.start>late.freeRange.start)
+  assertTrue(early.chainRange.start<late.chainRange.start)
+  assertTrue(early.windingRange.endInclusive<late.windingRange.endInclusive)
+  assertEquals(late,DifficultyProfiles.forStage(100))
+  assertThrows(IllegalArgumentException::class.java) { DifficultyProfiles.forStage(0) }
+  val level=ExactCoverGenerator.generate(8,8,17L,maxNodes=1000).level
+  if(level!=null) {
+   assertEquals(DifficultyProfiles.forStage(35).assess(level),
+    DifficultyProfiles.forStage(35).assess(level))
+   assertEquals(level,DifficultyProfiles.choose(35,listOf(level)))
+  }
+ }
+
  @Test fun exactCoverPropagationPreservesSolutionsAndRollback() {
   for((width,height) in listOf(4 to 4,8 to 8,10 to 8)) {
    for(seed in listOf(17L,7936L)) {
