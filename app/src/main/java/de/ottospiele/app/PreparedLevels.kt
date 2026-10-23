@@ -43,6 +43,13 @@ internal object PreparedLevels {
   write(context,stage,aspect,cached.filterNot { it.seed==chosen.seed })
   return chosen
  }
+ /** Atomic cache addition; concurrent consumption cannot be overwritten by stale snapshots. */
+ @Synchronized fun append(context:Context,stage:Int,aspect:Float,level:Level,limit:Int):Boolean {
+  val stored=read(context,stage,aspect)
+  if(stored.size>=limit || stored.any { it.seed==level.seed })return false
+  write(context,stage,aspect,stored+level)
+  return true
+ }
  @Synchronized fun write(context:Context,stage:Int,aspect:Float,levels:List<Level>) {
   require(levels.all { it.stage==stage && Rules.solve(it)!=null })
   val root=JSONObject().put("version",VERSION).put("stage",stage)
