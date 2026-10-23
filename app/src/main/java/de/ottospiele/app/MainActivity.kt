@@ -20,6 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -55,6 +57,7 @@ class MainActivity:ComponentActivity(){
 }
 @Composable fun Puzzle(){
  val context=LocalContext.current
+ val haptics=LocalHapticFeedback.current
  GeneratorDiagnostics.initialize(context)
  val screenAspect=remember{
   val metrics=context.resources.displayMetrics
@@ -72,6 +75,7 @@ class MainActivity:ComponentActivity(){
  var revision by remember{mutableIntStateOf(0)}
  var highlighted by remember{mutableStateOf<Int?>(null)}
  var invalid by remember{mutableStateOf<Int?>(null)}
+ var failedArrowIds by remember(game.level.seed,game.level.stage){mutableStateOf(emptySet<Int>())}
  var dialog by remember{mutableStateOf("")}
  var winScreen by remember{mutableStateOf(saved?.win?:false)}
  var defeatScreen by remember{mutableStateOf(saved?.defeat?:false)}
@@ -392,12 +396,16 @@ class MainActivity:ComponentActivity(){
    }
   }
 
-  Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,invalid,
+  Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,failedArrowIds,
    flights.toList(),occupiedEver,traveledCells,Modifier.weight(1f).fillMaxWidth(),previewHoldMillis){
    if(dialog.isNotEmpty() || game.won || game.lost || (!concurrent && flights.isNotEmpty()) || flights.any{f->f.id==it})return@Board
    val arrow=game.remaining.firstOrNull{a->a.id==it}?:return@Board
    val plan=Rules.plan(arrow,game.level,game.remaining.map{a->a.id}.toSet())
    val failed=!plan.canExit
+   if(failed){
+    failedArrowIds=failedArrowIds+it
+    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+   }
    highlighted=null;invalid=null
    // Apply success to game immediately: subsequently tapped arrows see updated blockers.
    if(!failed){game.tap(it);revision++}
@@ -769,7 +777,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f,legacyEnabled:Bo
  repeat(15){try{return Game(generateMeasured(stage,Random.nextLong(),aspect,"fresh",legacyEnabled),lives,hints)}catch(_:Exception){}}
  error("Cannot generate a valid level")
 }
-@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,previewHoldMillis:Long,onTap:(Int)->Unit){
+@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,failedArrowIds:Set<Int>,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,previewHoldMillis:Long,onTap:(Int)->Unit){
  val arrows=level.arrows.filter{it.id in remaining}
  var previewId by remember(level){mutableStateOf<Int?>(null)}
  Canvas(modifier.clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(Color.White,Color(0xFFF9FBFF))))
@@ -863,7 +871,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f,legacyEnabled:Bo
    if(points.isEmpty())return@forEach
    val vertices=points.map{Offset(ox+(it.x+.5f)*sx,oy+(it.y+.5f)*sy)}
    val tip=vertices.last()
-   val color=if(flights.any{it.id==a.id})if(shape.second)Color(0xFFE85161)else Color(0xFF7468EB) else when(a.id){hinted->Color(0xFF21A679);invalid->Color(0xFFEF7658);else->Color(0xFF28385D)}
+   val color=if(flights.any{it.id==a.id})if(shape.second)Color(0xFFE85161)else Color(0xFF7468EB) else when {a.id in failedArrowIds->Color(0xFFCB4D64);a.id==hinted->Color(0xFF21A679);else->Color(0xFF28385D)}
    val stroke=(cell*.20f).coerceAtLeast(2.5f);val wing=cell*.42f
    vertices.zipWithNext().forEach{(from,to)->drawLine(color,from,to,stroke,cap=StrokeCap.Round)}
    if(a.dir.x!=0){
