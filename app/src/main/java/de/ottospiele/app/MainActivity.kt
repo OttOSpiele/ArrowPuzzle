@@ -133,6 +133,7 @@ class MainActivity:ComponentActivity(){
   // The stage-success screen and Puzzle It can consume a ready next-stage puzzle
   // without waiting for the full current-stage reserve.
   val goals=listOf(nextStage to 2,currentStage to (progress.required()+2))
+  Log.i("ArrowPuzzlePreparation","Prefetch stage=$nextStage before current=$currentStage")
   prepStage=currentStage
   prepDone=0
   prepTotal=goals.sumOf { it.second }
@@ -186,12 +187,18 @@ class MainActivity:ComponentActivity(){
    val prepared=withContext(Dispatchers.IO){
     PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
    }
+   if(prepared!=null)Log.i("ArrowPuzzlePreparation","Cache hit stage=${target.stage} seed=${prepared.seed}")
    val ready=if(prepared!=null)Game(prepared,lives,hints)
     else withContext(Dispatchers.Default){generationMutex.withLock{
      // Background preparation may have finished while this coroutine waited.
      val late=PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
-     if(late!=null)Game(late,lives,hints)
-     else fresh(target.stage,lives,hints,screenAspect,defaults.legacyEnabled)
+     if(late!=null){
+      Log.i("ArrowPuzzlePreparation","Late cache hit stage=${target.stage} seed=${late.seed}")
+      Game(late,lives,hints)
+     }else{
+      Log.w("ArrowPuzzlePreparation","Cache miss stage=${target.stage}; generating during win/mini-game")
+      fresh(target.stage,lives,hints,screenAspect,defaults.legacyEnabled)
+     }
     }}
    nextProgress=target
    nextGame=ready
