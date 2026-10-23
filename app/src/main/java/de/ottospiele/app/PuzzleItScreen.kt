@@ -187,7 +187,7 @@ internal fun PuzzleItScreen(
       repeat(2){col->
        val value=round.answers[row*2+col]
        val active=round.phase==PuzzleItPhase.CHOICE_ACTIVE && value !in round.disabled
-       Button(onClick={if(controller.choose(value))publish() else publish()},
+       Button(onClick=ticked {if(controller.choose(value))publish() else publish()},
         enabled=active,modifier=Modifier.weight(1f).height(62.dp),
         shape=RoundedCornerShape(17.dp),
         contentPadding=PaddingValues(3.dp),
