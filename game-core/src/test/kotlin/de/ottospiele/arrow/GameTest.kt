@@ -4,6 +4,21 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class GameTest {
+ @Test fun exactCoverPropagationPreservesSolutionsAndRollback() {
+  for((width,height) in listOf(4 to 4,8 to 8,10 to 8)) {
+   for(seed in listOf(17L,7936L)) {
+    val first=ExactCoverGenerator.generate(width,height,seed,maxNodes=1200)
+    val second=ExactCoverGenerator.generate(width,height,seed,maxNodes=1200)
+    assertEquals(first,second,"Forced deductions must be deterministic")
+    assertTrue(first.nodes<=1200)
+    first.level?.let { level ->
+     assertEquals(width*height,level.arrows.flatMap { it.cells() }.toSet().size)
+     assertNotNull(Rules.solve(level))
+    }
+   }
+  }
+ }
+
  @Test fun exactCoverDifficultyConstraintsAreHardRequirements() {
   val result=ExactCoverGenerator.generate(8,8,17L,maxNodes=900,
    targetArrows=16,minWindingArrows=2,maxInitiallyFree=8,minChainLength=4)
