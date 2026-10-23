@@ -46,7 +46,17 @@ internal object PuzzleItGenerator {
   // Non-overlapping 3x3 scatter slots: each position is reachable, even on narrow screens.
   // Shuffle a derangement; none of the pieces starts at its finished coordinate.
   val slots=(0..8).toMutableList()
-  do {slots.shuffle(random)} while(slots.indices.any{slots[it]==it})
+  var nonSolved=false
+  repeat(config.maxAttempts.coerceIn(1,1000)) {
+   if(!nonSolved) {
+    slots.shuffle(random)
+    nonSolved=slots.indices.none{slots[it]==it}
+   }
+  }
+  if(!nonSolved) {
+   // Guaranteed finite fallback: one cyclic shift, no tile starts in its own slot.
+   for(i in 0..8)slots[i]=(i+1)%9
+  }
   val pieces=slots.mapIndexed { i,slot ->
    PuzzleItPiece(i,(slot%3)*1.12f,(slot/3)*1.12f)
   }
