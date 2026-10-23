@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -76,6 +77,10 @@ class MainActivity:ComponentActivity(){
  var nextProgress by remember{mutableStateOf<Progress?>(null)}
  var prepareError by remember{mutableStateOf(false)}
  var preparationAttempt by remember{mutableIntStateOf(0)}
+ // A mini-game is offered only on a stage transition after four completed puzzles.
+ var solvedSinceMini by rememberSaveable { mutableIntStateOf(0) }
+ var miniPending by rememberSaveable { mutableStateOf(false) }
+ var miniOpen by rememberSaveable { mutableStateOf(false) }
  var prepDone by remember{mutableIntStateOf(0)}
  var prepTotal by remember{mutableIntStateOf(2)}
  var prepStage by remember{mutableIntStateOf(0)}
@@ -114,20 +119,18 @@ class MainActivity:ComponentActivity(){
   prepStage=currentStage
   prepDone=0
   prepTotal=goals.sumOf { it.second }
-  val budgetNs=defaults.preparationExactBudgetMillis*1_000_000L
   for((target,capacity) in goals) {
    var cached=withContext(Dispatchers.IO) {
     PreparedLevels.read(context,target,screenAspect)
    }
    prepDone=goals.takeWhile { it.first!=target }.sumOf { it.second }+cached.size
    while(cached.size<capacity) {
-    val slotStarted=System.nanoTime()
     val candidate=withContext(Dispatchers.Default) {
      var chosen:Level?=null
      if(target>=9) {
       val candidates=mutableListOf<Level>()
       repeat(defaults.preparationExactAttemptsPerSlot) {
-       if(System.nanoTime()-slotStarted<budgetNs) {
+       run {
         val seed=Random.nextLong()
         if(seed!=game.level.seed && cached.none { it.seed==seed })
          generateExactMeasured(target,seed,screenAspect)?.let { candidates.add(it) }
@@ -184,12 +187,23 @@ class MainActivity:ComponentActivity(){
   }catch(_:Exception){defeatMode="error"}
  }
 
- if(winScreen){
+ if(winScreen && miniOpen){
+  MiniGamePlaceholder(ready=nextGame!=null,failed=prepareError,onRetry={preparationAttempt++},onContinue={
+   val next=nextGame;val nextP=nextProgress
+   if(next!=null && nextP!=null){
+    stopFlights();progress=nextP;game=next;highlighted=null;invalid=null
+    traveledCells=emptySet();revision++;winScreen=false;miniOpen=false;miniPending=false
+    nextGame=null;nextProgress=null
+   }
+  })
+ }else if(winScreen){
   WinScreen(
    stage=progress.stage,
    nextStage=nextProgress?.stage,
    ready=nextGame!=null,
    failed=prepareError,
+   miniAvailable=miniPending,
+   onPlay={miniOpen=true;solvedSinceMini=0},
    onRetry={preparationAttempt++},
    onContinue={
     val next=nextGame
@@ -200,6 +214,7 @@ class MainActivity:ComponentActivity(){
      game=next
      highlighted=null;invalid=null;traveledCells=emptySet();revision++
      winScreen=false
+     miniPending=false;miniOpen=false
      nextGame=null;nextProgress=null
     }
    }
@@ -395,7 +410,11 @@ class MainActivity:ComponentActivity(){
     flights.removeAll{f->f.id==it}
     jobs.remove(it)
     if(flights.isEmpty()){
-     if(game.won)winScreen=true
+     if(game.won){
+      solvedSinceMini++
+      miniPending=progress.win().stage>progress.stage && solvedSinceMini>=4
+      winScreen=true
+     }
      else if(game.lost){defeatMode="choice";defeatScreen=true}
     }
    }
@@ -640,6 +659,8 @@ private fun WinScreen(
  nextStage:Int?,
  ready:Boolean,
  failed:Boolean,
+ miniAvailable:Boolean,
+ onPlay:()->Unit,
  onRetry:()->Unit,
  onContinue:()->Unit
 ){
@@ -657,7 +678,14 @@ private fun WinScreen(
   Spacer(Modifier.height(12.dp))
   Text("Stufe $stage gemeistert",color=Color(0xFF787FA4))
   Spacer(Modifier.height(48.dp))
-  if(ready){
+  if(miniAvailable){
+   Text("Zeit für eine kleine Spielpause!",color=Color(0xFF3E699C),fontWeight=FontWeight.SemiBold)
+   Spacer(Modifier.height(16.dp))
+   Button(onClick=onPlay,modifier=Modifier.fillMaxWidth().height(60.dp),
+    shape=RoundedCornerShape(20.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){
+    Text("▶  Spielen",fontSize=20.sp,fontWeight=FontWeight.Bold,color=Color.White)
+   }
+  }else if(ready){
    Text(if(nextStage!=null && nextStage>stage)"Neue Stufe freigeschaltet!" else "Dein nächstes Rätsel ist bereit!",
     color=Color(0xFF3E699C),fontWeight=FontWeight.SemiBold)
    Spacer(Modifier.height(16.dp))
@@ -676,6 +704,28 @@ private fun WinScreen(
    Spacer(Modifier.height(16.dp))
    Text("Dein nächstes Rätsel entsteht …",color=Color(0xFF676D9A))
   }
+ }
+}
+
+/** Placeholder for independently pluggable mini-games. Generation continues in Puzzle's coroutine. */
+@Composable
+private fun MiniGamePlaceholder(ready:Boolean,failed:Boolean,onRetry:()->Unit,onContinue:()->Unit){
+ Column(Modifier.fillMaxSize().background(Color(0xFF383838)),
+  horizontalAlignment=Alignment.CenterHorizontally){
+  Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center){
+   when {
+    ready -> Button(onClick=onContinue,modifier=Modifier.height(60.dp),
+     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){Text("Weiter  →",fontSize=20.sp)}
+    failed -> Column(horizontalAlignment=Alignment.CenterHorizontally){
+     Text("Rätselvorbereitung fehlgeschlagen",color=Color.White)
+     OutlinedButton(onClick=onRetry){Text("Erneut versuchen",color=Color.White)}
+    }
+   }
+  }
+  // This is a readiness indicator, not a fabricated percentage of a search algorithm.
+  if(!ready && !failed) LinearProgressIndicator(modifier=Modifier.fillMaxWidth().height(3.dp),
+   color=Color(0xFFE6E6E6),trackColor=Color(0xFF555555))
+  else Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0xFFE6E6E6)))
  }
 }
 
