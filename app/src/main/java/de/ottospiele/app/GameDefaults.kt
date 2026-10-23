@@ -13,6 +13,7 @@ internal data class GameDefaults(
  val animationSpeed:Int=1,
  val preparationExactBudgetMillis:Long=30000L,
  val preparationExactAttemptsPerSlot:Int=8,
+ val legacyEnabled:Boolean=true,
  val showStageAdjustment:Boolean=true
 ) {
  companion object {
@@ -41,6 +42,11 @@ internal data class GameDefaults(
      ?.takeIf { it in 0L..120000L } ?: 30000L,
     preparationExactAttemptsPerSlot=props.getProperty("preparationExactAttemptsPerSlot")?.trim()?.toIntOrNull()
      ?.takeIf { it in 1..12 } ?: 8,
+    legacyEnabled=when(props.getProperty("legacyEnabled")?.trim()?.lowercase()){
+     "true"->true
+     "false"->false
+     else->true
+    },
     showStageAdjustment=when(props.getProperty("showStageAdjustment")?.trim()?.lowercase()) {
      "true" -> true
      "false" -> false
