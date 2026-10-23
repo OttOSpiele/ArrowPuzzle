@@ -7,6 +7,7 @@ package de.ottospiele.arrow
  * Never expose an incomplete or unsolvable board.
  */
 object LevelGeneration {
+ internal fun requiredWindingArrows(stage:Int):Int=if(stage>=24)2 else 0
  fun generate(stage:Int,seed:Long,aspect:Float=1f):Level {
   require(stage>=1)
   if(stage<=16)return Generator().generate(stage,seed,aspect)
@@ -15,7 +16,7 @@ object LevelGeneration {
   val target=(width*height/4).coerceAtLeast(2)
   val preferred=runCatching {
    ExactCoverGenerator.generate(width,height,seed,stage,
-    maxNodes=3000,targetArrows=target,minWindingArrows=if(stage>=24)2 else 0,
+    maxNodes=3000,targetArrows=target,minWindingArrows=requiredWindingArrows(stage),
     maxInitiallyFree=target/2,minChainLength=width/2).level
   }.getOrNull()
   if(preferred!=null && Rules.solve(preferred)!=null)return preferred
