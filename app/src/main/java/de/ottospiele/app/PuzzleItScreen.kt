@@ -212,7 +212,7 @@ internal fun PuzzleItScreen(
   }
   // Deliberate finger-safe empty row *above* Android's system navigation inset.
   Spacer(Modifier.fillMaxWidth().height(config.bottomSafetySpacingDp.dp))
-  if(preparationFailed) TextButton(onClick=onRetryPreparation,modifier=Modifier.align(Alignment.CenterHorizontally)){
+  if(preparationFailed) TextButton(onClick=ticked(onRetryPreparation),modifier=Modifier.align(Alignment.CenterHorizontally)){
    Text("Rätselvorbereitung wiederholen")
   }
   if(!preparationReady) LinearProgressIndicator(modifier=Modifier.fillMaxWidth().height(3.dp),
