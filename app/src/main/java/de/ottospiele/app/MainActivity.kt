@@ -588,14 +588,13 @@ class MainActivity:ComponentActivity(){
   dismissButton={
    if(!backLoading) Button(onClick=ticked {
     if(!backLoading){
-     backLoading=true
+     // A deliberate downgrade starts mandatory Puzzle It. Generate the
+     // replacement puzzle while the child is playing the mini-game.
      val target=progress.easier()
-     scope.launch {
-      val ready=runCatching { withContext(Dispatchers.Default) { generationMutex.withLock { fresh(target.stage,lives,hints,screenAspect,defaults.legacyEnabled) } } }.getOrNull()
-      if(ready!=null){ progress=target;replaceWith(ready);dialog="" }
-      else dialog="stufeZurueckFehler"
-      backLoading=false
-     }
+     stopFlights();dialog=""
+     forcedNextProgress=target;nextProgress=null;nextGame=null;prepareError=false
+     solvedSinceMini=0;miniPending=true;miniOpen=true;winScreen=true
+     haptics.miniGameEntered()
     }
    },colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7955CE))){
     Text("Stufe zurück",fontWeight=FontWeight.Bold)
