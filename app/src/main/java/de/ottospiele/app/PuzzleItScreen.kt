@@ -244,10 +244,10 @@ private fun drawPuzzlePiece(canvas:android.graphics.Canvas,round:PuzzleItRound,i
   typeface=android.graphics.Typeface.create("sans-serif-black",android.graphics.Typeface.BOLD)
  }
  val word=round.number.toString()
- ink.textSize=if(round.number==10)1.55f*t else 2.12f*t
+ ink.textSize=if(round.number==10)2.25f*t else 2.85f*t
  val maxWidth=2.80f*t
  if(ink.measureText(word)>maxWidth)ink.textSize*=maxWidth/ink.measureText(word)
- val baseline=2.51f*t
+ val baseline=2.49f*t
  canvas.drawText(word,1.5f*t,baseline,ink)
  val dot=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=android.graphics.Color.rgb(45,54,95)}
  val n=round.number
