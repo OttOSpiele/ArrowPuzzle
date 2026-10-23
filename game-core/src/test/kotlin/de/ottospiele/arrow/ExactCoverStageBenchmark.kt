@@ -78,6 +78,25 @@ object ExactCoverStageBenchmark {
       "","","","","","","",reason).joinToString(",")+"\n")
     }
    }
+   // Continue a separate bounded catalog search to get eight visual examples.
+   // Extra catalog attempts do NOT change the fixed-size statistical sample.
+   if(stage in selectedStages && catalogCount<8) {
+    for(extra in 0 until 64) {
+     if(catalogCount>=8)break
+     val aspect=listOf(1f,0.75f,1.5f)[extra%3]
+     val seed=stage.toLong()*1000003L+(perStage+extra)*7919L+17L
+     val level=runCatching{LevelGeneration.generateExactOrNull(stage,seed,aspect)}.getOrNull()
+      ?:continue
+     if(Rules.solve(level)==null)continue
+     val metrics=LevelQualityAnalyzer.analyze(level)
+     val score=DifficultyProfiles.forStage(stage).assess(level).score
+     val paths=level.arrows.joinToString("|"){a->a.vertices().joinToString(";"){p->"${p.x}:${p.y}"}}
+     drawings.appendText(listOf(stage,seed,aspect,level.width,level.height,false,
+      dec(metrics.occupancy*100),metrics.initiallyFree,metrics.longestChain,
+      dec(score),paths).joinToString("\t")+"\n")
+     catalogCount++
+    }
+   }
    val sorted=times.sorted()
    fun avg(numbers:Collection<Number>):Double=if(numbers.isEmpty())0.0 else numbers.sumOf{it.toDouble()}/numbers.size
    summary.appendText(listOf(stage,perStage,count,perStage-count,dec(count*100.0/perStage),
