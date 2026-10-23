@@ -65,6 +65,15 @@ internal fun goalsUntilNextMini(start:Progress,solvedSinceMini:Int,skipCurrent:B
  return targets.entries.map{it.key to it.value}
 }
 
+/** Preserve the full quality search in early stages; reduce costly candidate sampling later. */
+internal fun preparationCandidateCount(stage:Int,maximum:Int):Int =
+ when {
+  stage<30 -> maximum
+  stage<45 -> minOf(maximum,6)
+  stage<60 -> minOf(maximum,4)
+  else -> minOf(maximum,2)
+ }
+
 private val generationMutex=Mutex()
 
 private data class Flight(val id:Int,val plan:MovePlan,val failed:Boolean,val step:Int=0,val impactOffset:Float=0f)
@@ -149,11 +158,15 @@ class MainActivity:ComponentActivity(){
  fun replaceWith(ready:Game){stopFlights();game=ready;highlighted=null;invalid=null;traveledCells=emptySet();revision++}
  // Prepare only the missing puzzles until the NEXT mini-game, across stage boundaries.
  // Replenishment happens during success screens / Puzzle It; active play only fills deficits.
- LaunchedEffect(progress.stage,progress.done,winScreen,miniOpen,miniPending,solvedSinceMini,forcedNextProgress,nextGame,prepAttempt,screenAspect) {
+ // Keep this effect independent of presentation-only changes (miniOpen,
+// miniPending and nextGame); otherwise a candidate batch is repeatedly cancelled.
+ LaunchedEffect(progress.stage,progress.done,winScreen,solvedSinceMini,forcedNextProgress,prepAttempt,screenAspect) {
   prepComplete=false
   prepFailed=false
   val target=if(winScreen)forcedNextProgress?:progress.win() else progress
   val count=if(winScreen && (miniOpen || miniPending || forcedNextProgress!=null))0 else solvedSinceMini
+  // Snapshot the reservation only at the start of this work order.
+  // Do not restart the work when nextGame is assigned asynchronously.
   val reservedNext=winScreen && nextGame!=null
   val goals=if(target.stage>=10)goalsUntilNextMini(target,count,!winScreen || reservedNext)
    else if(winScreen)listOf(target.stage to (target.required()-target.done))
@@ -164,17 +177,22 @@ class MainActivity:ComponentActivity(){
   prepDone=if(reservedNext)1 else 0
   prepTotal=goals.sumOf { it.second }+if(reservedNext)1 else 0
   var allPrepared=true
+  val preparationStarted=android.os.SystemClock.elapsedRealtime()
+  val generationOrigin=if(winScreen)"transition" else "play"
+  try {
   for((target,capacity) in goals) {
+   val slotStart=android.os.SystemClock.elapsedRealtime()
    var cached=withContext(Dispatchers.IO) {
     PreparedLevels.read(context,target,screenAspect)
    }
    prepDone=(if(reservedNext)1 else 0)+goals.takeWhile { it.first!=target }.sumOf { it.second }+cached.size
    while(cached.size<capacity) {
+    val attemptStart=android.os.SystemClock.elapsedRealtime()
     val candidate=withContext(Dispatchers.Default) { generationMutex.withLock {
      var chosen:Level?=null
      if(target>=9) {
       val candidates=mutableListOf<Level>()
-      repeat(defaults.preparationExactAttemptsPerSlot) {
+      repeat(preparationCandidateCount(target,defaults.preparationExactAttemptsPerSlot)) {
        val seed=Random.nextLong()
        if(seed!=game.level.seed && cached.none { it.seed==seed })
         generateExactMeasured(target,seed,screenAspect)?.let { candidates.add(it) }
@@ -192,17 +210,33 @@ class MainActivity:ComponentActivity(){
      }
      chosen ?: if(target<=8)TutorialLevels.level(target,Random.nextLong()) else null
     } }
-    if(candidate==null){allPrepared=false;break}
+    if(candidate==null){
+     allPrepared=false
+     GeneratorDiagnostics.recordPreparation("slot_failed",target,generationOrigin,
+      android.os.SystemClock.elapsedRealtime()-attemptStart)
+     break
+    }
     withContext(Dispatchers.IO) {
      PreparedLevels.append(context,target,screenAspect,candidate,capacity)
     }
     cached=withContext(Dispatchers.IO){PreparedLevels.read(context,target,screenAspect)}
+    GeneratorDiagnostics.recordPreparation("slot_completed",target,generationOrigin,
+     android.os.SystemClock.elapsedRealtime()-attemptStart)
     prepDone=goals.takeWhile { it.first!=target }.sumOf { it.second }+cached.size
    }
    if(cached.size<capacity)allPrepared=false
+   else if(cached.size>=capacity && capacity>0)Log.i("ArrowPuzzlePreparation",
+    "Stage $target cache ready: ${cached.size}/$capacity; elapsed=${android.os.SystemClock.elapsedRealtime()-slotStart}ms")
   }
   prepComplete=allPrepared
   prepFailed=!allPrepared
+  GeneratorDiagnostics.recordPreparation(if(allPrepared)"preparation_complete" else "preparation_incomplete",
+   currentStage,generationOrigin,android.os.SystemClock.elapsedRealtime()-preparationStarted)
+  }catch(cancel:CancellationException){
+   GeneratorDiagnostics.recordPreparation("preparation_cancelled",currentStage,generationOrigin,
+    android.os.SystemClock.elapsedRealtime()-preparationStarted)
+   throw cancel
+  }
  }
  LaunchedEffect(winScreen,preparationAttempt,forcedNextProgress){
   if(!winScreen)return@LaunchedEffect
@@ -218,15 +252,20 @@ class MainActivity:ComponentActivity(){
    val prepared=withContext(Dispatchers.IO){
     PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
    }
-   if(prepared!=null)Log.i("ArrowPuzzlePreparation","Cache hit stage=${target.stage} seed=${prepared.seed}")
+   if(prepared!=null){
+    Log.i("ArrowPuzzlePreparation","Cache hit stage=${target.stage} seed=${prepared.seed}")
+    GeneratorDiagnostics.recordPreparation("cache_hit",target.stage,"transition",0L)
+   }
    val ready=if(prepared!=null)Game(prepared,lives,hints)
     else withContext(Dispatchers.Default){generationMutex.withLock{
      // Background preparation may have finished while this coroutine waited.
      val late=PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
      if(late!=null){
+      GeneratorDiagnostics.recordPreparation("cache_hit_late",target.stage,"transition",0L)
       Log.i("ArrowPuzzlePreparation","Late cache hit stage=${target.stage} seed=${late.seed}")
       Game(late,lives,hints)
      }else{
+      GeneratorDiagnostics.recordPreparation("cache_miss",target.stage,"transition",0L)
       Log.w("ArrowPuzzlePreparation","Cache miss stage=${target.stage}; generating during win/mini-game")
       fresh(target.stage,lives,hints,screenAspect,defaults.legacyEnabled)
      }
