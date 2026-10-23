@@ -11,6 +11,8 @@ internal data class GameDefaults(
  val hints:Int=3,
  val concurrentArrows:Boolean=true,
  val animationSpeed:Int=1,
+ val preparationExactBudgetMillis:Long=6000L,
+ val preparationExactAttemptsPerSlot:Int=3,
  val showStageAdjustment:Boolean=true
 ) {
  companion object {
@@ -35,6 +37,10 @@ internal data class GameDefaults(
     hints=int("defaultHints",setOf(0,1,3,5),3),
     concurrentArrows=concurrent,
     animationSpeed=int("defaultAnimationSpeed",setOf(0,1,2,3),1),
+    preparationExactBudgetMillis=props.getProperty("preparationExactBudgetMillis")?.trim()?.toLongOrNull()
+     ?.takeIf { it in 0L..120000L } ?: 6000L,
+    preparationExactAttemptsPerSlot=props.getProperty("preparationExactAttemptsPerSlot")?.trim()?.toIntOrNull()
+     ?.takeIf { it in 1..12 } ?: 3,
     showStageAdjustment=when(props.getProperty("showStageAdjustment")?.trim()?.lowercase()) {
      "true" -> true
      "false" -> false
