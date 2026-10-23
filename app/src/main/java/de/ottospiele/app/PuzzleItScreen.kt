@@ -61,7 +61,8 @@ internal fun PuzzleItScreen(
  var round by remember { mutableStateOf(controller.round) }
  var dragIndex by remember { mutableIntStateOf(-1) }
  var grip by remember { mutableStateOf(Offset.Zero) }
- val haptics=remember(LocalContext.current){HapticEffects(LocalContext.current)}
+ val context=LocalContext.current
+ val haptics=remember(context){HapticEffects(context)}
  var wasInsideSnap by remember { mutableStateOf(false) }
  val lifecycleOwner=LocalContext.current as LifecycleOwner
  DisposableEffect(lifecycleOwner) {
