@@ -19,7 +19,7 @@ object StageGenerationProfile {
   }.coerceAtMost(20)
   val height=(width/aspect.coerceIn(1f,1.65f)).toInt().coerceIn(4,width)
   val cells=width*height
-  val target=(cells/when{stage<=8->4;stage<=16->4;else->4}).coerceAtLeast(2)
+  val target=(cells/4).coerceAtLeast(2)
   return StageGeometry(width,height,target,if(stage>=24)2 else 0,
    (target*(if(stage<17)0.70 else 0.5)).toInt().coerceAtLeast(1),
    if(stage<=8)1 else (width/3).coerceAtLeast(2))
