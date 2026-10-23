@@ -11,7 +11,8 @@ internal data class PuzzleItConfig(
  val successMs:Long=1000L,
  val minVisibleRatio:Float=.40f,
  val maxAttempts:Int=100,
- val preventRepeat:Boolean=true
+ val preventRepeat:Boolean=true,
+ val bottomSafetySpacingDp:Int=56
 )
 internal data class PuzzleItPiece(
  val index:Int,
