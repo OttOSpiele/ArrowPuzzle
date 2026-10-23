@@ -32,6 +32,11 @@ class IntegrationRegressionTest {
   assertEquals(Progress(16,1),Progress(17,2).easier().win())
  }
 
+ @Test fun windingConstraintStartsWhenMultiBendCandidatesExist() {
+  for(stage in 17..23)assertEquals(0,LevelGeneration.requiredWindingArrows(stage),"stage $stage")
+  for(stage in listOf(24,35,80))assertEquals(2,LevelGeneration.requiredWindingArrows(stage),"stage $stage")
+ }
+
  @Test fun earlyStagesUseUnmodifiedLegacyGenerator() {
   for(stage in listOf(1,8,9,16)){
    val seed=104729L+stage
