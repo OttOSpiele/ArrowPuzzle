@@ -16,7 +16,7 @@ internal object GeneratorDiagnostics {
   val width:Int,val height:Int,val elapsedMs:Long,val generator:String,val outcome:String)
 
  @Synchronized fun record(context:Context,event:Event) {
-  if(!de.ottospiele.app.BuildConfig.DEBUG) return
+  if(context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE == 0) return
   val prefs=context.applicationContext.getSharedPreferences(PREF,Context.MODE_PRIVATE)
   val existing=runCatching { JSONArray(prefs.getString(KEY,"[]")) }.getOrElse { JSONArray() }
   val updated=JSONArray()
