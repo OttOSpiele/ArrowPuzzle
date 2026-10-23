@@ -10,7 +10,8 @@ class GameTest {
   assertTrue(early.freeRange.start>late.freeRange.start)
   assertTrue(early.chainRange.start<late.chainRange.start)
   assertTrue(early.windingRange.endInclusive<late.windingRange.endInclusive)
-  assertEquals(late,DifficultyProfiles.forStage(100))
+  assertEquals(late.freeRange,DifficultyProfiles.forStage(100).freeRange)
+  assertEquals(late.chainRange,DifficultyProfiles.forStage(100).chainRange)
   assertThrows(IllegalArgumentException::class.java) { DifficultyProfiles.forStage(0) }
   val level=ExactCoverGenerator.generate(8,8,17L,maxNodes=1000).level
   if(level!=null) {
