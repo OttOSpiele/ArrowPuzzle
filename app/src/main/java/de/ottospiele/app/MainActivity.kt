@@ -120,17 +120,20 @@ class MainActivity:ComponentActivity(){
    var cached=withContext(Dispatchers.IO) {
     PreparedLevels.read(context,target,screenAspect)
    }
+   prepDone=goals.takeWhile { it.first!=target }.sumOf { it.second }+cached.size
    while(cached.size<capacity) {
     val candidate=withContext(Dispatchers.Default) {
      var chosen:Level?=null
      if(target>=17) {
+      val candidates=mutableListOf<Level>()
       repeat(defaults.preparationExactAttemptsPerSlot) {
-       if(chosen==null && System.nanoTime()-started<budgetNs) {
+       if(System.nanoTime()-started<budgetNs) {
         val seed=Random.nextLong()
         if(seed!=game.level.seed && cached.none { it.seed==seed })
-         chosen=generateExactMeasured(target,seed,screenAspect)
+         generateExactMeasured(target,seed,screenAspect)?.let { candidates.add(it) }
        }
       }
+      chosen=DifficultyProfiles.choose(target,candidates)
      }
      if(chosen==null) {
       repeat(3) {
