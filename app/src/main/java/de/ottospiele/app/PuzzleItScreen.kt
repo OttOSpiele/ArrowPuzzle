@@ -187,13 +187,15 @@ internal fun PuzzleItScreen(
     }
    }
   }
+   if(round.phase==PuzzleItPhase.ROUND_SUCCESS) {
+    Text("★",fontSize=32.sp,color=Color(0xFF8B63CA),
+     modifier=Modifier.align(Alignment.Center).graphicsLayer {
+      scaleX=successScale;scaleY=successScale;alpha=successScale
+     })
+   }
   }
-  if(round.phase==PuzzleItPhase.ROUND_SUCCESS) {
-   Text("★",fontSize=32.sp,color=Color(0xFF8B63CA),
-    modifier=Modifier.align(Alignment.CenterHorizontally).graphicsLayer {
-     scaleX=successScale;scaleY=successScale;alpha=successScale
-    })
-  }
+  // Deliberate finger-safe empty row *above* Android's system navigation inset.
+  Spacer(Modifier.fillMaxWidth().height(config.bottomSafetySpacingDp.dp))
   if(preparationFailed) TextButton(onClick=onRetryPreparation,modifier=Modifier.align(Alignment.CenterHorizontally)){
    Text("Rätselvorbereitung wiederholen")
   }
