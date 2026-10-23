@@ -32,6 +32,15 @@ class IntegrationRegressionTest {
   assertEquals(Progress(16,1),Progress(17,2).easier().win())
  }
 
+ @Test fun requiredPlusTwoPreparationCapacityAcrossBoundaries() {
+  val expected=mapOf(1 to 3,8 to 3,9 to 4,16 to 4,
+   17 to 5,29 to 5,30 to 6,42 to 6,43 to 7,
+   54 to 7,55 to 8,67 to 8,68 to 9,79 to 9,80 to 10)
+  expected.forEach { (stage,capacity)->
+   assertEquals(capacity,Progress(stage).required()+2,"prepared current-stage reserve at $stage")
+  }
+ }
+
  @Test fun windingConstraintStartsWhenMultiBendCandidatesExist() {
   for(stage in 17..23)assertEquals(0,LevelGeneration.requiredWindingArrows(stage),"stage $stage")
   for(stage in listOf(24,35,80))assertEquals(2,LevelGeneration.requiredWindingArrows(stage),"stage $stage")
