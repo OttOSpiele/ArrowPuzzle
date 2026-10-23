@@ -662,9 +662,9 @@ private fun WinScreen(
  onRetry:()->Unit,
  onContinue:()->Unit
 ){
+ Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFECEBFF),Color(0xFFF6FAFF),Color(0xFFFFF9EC))))) {
  Column(
-  Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFECEBFF),Color(0xFFF6FAFF),Color(0xFFFFF9EC))))
-   .padding(28.dp),
+  Modifier.fillMaxSize().padding(28.dp),
   horizontalAlignment=Alignment.CenterHorizontally,
   verticalArrangement=Arrangement.Center
  ){
@@ -702,6 +702,10 @@ private fun WinScreen(
    Spacer(Modifier.height(16.dp))
    Text("Dein nächstes Rätsel entsteht …",color=Color(0xFF676D9A))
   }
+ }
+ if(!ready && !failed) LinearProgressIndicator(modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp),
+  color=Color.White,trackColor=Color(0xFFD6D9E9))
+ else Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp).background(Color.White))
  }
 }
 
