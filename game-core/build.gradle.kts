@@ -22,3 +22,13 @@ tasks.register<JavaExec>("benchmarkExactCover") {
   (project.findProperty("exactCoverSeeds") ?: "10").toString(),
   (project.findProperty("exactCoverNodes") ?: "600").toString())
 }
+
+tasks.register<JavaExec>("benchmarkExactCoverAB") {
+ group = "verification"
+ description = "Compare frozen #221 exact-cover solver with current code at matched seeds and budgets"
+ dependsOn(tasks.testClasses)
+ classpath = sourceSets.test.get().runtimeClasspath
+ mainClass.set("de.ottospiele.arrow.ExactCoverComparison")
+ args(layout.buildDirectory.dir("benchmark").get().asFile.absolutePath,
+  (project.findProperty("exactCoverABSeeds") ?: "10").toString())
+}
