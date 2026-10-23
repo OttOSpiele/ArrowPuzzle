@@ -88,7 +88,7 @@ internal fun PuzzleItScreen(
   if(round.phase==PuzzleItPhase.EXITING &&
    (preparationReady || controller.completedRounds>=requiredRounds))onCompleted()
  }
- Column(Modifier.fillMaxSize().background(Color(0xFFF0F1F8))) {
+ Column(Modifier.fillMaxSize().background(Color(0xFFF0F1F8)).navigationBarsPadding()) {
   Box(Modifier.weight(1f).fillMaxWidth().padding(4.dp)) {
    Canvas(Modifier.fillMaxSize().pointerInput(round.seed,round.phase) {
     detectDragGestures(
@@ -163,6 +163,7 @@ internal fun PuzzleItScreen(
     }
    }
   }
+  Box(Modifier.fillMaxWidth().height(148.dp)) {
   if(round.phase==PuzzleItPhase.CHOICE_ACTIVE || round.phase==PuzzleItPhase.ROUND_SUCCESS) {
    Column(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
     repeat(2){row->
@@ -185,6 +186,7 @@ internal fun PuzzleItScreen(
      }
     }
    }
+  }
   }
   if(round.phase==PuzzleItPhase.ROUND_SUCCESS) {
    Text("★",fontSize=32.sp,color=Color(0xFF8B63CA),
