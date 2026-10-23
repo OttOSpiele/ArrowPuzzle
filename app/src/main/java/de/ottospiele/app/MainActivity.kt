@@ -140,7 +140,7 @@ class MainActivity:ComponentActivity(){
    val target=progress.win()
    val ready=withContext(Dispatchers.Default){
     val prepared=PreparedLevels.read(context,target.stage,screenAspect)
-     .firstOrNull { it.seed!=game.level.seed }
+     .firstOrNull { it.seed!=game.level.seed && (target.stage<=16 || it.fallbackGeneration || BoardProfile.actualOccupancy(it)>=.999f) }
     if(prepared!=null)Game(prepared,lives,hints)
     else fresh(target.stage,lives,hints,screenAspect)
    }
