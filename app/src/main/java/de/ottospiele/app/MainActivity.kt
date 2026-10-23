@@ -190,7 +190,7 @@ class MainActivity:ComponentActivity(){
   defeatPrepared=null
   delay(350)
   try{
-   val ready=withContext(Dispatchers.Default){fresh(progress.stage,lives,hints,screenAspect,defaults.legacyEnabled)}
+   val ready=withContext(Dispatchers.Default){generationMutex.withLock{fresh(progress.stage,lives,hints,screenAspect,defaults.legacyEnabled)}}
    defeatPrepared=ready
    defeatMode="ready"
   }catch(_:Exception){defeatMode="error"}
@@ -522,7 +522,7 @@ class MainActivity:ComponentActivity(){
      backLoading=true
      val target=progress.easier()
      scope.launch {
-      val ready=runCatching { withContext(Dispatchers.Default) { fresh(target.stage,lives,hints,screenAspect,defaults.legacyEnabled) } }.getOrNull()
+      val ready=runCatching { withContext(Dispatchers.Default) { generationMutex.withLock { fresh(target.stage,lives,hints,screenAspect,defaults.legacyEnabled) } } }.getOrNull()
       if(ready!=null){ progress=target;replaceWith(ready);dialog="" }
       else dialog="stufeZurueckFehler"
       backLoading=false
