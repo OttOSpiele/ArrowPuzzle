@@ -44,6 +44,9 @@ jobs:
       - name: Test Kotlin game core
         run: gradle --no-daemon --warning-mode all :game-core:test
 
+      - name: Test Puzzle It model
+        run: gradle --no-daemon --warning-mode all :app:testDebugUnitTest
+
       - name: Build debug APK
         run: gradle --no-daemon --warning-mode all :app:assembleDebug
 
