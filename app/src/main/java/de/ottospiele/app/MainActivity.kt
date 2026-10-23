@@ -100,6 +100,7 @@ class MainActivity:ComponentActivity(){
  val pendingStage=remember{miniPrefs.getInt("preparing_target_stage",0)}
  val pendingDone=remember{miniPrefs.getInt("preparing_target_done",0)}
  val restoringPreparation=pendingStage>0
+ val restoringCurrent=restoringPreparation && miniPrefs.getBoolean("preparing_resume_current",false) && saved!=null
  val restoredTarget=remember(pendingStage,pendingDone){
   if(restoringPreparation)Progress(pendingStage,pendingDone) else null
  }
@@ -117,9 +118,10 @@ class MainActivity:ComponentActivity(){
  var defeatMode by remember{mutableStateOf("choice")}
  var defeatPrepared by remember{mutableStateOf<Game?>(null)}
  var defeatAttempt by remember{mutableIntStateOf(0)}
- var nextGame by remember{mutableStateOf<Game?>(null)}
- var nextProgress by remember{mutableStateOf<Progress?>(null)}
+ var nextGame by remember{mutableStateOf<Game?>(if(restoringCurrent)saved?.game else null)}
+ var nextProgress by remember{mutableStateOf<Progress?>(if(restoringCurrent)saved?.progress else null)}
  var forcedNextProgress by remember{mutableStateOf<Progress?>(restoredTarget)}
+ var resumeCurrentAfterMini by remember{mutableStateOf(restoringCurrent)}
  var prepareError by remember{mutableStateOf(false)}
  var preparationAttempt by remember{mutableIntStateOf(0)}
  // A mini-game is offered only on a stage transition after four completed puzzles.
@@ -244,8 +246,8 @@ class MainActivity:ComponentActivity(){
    throw cancel
   }
  }
- LaunchedEffect(winScreen,preparationAttempt,forcedNextProgress){
-  if(!winScreen)return@LaunchedEffect
+ LaunchedEffect(winScreen,preparationAttempt,forcedNextProgress,resumeCurrentAfterMini){
+  if(!winScreen || resumeCurrentAfterMini)return@LaunchedEffect
   nextGame=null
   nextProgress=null
   prepareError=false
@@ -306,7 +308,9 @@ class MainActivity:ComponentActivity(){
     if(miniOpen && next!=null && nextP!=null){
      haptics.arrowPuzzleReturned()
      stopFlights();progress=nextP;game=next;highlighted=null;invalid=null
-     miniPrefs.edit().remove("preparing_target_stage").remove("preparing_target_done").commit()
+     miniPrefs.edit().remove("preparing_target_stage").remove("preparing_target_done")
+      .remove("preparing_resume_current").commit()
+     resumeCurrentAfterMini=false
      traveledCells=emptySet();revision++;winScreen=false;miniOpen=false;miniPending=false;forcedNextProgress=null
      nextGame=null;nextProgress=null
     }
@@ -356,6 +360,8 @@ class MainActivity:ComponentActivity(){
     miniPrefs.edit().putInt("preparing_target_stage",target.stage)
      .putInt("preparing_target_done",target.done).commit()
     stopFlights();defeatScreen=false;defeatPrepared=null
+    resumeCurrentAfterMini=false
+    miniPrefs.edit().remove("preparing_resume_current").commit()
     forcedNextProgress=target;nextGame=null;nextProgress=null;prepareError=false
     solvedSinceMini=0;miniPending=true;miniOpen=true;winScreen=true
     haptics.miniGameEntered()
@@ -625,6 +631,8 @@ class MainActivity:ComponentActivity(){
       stageError=true;return@ticked
      }
      stopFlights();dialog="";defeatScreen=false;defeatPrepared=null
+     resumeCurrentAfterMini=false
+     miniPrefs.edit().remove("preparing_resume_current").commit()
      nextGame=null;nextProgress=null;prepareError=false
      forcedNextProgress=target
      solvedSinceMini=0;miniPending=true;miniOpen=true;winScreen=true
@@ -661,6 +669,8 @@ class MainActivity:ComponentActivity(){
      miniPrefs.edit().putInt("preparing_target_stage",target.stage)
       .putInt("preparing_target_done",target.done).commit()
      stopFlights();dialog=""
+     resumeCurrentAfterMini=false
+     miniPrefs.edit().remove("preparing_resume_current").commit()
      forcedNextProgress=target;nextProgress=null;nextGame=null;prepareError=false
      solvedSinceMini=0;miniPending=true;miniOpen=true;winScreen=true
      haptics.miniGameEntered()
