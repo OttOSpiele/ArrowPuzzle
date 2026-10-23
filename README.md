@@ -236,6 +236,12 @@ Die Reihenfolge bleibt unabhängig von einzelnen Benchmark-Ergebnissen:
 
 **Stand Phase 1:** A und B sind im Commit 109ca24 implementiert. C ist noch offen: MRV erkennt bereits Ein-Kandidaten-Zellen, aber eine eigenständige iterative Zwangsplatzierungsphase mit gemeinsamem Rollback ist noch nicht umgesetzt. In den nächsten Arbeiten nur Phase 1 abschließen, bevor Phase 2 beginnt. Die Geometrie und der Legacy-Generator bleiben unverändert.
 
+## Exact Cover – Phase 1C abgeschlossen (Oktober 2026)
+
+Der zellorientierte Exact-Cover-Solver führt nun **iterative Zwangsplatzierungen** aus: Wenn für eine noch freie Zelle nur ein zulässiger Kandidat verbleibt, wird dieser gesetzt und die Suche erneut nach erzwungenen Kandidaten durchsucht. Entsteht ein Widerspruch (kein Kandidat, Region nicht belegbar, Abhängigkeitszyklus), werden **sämtliche Zwangsplatzierungen des aktuellen Suchaufrufs** gemeinsam zurückgenommen. Der normale Entscheidungszweig besitzt seinen eigenen Rollback; die Rekursion kann dadurch keine belegten Zellen oder Pfeile in benachbarte Suchzweige verschleppen. Die bestehende Pfeillängenpriorisierung, Regionsprüfung, Zielpfeilzahl und Schwierigkeit bleiben erhalten; die maximale Knotenzahl bleibt begrenzt.
+
+Phase 1A–1C ist damit im Code implementiert. **CI-Validierung und quantitativer Vergleich stehen noch aus.** Verbindliche Reihenfolge unverändert: danach Phase 2 (CSV/Benchmark gegen #221), Phase 3 (Schwierigkeitsprofile), Phase 4 (App-Integration). Keine Änderungen am Legacy-Generator.
+
 ## Dokumentationsstand / Änderungsverlauf
 
 - **18.10.2026 – Eigenständiger Exact-Cover-Prototyp:** Neuer zellbasierter MRV-/DFS-Solver mit vollständiger Rasterbelegung und abschließender Lösbarkeitsprüfung für kleine Raster. Produktionsintegration erst nach Benchmark und regionaler Skalierung.
