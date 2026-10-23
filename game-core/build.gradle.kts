@@ -42,3 +42,13 @@ tasks.register<JavaExec>("benchmarkExactCoverStages") {
  args(layout.buildDirectory.dir("benchmark").get().asFile.absolutePath,
   (project.findProperty("exactStageSeeds") ?: "16").toString())
 }
+
+tasks.register<JavaExec>("benchmarkExactCoverCatalog") {
+ group = "verification"
+ description = "Fast representative Exact Cover catalog with failure and quality statistics"
+ dependsOn(tasks.testClasses)
+ classpath = sourceSets.test.get().runtimeClasspath
+ mainClass.set("de.ottospiele.arrow.ExactCoverStageBenchmark")
+ args(layout.buildDirectory.dir("benchmark").get().asFile.absolutePath,
+  (project.findProperty("exactCatalogSeeds") ?: "8").toString(), "catalog")
+}
