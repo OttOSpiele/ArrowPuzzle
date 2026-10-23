@@ -124,16 +124,26 @@ class MainActivity:ComponentActivity(){
   jobs.clear();flights.clear()
  }
  fun replaceWith(ready:Game){stopFlights();game=ready;highlighted=null;invalid=null;traveledCells=emptySet();revision++}
- // Keep a full current-stage reserve (+2) and a small next-stage starter reserve.
- // Preparation is not stopped by an elapsed wall-clock time limit.
- LaunchedEffect(progress.stage,progress.done,screenAspect) {
-  val currentStage=progress.stage
-  val nextStage=currentStage+1
-  // Prioritize the imminent stage transition before replenishing the current stage.
-  // The stage-success screen and Puzzle It can consume a ready next-stage puzzle
-  // without waiting for the full current-stage reserve.
-  val goals=listOf(nextStage to 2,currentStage to (progress.required()+2))
-  Log.i("ArrowPuzzlePreparation","Prefetch stage=$nextStage before current=$currentStage")
+ // Generation is primarily a transition-time activity (success screen / Puzzle It).
+ // During active play, fill ONLY the deficit to the next stage boundary.
+ // The current puzzle is already in game, so it must not count towards cached demand.
+ // A stage transition prepares the upcoming stage; optional reserve for the following
+ // stage is built only while the transition screen remains visible.
+ LaunchedEffect(progress.stage,progress.done,winScreen,screenAspect) {
+  val nextProgress=progress.win()
+  val goals:List<Pair<Int,Int>>
+  val currentStage:Int
+  if(winScreen) {
+   currentStage=nextProgress.stage
+   val remainingAfterWin=nextProgress.required()-nextProgress.done
+   goals=listOf(currentStage to remainingAfterWin,(currentStage+1) to 1)
+   Log.i("ArrowPuzzlePreparation","Transition preparation: stage=$currentStage remaining=$remainingAfterWin")
+  } else {
+   currentStage=progress.stage
+   val remainingAfterCurrent=progress.required()-progress.done-1
+   goals=if(remainingAfterCurrent>0)listOf(currentStage to remainingAfterCurrent) else emptyList()
+   Log.i("ArrowPuzzlePreparation","Active play: stage=$currentStage cache demand=$remainingAfterCurrent")
+  }
   prepStage=currentStage
   prepDone=0
   prepTotal=goals.sumOf { it.second }
