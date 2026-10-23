@@ -209,7 +209,8 @@ class MainActivity:ComponentActivity(){
    onRetryPreparation={preparationAttempt++},
    onCompleted={
     val next=nextGame;val nextP=nextProgress
-    if(next!=null && nextP!=null){
+    if(miniOpen && next!=null && nextP!=null){
+     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
      stopFlights();progress=nextP;game=next;highlighted=null;invalid=null
      traveledCells=emptySet();revision++;winScreen=false;miniOpen=false;miniPending=false
      nextGame=null;nextProgress=null
@@ -223,7 +224,12 @@ class MainActivity:ComponentActivity(){
    ready=nextGame!=null,
    failed=prepareError,
    miniAvailable=miniPending && progress.stage>=10,
-   onPlay={miniOpen=true;solvedSinceMini=0},
+   onPlay={
+    if(!miniOpen){
+     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+     miniOpen=true;solvedSinceMini=0
+    }
+   },
    onRetry={preparationAttempt++},
    onContinue={
     val next=nextGame
@@ -437,6 +443,7 @@ class MainActivity:ComponentActivity(){
      if(game.won){
       solvedSinceMini=(solvedSinceMini+1).coerceAtMost(4)
       miniPending=progress.stage>=10 && progress.win().stage>progress.stage && solvedSinceMini>=4
+      haptics.performHapticFeedback(HapticFeedbackType.LongPress)
       winScreen=true
      }
      else if(game.lost){defeatMode="choice";defeatScreen=true}
