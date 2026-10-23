@@ -79,11 +79,11 @@ internal fun PuzzleItScreen(
       if(round.phase!=PuzzleItPhase.PUZZLE_ACTIVE)return@detectDragGestures
       val geometry=PuzzleItLayout(size.width.toFloat(),size.height.toFloat())
       val index=round.pieces.indices.reversed().firstOrNull { i->
-       val piece=round.pieces[i]
-       !piece.fixed && containsPuzzlePiece(round,i,at,geometry,piece)
+       val piece=controller.round.pieces[i]
+       !piece.fixed && containsPuzzlePiece(controller.round,i,at,geometry,piece)
       } ?:return@detectDragGestures
       dragIndex=index
-      val p=round.pieces[index]
+      val p=controller.round.pieces[index]
       grip=Offset(at.x-geometry.scatterX-p.left*geometry.tile,
        at.y-geometry.scatterY-p.top*geometry.tile)
      },
@@ -91,7 +91,7 @@ internal fun PuzzleItScreen(
      onDragEnd={
       val i=dragIndex
       if(i>=0) {
-       val p=round.pieces[i]
+       val p=controller.round.pieces[i]
        val geometry=PuzzleItLayout(size.width.toFloat(),size.height.toFloat())
        val absoluteX=geometry.scatterX+p.left*geometry.tile
        val absoluteY=geometry.scatterY+p.top*geometry.tile
@@ -120,9 +120,9 @@ internal fun PuzzleItScreen(
       val maxY=((size.height-geometry.scatterY)/geometry.tile-1.23f).coerceAtLeast(0f)
       val next=p.copy(left=(p.left+delta.x/geometry.tile).coerceIn(.25f,maxX),
        top=(p.top+delta.y/geometry.tile).coerceIn(.25f,maxY))
-      val ps=round.pieces.toMutableList()
+      val ps=controller.round.pieces.toMutableList()
       ps[i]=next
-      controller.replace(round.copy(pieces=ps),controller.stopAfterCurrentRound,controller.completedRounds)
+      controller.replace(controller.round.copy(pieces=ps),controller.stopAfterCurrentRound,controller.completedRounds)
       publish()
      }
     )
