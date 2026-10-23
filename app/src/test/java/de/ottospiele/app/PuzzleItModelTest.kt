@@ -70,6 +70,15 @@ class PuzzleItModelTest {
   assertFalse(c.choose(c.round.number))
   assertEquals(PuzzleItPhase.ROUND_SUCCESS,c.round.phase)
  }
+ @Test fun stopSignalNeverInterruptsCurrentPhase(){
+  for(phase in PuzzleItPhase.values().filter{it!=PuzzleItPhase.EXITING}) {
+   val c=PuzzleItController(PuzzleItConfig(),49L)
+   c.replace(c.round.copy(phase=phase),false,0)
+   c.requestStopAfterCurrentRound()
+   assertEquals(phase,c.round.phase)
+   assertTrue(c.stopAfterCurrentRound)
+  }
+ }
  @Test fun deferredExitFinishesRoundOnlyOnce(){
   val c=PuzzleItController(PuzzleItConfig(),18)
   c.requestStopAfterCurrentRound()
