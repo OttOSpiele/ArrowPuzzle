@@ -501,7 +501,7 @@ class MainActivity:ComponentActivity(){
    Button(
     enabled=!stageLoading && stageInput.toIntOrNull()?.let { it in 1..9999 } == true,
     onClick=ticked {
-     val selected=stageInput.toIntOrNull()?:return@Button
+     val selected=stageInput.toIntOrNull()?:return@ticked
      stageLoading=true;stageError=false
      scope.launch {
       val ready=runCatching {withContext(Dispatchers.Default){
