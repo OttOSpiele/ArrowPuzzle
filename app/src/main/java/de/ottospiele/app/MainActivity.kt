@@ -62,7 +62,7 @@ class MainActivity:ComponentActivity(){
  var progress by remember{mutableStateOf(saved?.progress?:Progress())}
  var lives by remember{mutableIntStateOf(saved?.lifeSetting?:defaults.lives)}
  var hints by remember{mutableIntStateOf(saved?.hintSetting?:defaults.hints)}
- var game by remember{mutableStateOf(saved?.game?:fresh(1,defaults.lives,defaults.hints,screenAspect))}
+ var game by remember{mutableStateOf(saved?.game?:fresh(1,defaults.lives,defaults.hints,screenAspect,defaults.legacyEnabled))}
  var revision by remember{mutableIntStateOf(0)}
  var highlighted by remember{mutableStateOf<Int?>(null)}
  var invalid by remember{mutableStateOf<Int?>(null)}
@@ -124,7 +124,7 @@ class MainActivity:ComponentActivity(){
     val slotStarted=System.nanoTime()
     val candidate=withContext(Dispatchers.Default) {
      var chosen:Level?=null
-     if(target>=17) {
+     if(target>=9) {
       val candidates=mutableListOf<Level>()
       repeat(defaults.preparationExactAttemptsPerSlot) {
        if(System.nanoTime()-slotStarted<budgetNs) {
@@ -135,7 +135,7 @@ class MainActivity:ComponentActivity(){
       }
       chosen=DifficultyProfiles.choose(target,candidates)
      }
-     if(chosen==null) {
+     if(chosen==null && defaults.legacyEnabled) {
       repeat(3) {
        if(chosen==null) {
         val seed=Random.nextLong()
@@ -144,7 +144,7 @@ class MainActivity:ComponentActivity(){
        }
       }
      }
-     chosen
+     chosen ?: if(target<=8)TutorialLevels.level(target,Random.nextLong()) else null
     } ?: break
     withContext(Dispatchers.IO) {
      PreparedLevels.append(context,target,screenAspect,candidate,capacity)
@@ -166,7 +166,7 @@ class MainActivity:ComponentActivity(){
    val ready=withContext(Dispatchers.Default){
     val prepared=PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
     if(prepared!=null)Game(prepared,lives,hints)
-    else fresh(target.stage,lives,hints,screenAspect)
+    else fresh(target.stage,lives,hints,screenAspect,defaults.legacyEnabled)
    }
    nextProgress=target
    nextGame=ready
@@ -178,7 +178,7 @@ class MainActivity:ComponentActivity(){
   defeatPrepared=null
   delay(350)
   try{
-   val ready=withContext(Dispatchers.Default){fresh(progress.stage,lives,hints,screenAspect)}
+   val ready=withContext(Dispatchers.Default){fresh(progress.stage,lives,hints,screenAspect,defaults.legacyEnabled)}
    defeatPrepared=ready
    defeatMode="ready"
   }catch(_:Exception){defeatMode="error"}
@@ -453,7 +453,7 @@ class MainActivity:ComponentActivity(){
      stageLoading=true;stageError=false
      scope.launch {
       val ready=runCatching {withContext(Dispatchers.Default){
-       fresh(selected,lives,hints,screenAspect)
+       fresh(selected,lives,hints,screenAspect,defaults.legacyEnabled)
       }}.getOrNull()
       stageLoading=false
       if(ready==null){stageError=true}else{
@@ -494,7 +494,7 @@ class MainActivity:ComponentActivity(){
      backLoading=true
      val target=progress.easier()
      scope.launch {
-      val ready=runCatching { withContext(Dispatchers.Default) { fresh(target.stage,lives,hints,screenAspect) } }.getOrNull()
+      val ready=runCatching { withContext(Dispatchers.Default) { fresh(target.stage,lives,hints,screenAspect,defaults.legacyEnabled) } }.getOrNull()
       if(ready!=null){ progress=target;replaceWith(ready);dialog="" }
       else dialog="stufeZurueckFehler"
       backLoading=false
@@ -698,16 +698,16 @@ private fun generateFallbackMeasured(stage:Int,seed:Long,aspect:Float):Level {
  Log.i("ArrowPuzzleGeneration","origin=preparation stage=$stage seed=$seed elapsedMs=$elapsed generator=${if(stage<=16)"legacy" else "legacy-fallback"} outcome=success")
  return level
 }
-private fun generateMeasured(stage:Int,seed:Long,aspect:Float,origin:String):Level {
+private fun generateMeasured(stage:Int,seed:Long,aspect:Float,origin:String,legacyEnabled:Boolean):Level {
  val start=System.nanoTime()
  return try {
-  val level=LevelGeneration.generate(stage,seed,aspect)
+  val level=LevelGeneration.generate(stage,seed,aspect,GenerationPolicy(legacyEnabled))
   val elapsed=(System.nanoTime()-start)/1_000_000
   GeneratorDiagnostics.record(GeneratorDiagnostics.Event(System.currentTimeMillis(),origin,stage,seed,
    level.width,level.height,elapsed,
-   if(stage<=16)"legacy" else if(level.fallbackGeneration)"legacy-fallback" else "exact-cover","success"))
+   if(stage<=8)"tutorial" else if(level.fallbackGeneration)"legacy-fallback" else "exact-cover","success"))
   Log.i("ArrowPuzzleGeneration",
-   "origin=$origin stage=$stage seed=$seed grid=${level.width}x${level.height} elapsedMs=$elapsed generator=${if(stage<=16) "legacy" else if(level.fallbackGeneration) "legacy-fallback" else "exact-cover"}")
+   "origin=$origin stage=$stage seed=$seed grid=${level.width}x${level.height} elapsedMs=$elapsed generator=${if(stage<=8) "tutorial" else if(level.fallbackGeneration) "legacy-fallback" else "exact-cover"}")
   level
  } catch(error:Exception) {
   GeneratorDiagnostics.record(GeneratorDiagnostics.Event(System.currentTimeMillis(),origin,stage,seed,
@@ -716,8 +716,8 @@ private fun generateMeasured(stage:Int,seed:Long,aspect:Float,origin:String):Lev
   throw error
  }
 }
-private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
- repeat(15){try{return Game(generateMeasured(stage,Random.nextLong(),aspect,"fresh"),lives,hints)}catch(_:Exception){}}
+private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f,legacyEnabled:Boolean=true):Game{
+ repeat(15){try{return Game(generateMeasured(stage,Random.nextLong(),aspect,"fresh",legacyEnabled),lives,hints)}catch(_:Exception){}}
  error("Cannot generate a valid level")
 }
 @Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,previewHoldMillis:Long,onTap:(Int)->Unit){
