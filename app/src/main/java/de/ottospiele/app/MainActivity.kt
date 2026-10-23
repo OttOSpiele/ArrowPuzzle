@@ -115,6 +115,9 @@ class MainActivity:ComponentActivity(){
   miniPrefs.edit().putInt("solved",solvedSinceMini).putBoolean("pending",miniPending)
    .putBoolean("open",miniOpen).commit()
  }
+ var prepComplete by remember{mutableStateOf(false)}
+ var prepFailed by remember{mutableStateOf(false)}
+ var prepAttempt by remember{mutableIntStateOf(0)}
  var prepDone by remember{mutableIntStateOf(0)}
  var prepTotal by remember{mutableIntStateOf(2)}
  var prepStage by remember{mutableIntStateOf(0)}
@@ -146,7 +149,9 @@ class MainActivity:ComponentActivity(){
  fun replaceWith(ready:Game){stopFlights();game=ready;highlighted=null;invalid=null;traveledCells=emptySet();revision++}
  // Prepare only the missing puzzles until the NEXT mini-game, across stage boundaries.
  // Replenishment happens during success screens / Puzzle It; active play only fills deficits.
- LaunchedEffect(progress.stage,progress.done,winScreen,miniPending,solvedSinceMini,forcedNextProgress,screenAspect) {
+ LaunchedEffect(progress.stage,progress.done,winScreen,miniOpen,miniPending,solvedSinceMini,forcedNextProgress,prepAttempt,screenAspect) {
+  prepComplete=false
+  prepFailed=false
   val target=if(winScreen)forcedNextProgress?:progress.win() else progress
   val count=if(winScreen && (miniOpen || miniPending || forcedNextProgress!=null))0 else solvedSinceMini
   val goals=if(target.stage>=10)goalsUntilNextMini(target,count,!winScreen)
@@ -157,6 +162,7 @@ class MainActivity:ComponentActivity(){
   prepStage=currentStage
   prepDone=0
   prepTotal=goals.sumOf { it.second }
+  var allPrepared=true
   for((target,capacity) in goals) {
    var cached=withContext(Dispatchers.IO) {
     PreparedLevels.read(context,target,screenAspect)
@@ -184,14 +190,17 @@ class MainActivity:ComponentActivity(){
       }
      }
      chosen ?: if(target<=8)TutorialLevels.level(target,Random.nextLong()) else null
-    } } ?: break
+    } } ?: run { allPrepared=false; break }
     withContext(Dispatchers.IO) {
      PreparedLevels.append(context,target,screenAspect,candidate,capacity)
     }
     cached=withContext(Dispatchers.IO){PreparedLevels.read(context,target,screenAspect)}
     prepDone=goals.takeWhile { it.first!=target }.sumOf { it.second }+cached.size
    }
+   if(cached.size<capacity)allPrepared=false
   }
+  prepComplete=allPrepared
+  prepFailed=!allPrepared
  }
  LaunchedEffect(winScreen,preparationAttempt,forcedNextProgress){
   if(!winScreen)return@LaunchedEffect
@@ -240,10 +249,11 @@ class MainActivity:ComponentActivity(){
  if(winScreen && miniOpen){
   PuzzleItScreen(
    config=defaults.puzzleIt,
-   preparationReady=nextGame!=null && nextProgress!=null,
-   preparationFailed=prepareError,
+   preparationReady=nextGame!=null && nextProgress!=null && prepComplete,
+   preparationProgress=if(prepTotal<=0)1f else (prepDone.toFloat()/prepTotal).coerceIn(0f,1f),
+   preparationFailed=prepareError || prepFailed,
    requiredRounds=Int.MAX_VALUE,
-   onRetryPreparation={preparationAttempt++},
+   onRetryPreparation={preparationAttempt++;prepAttempt++},
    onCompleted={
     val next=nextGame;val nextP=nextProgress
     if(miniOpen && next!=null && nextP!=null){
