@@ -46,6 +46,25 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.graphics.drawscope.DrawScope
 
+/** Cached puzzles needed until the next mini-game boundary (exclusive).
+ * During active play the already displayed puzzle does not occupy a cache slot.
+ * Mini-games begin at stage boundaries, after at least four solved puzzles.
+ */
+internal fun goalsUntilNextMini(start:Progress,solvedSinceMini:Int,skipCurrent:Boolean):List<Pair<Int,Int>> {
+ var current=start
+ var solved=solvedSinceMini.coerceIn(0,4)
+ val targets=linkedMapOf<Int,Int>()
+ repeat(48){index->
+  if(!(skipCurrent && index==0))targets[current.stage]=(targets[current.stage]?:0)+1
+  val next=current.win()
+  solved++
+  if(current.stage>=10 && next.stage>current.stage && solved>=4)
+   return targets.entries.map{it.key to it.value}
+  current=next
+ }
+ return targets.entries.map{it.key to it.value}
+}
+
 private val generationMutex=Mutex()
 
 private data class Flight(val id:Int,val plan:MovePlan,val failed:Boolean,val step:Int=0,val impactOffset:Float=0f)
@@ -84,6 +103,7 @@ class MainActivity:ComponentActivity(){
  var defeatAttempt by remember{mutableIntStateOf(0)}
  var nextGame by remember{mutableStateOf<Game?>(null)}
  var nextProgress by remember{mutableStateOf<Progress?>(null)}
+ var forcedNextProgress by remember{mutableStateOf<Progress?>(null)}
  var prepareError by remember{mutableStateOf(false)}
  var preparationAttempt by remember{mutableIntStateOf(0)}
  // A mini-game is offered only on a stage transition after four completed puzzles.
@@ -124,26 +144,16 @@ class MainActivity:ComponentActivity(){
   jobs.clear();flights.clear()
  }
  fun replaceWith(ready:Game){stopFlights();game=ready;highlighted=null;invalid=null;traveledCells=emptySet();revision++}
- // Generation is primarily a transition-time activity (success screen / Puzzle It).
- // During active play, fill ONLY the deficit to the next stage boundary.
- // The current puzzle is already in game, so it must not count towards cached demand.
- // A stage transition prepares the upcoming stage; optional reserve for the following
- // stage is built only while the transition screen remains visible.
- LaunchedEffect(progress.stage,progress.done,winScreen,screenAspect) {
-  val nextProgress=progress.win()
-  val goals:List<Pair<Int,Int>>
-  val currentStage:Int
-  if(winScreen) {
-   currentStage=nextProgress.stage
-   val remainingAfterWin=nextProgress.required()-nextProgress.done
-   goals=listOf(currentStage to remainingAfterWin,(currentStage+1) to 1)
-   Log.i("ArrowPuzzlePreparation","Transition preparation: stage=$currentStage remaining=$remainingAfterWin")
-  } else {
-   currentStage=progress.stage
-   val remainingAfterCurrent=progress.required()-progress.done-1
-   goals=if(remainingAfterCurrent>0)listOf(currentStage to remainingAfterCurrent) else emptyList()
-   Log.i("ArrowPuzzlePreparation","Active play: stage=$currentStage cache demand=$remainingAfterCurrent")
-  }
+ // Prepare only the missing puzzles until the NEXT mini-game, across stage boundaries.
+ // Replenishment happens during success screens / Puzzle It; active play only fills deficits.
+ LaunchedEffect(progress.stage,progress.done,winScreen,miniPending,solvedSinceMini,forcedNextProgress,screenAspect) {
+  val target=if(winScreen)forcedNextProgress?:progress.win() else progress
+  val count=if(winScreen && (miniOpen || miniPending || forcedNextProgress!=null))0 else solvedSinceMini
+  val goals=if(target.stage>=10)goalsUntilNextMini(target,count,!winScreen)
+   else if(winScreen)listOf(target.stage to (target.required()-target.done))
+   else listOf(target.stage to (target.required()-target.done-1).coerceAtLeast(0))
+  val currentStage=target.stage
+  Log.i("ArrowPuzzlePreparation","phase=${if(winScreen)"transition" else "play"} stage=$currentStage untilMini=$goals")
   prepStage=currentStage
   prepDone=0
   prepTotal=goals.sumOf { it.second }
@@ -183,7 +193,7 @@ class MainActivity:ComponentActivity(){
    }
   }
  }
- LaunchedEffect(winScreen,preparationAttempt){
+ LaunchedEffect(winScreen,preparationAttempt,forcedNextProgress){
   if(!winScreen)return@LaunchedEffect
   nextGame=null
   nextProgress=null
@@ -191,7 +201,7 @@ class MainActivity:ComponentActivity(){
   // Give the celebration a perceptible opening, even on fast hardware.
   delay(450)
   try {
-   val target=progress.win()
+   val target=forcedNextProgress?:progress.win()
    // Cache extraction is synchronized by PreparedLevels itself. Do not wait
    // for an unrelated generation holding generationMutex if a level is ready.
    val prepared=withContext(Dispatchers.IO){
@@ -227,7 +237,7 @@ class MainActivity:ComponentActivity(){
   }catch(_:Exception){defeatMode="error"}
  }
 
- if(winScreen && miniOpen && progress.stage>=10){
+ if(winScreen && miniOpen){
   PuzzleItScreen(
    config=defaults.puzzleIt,
    preparationReady=nextGame!=null && nextProgress!=null,
@@ -239,7 +249,7 @@ class MainActivity:ComponentActivity(){
     if(miniOpen && next!=null && nextP!=null){
      haptics.arrowPuzzleReturned()
      stopFlights();progress=nextP;game=next;highlighted=null;invalid=null
-     traveledCells=emptySet();revision++;winScreen=false;miniOpen=false;miniPending=false
+     traveledCells=emptySet();revision++;winScreen=false;miniOpen=false;miniPending=false;forcedNextProgress=null
      nextGame=null;nextProgress=null
     }
    }
