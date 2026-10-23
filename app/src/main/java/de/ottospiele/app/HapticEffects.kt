@@ -26,10 +26,11 @@ internal class HapticEffects(context:Context) {
  fun arrowRemoved()=pulse(18,105)
  fun blockedArrow()=pattern(longArrayOf(0,55,22,105),intArrayOf(0,230,0,255))
  fun snapZoneEntered()=pulse(55,200)
- // Escalating firework: launch ticks followed by three distinct bursts.
+ // Child-friendly success: "bumm ... bumm-bumm ... sparkle".
+ // Short accents with a soft, fading shimmer; no sustained maximum-power finale.
  fun stageSuccess()=pattern(
-  longArrayOf(0,35,85,45,80,100,45,85,95,130,55,185),
-  intArrayOf(0,95,0,120,0,235,0,190,0,255,0,255)
+  longArrayOf(0,42,65,55,45,35,65,22,28,18,30,12),
+  intArrayOf(0,155,0,205,0,165,0,105,0,70,0,40)
  )
  fun miniGameEntered()=pulse(90,230)
  fun arrowPuzzleReturned()=pattern(longArrayOf(0,70,55,120),intArrayOf(0,230,0,255))
