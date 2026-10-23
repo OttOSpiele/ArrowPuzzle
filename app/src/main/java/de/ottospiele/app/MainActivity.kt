@@ -129,7 +129,10 @@ class MainActivity:ComponentActivity(){
  LaunchedEffect(progress.stage,progress.done,screenAspect) {
   val currentStage=progress.stage
   val nextStage=currentStage+1
-  val goals=listOf(currentStage to (progress.required()+2),nextStage to 2)
+  // Prioritize the imminent stage transition before replenishing the current stage.
+  // The stage-success screen and Puzzle It can consume a ready next-stage puzzle
+  // without waiting for the full current-stage reserve.
+  val goals=listOf(nextStage to 2,currentStage to (progress.required()+2))
   prepStage=currentStage
   prepDone=0
   prepTotal=goals.sumOf { it.second }
@@ -178,11 +181,18 @@ class MainActivity:ComponentActivity(){
   delay(450)
   try {
    val target=progress.win()
-   val ready=withContext(Dispatchers.Default){generationMutex.withLock{
-    val prepared=PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
-    if(prepared!=null)Game(prepared,lives,hints)
-    else fresh(target.stage,lives,hints,screenAspect,defaults.legacyEnabled)
-   }}
+   // Cache extraction is synchronized by PreparedLevels itself. Do not wait
+   // for an unrelated generation holding generationMutex if a level is ready.
+   val prepared=withContext(Dispatchers.IO){
+    PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
+   }
+   val ready=if(prepared!=null)Game(prepared,lives,hints)
+    else withContext(Dispatchers.Default){generationMutex.withLock{
+     // Background preparation may have finished while this coroutine waited.
+     val late=PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
+     if(late!=null)Game(late,lives,hints)
+     else fresh(target.stage,lives,hints,screenAspect,defaults.legacyEnabled)
+    }}
    nextProgress=target
    nextGame=ready
   }catch(cancel:CancellationException){throw cancel}
