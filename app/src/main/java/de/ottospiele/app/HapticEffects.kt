@@ -18,9 +18,15 @@ internal class HapticEffects(context:Context) {
   @Suppress("DEPRECATION")
   (context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator)
  }
- fun blockedArrow()=pulse(65,220)
+ fun arrowSelected()=pulse(12,75)
+ fun arrowRemoved()=pulse(18,105)
+ fun blockedArrow()=pattern(longArrayOf(0,55,22,105),intArrayOf(0,230,0,255))
  fun snapZoneEntered()=pulse(55,200)
- fun stageSuccess()=pattern(longArrayOf(0,85,65,150),intArrayOf(0,235,0,255))
+ // Escalating firework: launch ticks followed by three distinct bursts.
+ fun stageSuccess()=pattern(
+  longArrayOf(0,35,85,45,80,100,45,85,95,130,55,185),
+  intArrayOf(0,95,0,120,0,235,0,190,0,255,0,255)
+ )
  fun miniGameEntered()=pulse(90,230)
  fun arrowPuzzleReturned()=pattern(longArrayOf(0,70,55,120),intArrayOf(0,230,0,255))
  private fun pulse(milliseconds:Long,amplitude:Int) {
