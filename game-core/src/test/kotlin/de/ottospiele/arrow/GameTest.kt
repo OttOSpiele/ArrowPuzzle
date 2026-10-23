@@ -16,11 +16,18 @@ class GameTest {
    assertEquals(Progress(stage+1,0),p.win())
   }
  }
- @Test fun tutorialRoutingPreservesLegacyGeometry() {
-  for(stage in listOf(1,8,9,16)) {
+ @Test fun tutorialRoutingUsesFixedLevelsAndExactCoverStartsAtNine() {
+  for(stage in 1..8) {
    val seed=617L
-   val expected=Generator().generate(stage,seed,1f)
-   assertEquals(expected,LevelGeneration.generate(stage,seed,1f))
+   val level=LevelGeneration.generate(stage,seed,1f,GenerationPolicy(legacyEnabled=false))
+   assertEquals(TutorialLevels.level(stage,seed),level)
+   assertNotNull(Rules.solve(level))
+   assertFalse(level.fallbackGeneration)
+  }
+  for(stage in listOf(9,16,17)) {
+   val profile=StageGenerationProfile.forStage(stage,1f)
+   assertTrue(profile.targetArrows>0)
+   assertEquals(stage>=24,profile.windingArrows>0)
   }
  }
 
