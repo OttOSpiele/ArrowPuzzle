@@ -596,7 +596,7 @@ data class Progress(val stage:Int=1,val done:Int=0){
  fun required():Int=when{
   stage<=8->1
   stage<=16->2
-  else->((stage-17)/8+3).coerceAtMost(10)
+  else->(3+((stage-17)*5/63)).coerceIn(3,8)
  }
  fun win():Progress=if(done+1>=required())Progress(stage+1,0)else copy(done=done+1)
  fun easier()=Progress((stage-1).coerceAtLeast(1),0)
