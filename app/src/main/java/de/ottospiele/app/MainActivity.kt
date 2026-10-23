@@ -309,7 +309,7 @@ class MainActivity:ComponentActivity(){
       horizontalArrangement=Arrangement.spacedBy(6.dp)) {
    Button(
     enabled=!game.won && !backLoading,
-     onClick=ticked {stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
+     onClick=ticked {stopFlights();game.retry();failedArrowIds=emptySet();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
     modifier=Modifier.weight(1f).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8),contentColor=Color.White)){
@@ -367,7 +367,7 @@ class MainActivity:ComponentActivity(){
    }
    Button(
     enabled=!game.won && !backLoading,
-     onClick=ticked {stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
+     onClick=ticked {stopFlights();game.retry();failedArrowIds=emptySet();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
     modifier=Modifier.width(122.dp).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8),contentColor=Color.White)){
@@ -443,9 +443,7 @@ class MainActivity:ComponentActivity(){
      if(game.won){
       solvedSinceMini=(solvedSinceMini+1).coerceAtMost(4)
       miniPending=progress.stage>=10 && progress.win().stage>progress.stage && solvedSinceMini>=4
-      if(progress.win().stage>progress.stage){
-       haptics.stageSuccess()
-      }
+      haptics.stageSuccess()
       winScreen=true
      }
      else if(game.lost){defeatMode="choice";defeatScreen=true}
@@ -845,7 +843,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f,legacyEnabled:Bo
    }
   }
   for(y in 0 until level.height)for(x in 0 until level.width){
-   drawCircle(if(level.fallbackGeneration)Color(0xFFE4C58D) else Color(0xFFCED7ED),
+   drawCircle(if(level.fallbackGeneration && level.stage>16)Color(0xFFE4C58D) else Color(0xFFCED7ED),
     radius=(cell*.115f).coerceAtLeast(1.65f),
     center=Offset(ox+(x+.5f)*sx,oy+(y+.5f)*sy))
   }
