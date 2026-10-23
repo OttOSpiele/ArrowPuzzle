@@ -15,7 +15,7 @@ object LevelGeneration {
   val target=(width*height/4).coerceAtLeast(2)
   val preferred=runCatching {
    ExactCoverGenerator.generate(width,height,seed,stage,
-    maxNodes=3000,targetArrows=target,minWindingArrows=2,
+    maxNodes=3000,targetArrows=target,minWindingArrows=if(stage>=24)2 else 0,
     maxInitiallyFree=target/2,minChainLength=width/2).level
   }.getOrNull()
   if(preferred!=null && Rules.solve(preferred)!=null)return preferred
