@@ -79,10 +79,14 @@ internal fun PuzzleItScreen(
  LaunchedEffect(round.phase,round.seed) {
   if(round.phase==PuzzleItPhase.ROUND_SUCCESS) {
    delay(config.successMs)
-   val exiting=controller.finishRound(preparationReady,requiredRounds)
+   controller.finishRound(preparationReady,requiredRounds)
    publish()
-   if(exiting)onCompleted()
-  }else if(round.phase==PuzzleItPhase.EXITING)onCompleted()
+  }
+ }
+ // Exactly one host callback, after round success; readiness may arrive late.
+ LaunchedEffect(round.phase,preparationReady) {
+  if(round.phase==PuzzleItPhase.EXITING &&
+   (preparationReady || controller.completedRounds>=requiredRounds))onCompleted()
  }
  Column(Modifier.fillMaxSize().background(Color(0xFFF0F1F8))) {
   Box(Modifier.weight(1f).fillMaxWidth().padding(4.dp)) {
