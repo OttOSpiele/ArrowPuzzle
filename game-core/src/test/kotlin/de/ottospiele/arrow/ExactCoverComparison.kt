@@ -10,6 +10,7 @@ object ExactCoverComparison {
   val directory=File(args.getOrNull(0)?:"build/benchmark").apply{mkdirs()}
   val seedCount=(args.getOrNull(1)?.toIntOrNull()?:10).coerceIn(1,25)
   val budgets=listOf(600,3000)
+  val csv=File(directory,"exact-cover-ab.csv")
   val rows=mutableListOf("solver,board,seed,mode,target_arrows,winding_min,free_max,chain_min,budget,success,exhausted,nodes,elapsed_ms,arrows,initially_free,longest_chain,windings,failure_reason")
   for(size in listOf(8,12,16,20))for(i in 0 until seedCount)for(constrained in listOf(false,true))for(budget in budgets) {
    val seed=17L+i*7919L
