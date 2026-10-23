@@ -46,6 +46,13 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.graphics.drawscope.DrawScope
 
+/** Standard touch tick for enabled controls; action-specific stronger feedback follows it. */
+@Composable private fun ticked(action:()->Unit):()->Unit {
+ val context=LocalContext.current
+ val haptics=remember(context){HapticEffects(context)}
+ return {haptics.buttonTick();action()}
+}
+
 private val generationMutex=Mutex()
 
 private data class Flight(val id:Int,val plan:MovePlan,val failed:Boolean,val step:Int=0)
@@ -286,18 +293,18 @@ class MainActivity:ComponentActivity(){
       horizontalArrangement=Arrangement.spacedBy(10.dp)) {
    Box {
     FilledTonalIconButton(
-     onClick={menuOpen=true},
+     onClick=ticked {menuOpen=true},
      modifier=Modifier.size(56.dp),
      colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=Color.White)){
      Text("☰",fontSize=27.sp,color=Color(0xFF5662A7))
     }
     DropdownMenu(expanded=menuOpen,onDismissRequest={menuOpen=false}){
-     DropdownMenuItem(text={Text("⚙  Einstellungen")},onClick={menuOpen=false;settings=true})
-     if(canAdjustStage)DropdownMenuItem(text={Text("↕  Stufe anpassen")},onClick={
+     DropdownMenuItem(text={Text("⚙  Einstellungen")},onClick=ticked {menuOpen=false;settings=true})
+     if(canAdjustStage)DropdownMenuItem(text={Text("↕  Stufe anpassen")},onClick=ticked {
       menuOpen=false;stageInput=progress.stage.toString();stageError=false;dialog="stufeAnpassen"
      })
-     if(context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0)DropdownMenuItem(text={Text("📊  Generator-Diagnose")},onClick={menuOpen=false;diagnosticEvents=GeneratorDiagnostics.entries(context);diagnosticsOpen=true})
-     DropdownMenuItem(text={Text("ⓘ  Über das Spiel")},onClick={menuOpen=false;aboutOpen=true})
+     if(context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0)DropdownMenuItem(text={Text("📊  Generator-Diagnose")},onClick=ticked {menuOpen=false;diagnosticEvents=GeneratorDiagnostics.entries(context);diagnosticsOpen=true})
+     DropdownMenuItem(text={Text("ⓘ  Über das Spiel")},onClick=ticked {menuOpen=false;aboutOpen=true})
     }
    }
    Column(Modifier.weight(1f)) {
@@ -309,7 +316,7 @@ class MainActivity:ComponentActivity(){
       horizontalArrangement=Arrangement.spacedBy(6.dp)) {
    Button(
     enabled=!game.won && !backLoading,
-     onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
+     onClick=ticked {stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
     modifier=Modifier.weight(1f).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8),contentColor=Color.White)){
@@ -320,7 +327,7 @@ class MainActivity:ComponentActivity(){
    }
    Button(
     enabled=!game.won && !backLoading,
-     onClick={dialog="stufeZurueck"},
+     onClick=ticked {dialog="stufeZurueck"},
     modifier=Modifier.weight(1f).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7955CE),contentColor=Color.White)){
@@ -330,7 +337,7 @@ class MainActivity:ComponentActivity(){
     }
    }
    Button(
-    onClick={highlighted=game.hint();invalid=null;revision++},
+    onClick=ticked {highlighted=game.hint();invalid=null;revision++},
     enabled=game.hints!=0 && !game.lost && !game.won && !backLoading,
     modifier=Modifier.weight(1f).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
@@ -347,18 +354,18 @@ class MainActivity:ComponentActivity(){
      horizontalArrangement=Arrangement.spacedBy(8.dp)) {
    Box {
     FilledTonalIconButton(
-     onClick={menuOpen=true},
+     onClick=ticked {menuOpen=true},
      modifier=Modifier.size(56.dp),
      colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=Color.White)){
      Text("☰",fontSize=27.sp,color=Color(0xFF5662A7))
     }
     DropdownMenu(expanded=menuOpen,onDismissRequest={menuOpen=false}){
-     DropdownMenuItem(text={Text("⚙  Einstellungen")},onClick={menuOpen=false;settings=true})
-     if(canAdjustStage)DropdownMenuItem(text={Text("↕  Stufe anpassen")},onClick={
+     DropdownMenuItem(text={Text("⚙  Einstellungen")},onClick=ticked {menuOpen=false;settings=true})
+     if(canAdjustStage)DropdownMenuItem(text={Text("↕  Stufe anpassen")},onClick=ticked {
       menuOpen=false;stageInput=progress.stage.toString();stageError=false;dialog="stufeAnpassen"
      })
-     if(context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0)DropdownMenuItem(text={Text("📊  Generator-Diagnose")},onClick={menuOpen=false;diagnosticEvents=GeneratorDiagnostics.entries(context);diagnosticsOpen=true})
-     DropdownMenuItem(text={Text("ⓘ  Über das Spiel")},onClick={menuOpen=false;aboutOpen=true})
+     if(context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0)DropdownMenuItem(text={Text("📊  Generator-Diagnose")},onClick=ticked {menuOpen=false;diagnosticEvents=GeneratorDiagnostics.entries(context);diagnosticsOpen=true})
+     DropdownMenuItem(text={Text("ⓘ  Über das Spiel")},onClick=ticked {menuOpen=false;aboutOpen=true})
     }
    }
    Column(Modifier.weight(1f)) {
@@ -367,7 +374,7 @@ class MainActivity:ComponentActivity(){
    }
    Button(
     enabled=!game.won && !backLoading,
-     onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
+     onClick=ticked {stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
     modifier=Modifier.width(122.dp).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8),contentColor=Color.White)){
@@ -378,7 +385,7 @@ class MainActivity:ComponentActivity(){
    }
    Button(
     enabled=!game.won && !backLoading,
-     onClick={dialog="stufeZurueck"},
+     onClick=ticked {dialog="stufeZurueck"},
     modifier=Modifier.width(136.dp).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7955CE),contentColor=Color.White)){
@@ -388,7 +395,7 @@ class MainActivity:ComponentActivity(){
     }
    }
    Button(
-    onClick={highlighted=game.hint();invalid=null;revision++},
+    onClick=ticked {highlighted=game.hint();invalid=null;revision++},
     enabled=game.hints!=0 && !game.lost && !game.won && !backLoading,
     modifier=Modifier.width(122.dp).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
@@ -500,7 +507,7 @@ class MainActivity:ComponentActivity(){
   confirmButton={
    Button(
     enabled=!stageLoading && stageInput.toIntOrNull()?.let { it in 1..9999 } == true,
-    onClick={
+    onClick=ticked {
      val selected=stageInput.toIntOrNull()?:return@Button
      stageLoading=true;stageError=false
      scope.launch {
@@ -521,9 +528,9 @@ class MainActivity:ComponentActivity(){
     }
    ){Text("Stufe starten")}
   },
-  dismissButton={TextButton(enabled=!stageLoading,onClick={dialog=""}){Text("Abbrechen")}}
+  dismissButton={TextButton(enabled=!stageLoading,onClick=ticked {dialog=""}){Text("Abbrechen")}}
  )
- if(dialog=="stufeZurueckFehler")AlertDialog(onDismissRequest={dialog=""},confirmButton={TextButton(onClick={dialog=""}){Text("OK")}},title={Text("Rätsel konnte nicht erstellt werden")},text={Text("Bitte erneut versuchen.")})
+ if(dialog=="stufeZurueckFehler")AlertDialog(onDismissRequest={dialog=""},confirmButton={TextButton(onClick=ticked {dialog=""}){Text("OK")}},title={Text("Rätsel konnte nicht erstellt werden")},text={Text("Bitte erneut versuchen.")})
  if(dialog=="stufeZurueck")AlertDialog(
   onDismissRequest={if(!backLoading)dialog=""},
   title={Text("Wirklich eine Stufe zurück?",fontWeight=FontWeight.Bold)},
@@ -537,12 +544,12 @@ class MainActivity:ComponentActivity(){
   },
   confirmButton={
    if(backLoading) CircularProgressIndicator(color=Color(0xFF7955CE))
-   else Button(onClick={dialog=""},colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){
+   else Button(onClick=ticked {dialog=""},colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){
     Text("Fortsetzen",fontWeight=FontWeight.Bold)
    }
   },
   dismissButton={
-   if(!backLoading) Button(onClick={
+   if(!backLoading) Button(onClick=ticked {
     if(!backLoading){
      backLoading=true
      val target=progress.easier()
@@ -586,11 +593,11 @@ class MainActivity:ComponentActivity(){
      }
     }
    }},
-   confirmButton={TextButton(onClick={GeneratorDiagnostics.share(context,diagnosticEvents)}){Text("CSV teilen")}},
+   confirmButton={TextButton(onClick=ticked {GeneratorDiagnostics.share(context,diagnosticEvents)}){Text("CSV teilen")}},
    dismissButton={Row{
-    TextButton(onClick={GeneratorDiagnostics.clear(context);diagnosticEvents=emptyList()}){Text("Löschen")}
-    TextButton(onClick={diagnosticEvents=GeneratorDiagnostics.entries(context)}){Text("Aktualisieren")}
-    TextButton(onClick={diagnosticsOpen=false}){Text("Schließen")}
+    TextButton(onClick=ticked {GeneratorDiagnostics.clear(context);diagnosticEvents=emptyList()}){Text("Löschen")}
+    TextButton(onClick=ticked {diagnosticEvents=GeneratorDiagnostics.entries(context)}){Text("Aktualisieren")}
+    TextButton(onClick=ticked {diagnosticsOpen=false}){Text("Schließen")}
    }}
   )
  }
@@ -598,16 +605,16 @@ class MainActivity:ComponentActivity(){
   onDismissRequest={aboutOpen=false},
   title={Text("Über Arrow Puzzle")},
   text={Text("OttOSpiele – Arrow Puzzle\n\nEin Rätselspiel mit Pfeilen für Kinder. Finde die freien Pfeile und lasse sie aus dem Spielfeld fahren.\n\nOffline spielbar, ohne Werbung.")},
-  confirmButton={TextButton(onClick={aboutOpen=false}){Text("Schließen")}}
+  confirmButton={TextButton(onClick=ticked {aboutOpen=false}){Text("Schließen")}}
  )
  if(settings)AlertDialog(
   onDismissRequest={settings=false},
   title={Text("Spieleinstellungen")},
   text={Column{
    Text("Herzen pro Level")
-   Row{listOf(3,5,10).forEach{n->TextButton(onClick={lives=n}){Text(if(lives==n)"[$n]"else"$n")}}}
+   Row{listOf(3,5,10).forEach{n->TextButton(onClick=ticked {lives=n}){Text(if(lives==n)"[$n]"else"$n")}}}
    Text("Tipps pro Level")
-   Row{listOf(0,1,3,5).forEach{n->TextButton(onClick={hints=n}){Text(if(hints==n)"[$n]"else"$n")}}}
+   Row{listOf(0,1,3,5).forEach{n->TextButton(onClick=ticked {hints=n}){Text(if(hints==n)"[$n]"else"$n")}}}
    Text("Parallele Pfeile")
    Row(verticalAlignment=Alignment.CenterVertically){
     Text("Nächsten Pfeil sofort antippen",modifier=Modifier.weight(1f))
@@ -616,12 +623,12 @@ class MainActivity:ComponentActivity(){
    Text("Ausfahrgeschwindigkeit")
    Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
     listOf("Ruhig","Normal","Flott","Turbo").forEachIndexed{index,label->
-     FilterChip(selected=speed==index,onClick={speed=index},label={Text(label)})
+     FilterChip(selected=speed==index,onClick=ticked {speed=index},label={Text(label)})
     }
    }
    Text("Herzen und Tipps gelten ab dem nächsten Rätsel. Animationseinstellungen sofort.")
   }},
-  confirmButton={TextButton(onClick={settings=false}){Text("OK")}}
+  confirmButton={TextButton(onClick=ticked {settings=false}){Text("OK")}}
  )
 }
 @Composable
@@ -649,13 +656,13 @@ private fun DefeatScreen(
   Spacer(Modifier.height(44.dp))
   when(mode){
    "choice"->{
-    Button(onClick=onAgain,modifier=Modifier.fillMaxWidth().height(60.dp),
+    Button(onClick=ticked(onAgain),modifier=Modifier.fillMaxWidth().height(60.dp),
      shape=RoundedCornerShape(20.dp),
      colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){
      Text("↻  Nochmal versuchen",fontSize=19.sp,fontWeight=FontWeight.Bold)
     }
     Spacer(Modifier.height(14.dp))
-    FilledTonalButton(onClick=onNew,modifier=Modifier.fillMaxWidth().height(60.dp),
+    FilledTonalButton(onClick=ticked(onNew),modifier=Modifier.fillMaxWidth().height(60.dp),
      shape=RoundedCornerShape(20.dp)){
      Text("Neues Rätsel",fontSize=19.sp,fontWeight=FontWeight.SemiBold)
     }
@@ -671,7 +678,7 @@ private fun DefeatScreen(
    "ready"->{
     Text("Dein neues Rätsel ist bereit!",fontWeight=FontWeight.SemiBold,color=Color(0xFF306E9B))
     Spacer(Modifier.height(16.dp))
-    Button(onClick=onContinue,modifier=Modifier.fillMaxWidth().height(60.dp),
+    Button(onClick=ticked(onContinue),modifier=Modifier.fillMaxWidth().height(60.dp),
      shape=RoundedCornerShape(20.dp),
      colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){
      Text("Weiter  →",fontSize=20.sp,fontWeight=FontWeight.Bold)
@@ -680,8 +687,8 @@ private fun DefeatScreen(
    else->{
     Text("Das Rätsel konnte nicht vorbereitet werden.",color=Color(0xFFB14A64))
     Spacer(Modifier.height(15.dp))
-    Button(onClick=onRetryGeneration){Text("Erneut versuchen")}
-    TextButton(onClick=onAgain){Text("Dasselbe Rätsel wiederholen")}
+    Button(onClick=ticked(onRetryGeneration)){Text("Erneut versuchen")}
+    TextButton(onClick=ticked(onAgain)){Text("Dasselbe Rätsel wiederholen")}
    }
   }
  }
@@ -715,7 +722,7 @@ private fun WinScreen(
   if(miniAvailable){
    Text("Zeit für eine kleine Spielpause!",color=Color(0xFF3E699C),fontWeight=FontWeight.SemiBold)
    Spacer(Modifier.height(16.dp))
-   Button(onClick=onPlay,modifier=Modifier.fillMaxWidth().height(60.dp),
+   Button(onClick=ticked(onPlay),modifier=Modifier.fillMaxWidth().height(60.dp),
     shape=RoundedCornerShape(20.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){
     Text("▶  Spielen",fontSize=20.sp,fontWeight=FontWeight.Bold,color=Color.White)
    }
@@ -723,7 +730,7 @@ private fun WinScreen(
    Text(if(nextStage!=null && nextStage>stage)"Neue Stufe freigeschaltet!" else "Dein nächstes Rätsel ist bereit!",
     color=Color(0xFF3E699C),fontWeight=FontWeight.SemiBold)
    Spacer(Modifier.height(16.dp))
-   Button(onClick=onContinue,
+   Button(onClick=ticked(onContinue),
     modifier=Modifier.fillMaxWidth().height(60.dp),
     shape=RoundedCornerShape(20.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){
@@ -732,7 +739,7 @@ private fun WinScreen(
   }else if(failed){
    Text("Das neue Rätsel konnte nicht vorbereitet werden.",color=Color(0xFFB14A64))
    Spacer(Modifier.height(12.dp))
-   OutlinedButton(onClick=onRetry){Text("Erneut versuchen")}
+   OutlinedButton(onClick=ticked(onRetry)){Text("Erneut versuchen")}
   }else{
    CircularProgressIndicator(color=Color(0xFF7468DD))
    Spacer(Modifier.height(16.dp))
