@@ -5,7 +5,8 @@ package de.ottospiele.arrow
 data class GenerationPolicy(val legacyEnabled:Boolean=true)
 
 data class StageGeometry(val width:Int,val height:Int,val targetArrows:Int,
- val windingArrows:Int,val maxInitiallyFree:Int,val minChainLength:Int)
+ val windingArrows:Int,val maxInitiallyFree:Int,val minChainLength:Int,
+ val coveredWidth:Int,val coveredHeight:Int)
 
 object StageGenerationProfile {
  fun forStage(stage:Int,aspect:Float=1f):StageGeometry {
@@ -18,11 +19,17 @@ object StageGenerationProfile {
    else->(17+(stage-41)/12).coerceAtMost(20)
   }.coerceAtMost(20)
   val height=(width/aspect.coerceIn(1f,1.65f)).toInt().coerceIn(4,width)
-  val cells=width*height
+  // Exact Cover fills its SEARCH footprint, not the complete displayed board.
+  // Deliberate empty margins improve readability without breaking the proof.
+  val inset=if(stage<=24)2 else 1
+  val coveredWidth=(width-inset).coerceAtLeast(3)
+  val coveredHeight=(height-inset).coerceAtLeast(3)
+  val cells=coveredWidth*coveredHeight
   val target=(cells/4).coerceAtLeast(2)
-  return StageGeometry(width,height,target,if(stage>=24)2 else 0,
-   (target*(if(stage<17)0.70 else 0.5)).toInt().coerceAtLeast(1),
-   if(stage<=8)1 else (width/3).coerceAtLeast(2))
+  val windings=when {stage<28->0;stage<40->1;else->2}
+  return StageGeometry(width,height,target,windings,
+   (target*(if(stage<17)0.75 else 0.60)).toInt().coerceAtLeast(1),
+   (coveredWidth/3).coerceAtLeast(2),coveredWidth,coveredHeight)
  }
 }
 
@@ -45,19 +52,27 @@ object TutorialLevels {
 
 /** Legacy is optional for every stage; the tutorial is a built-in solvable pool. */
 object LevelGeneration {
- internal fun requiredWindingArrows(stage:Int):Int=if(stage>=24)2 else 0
+ internal fun requiredWindingArrows(stage:Int):Int=when{stage<28->0;stage<40->1;else->2}
  fun generateExactOrNull(stage:Int,seed:Long,aspect:Float=1f):Level? {
   require(stage>=1)
   if(stage<=8)return TutorialLevels.level(stage,seed)
   val profile=StageGenerationProfile.forStage(stage,aspect)
   val level=runCatching {
-   ExactCoverGenerator.generate(profile.width,profile.height,seed,stage,
+   ExactCoverGenerator.generate(profile.coveredWidth,profile.coveredHeight,seed,stage,
     maxNodes=3000,targetArrows=profile.targetArrows,
     minWindingArrows=profile.windingArrows,
     maxInitiallyFree=profile.maxInitiallyFree,
     minChainLength=profile.minChainLength).level
   }.getOrNull()
-  return level?.takeIf { Rules.solve(it)!=null }
+  return level?.let { covered->
+   val left=(profile.width-profile.coveredWidth)/2
+   val top=(profile.height-profile.coveredHeight)/2
+   val translated=covered.arrows.map { arrow->
+    arrow.copy(x=arrow.x+left,y=arrow.y+top,
+     bends=arrow.bends.map {Pt(it.x+left,it.y+top)})
+   }
+   Level(seed,stage,profile.width,translated,profile.height)
+  }?.takeIf { Rules.solve(it)!=null }
  }
  fun generateFallback(stage:Int,seed:Long,aspect:Float=1f):Level {
   val level=Generator().generate(stage,seed,aspect)
