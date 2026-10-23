@@ -62,7 +62,8 @@ internal data class GameDefaults(
      successMs=longRange("puzzle.successAnimationMs",800L,1200L,1000L),
      minVisibleRatio=floatRange("puzzle.minVisibleAreaRatio",.25f,.9f,.40f),
      maxAttempts=intRange("puzzle.maxPlacementAttempts",1,1000,100),
-     preventRepeat=boolean("puzzle.preventImmediateNumberRepeat",true)
+     preventRepeat=boolean("puzzle.preventImmediateNumberRepeat",true),
+     bottomSafetySpacingDp=intRange("puzzle.bottomSafetySpacingDp",24,100,56)
     )
    )
   }
