@@ -80,49 +80,6 @@ jobs:
             gh release create develop-preview OttOSpiele-ArrowPuzzle-debug.apk --target "$GITHUB_SHA" --title "Arrow Puzzle – Entwicklungs-APK" --notes "Automatischer Debug-Build von develop. Commit: ${GITHUB_SHA}. Nur für interne Tests; kein signiertes Play-Store-Release." --prerelease
           fi
 
-      - name: Benchmark generator reference levels
-        if: success()
-        id: generator_benchmark
-        continue-on-error: true
-        run: gradle --no-daemon :game-core:benchmarkLevels
-
-      - name: Benchmark independent Exact Cover
-        if: success()
-        continue-on-error: true
-        timeout-minutes: 7
-        run: timeout 360s gradle --no-daemon :game-core:benchmarkExactCover
-
-      - name: Compare exact cover with frozen build 221
-        if: success()
-        continue-on-error: true
-        timeout-minutes: 8
-        run: timeout 450s gradle --no-daemon :game-core:benchmarkExactCoverAB
-
-      - name: Install PDF renderer
-        if: always()
-        run: python3 -m pip install --disable-pip-version-check 'reportlab>=4.2,<5'
-
-      - name: Render visual generator catalog
-        if: always()
-        run: |
-          if [ -s game-core/build/benchmark/boards.tsv ]; then
-            python3 tools/render_generator_benchmark.py game-core/build/benchmark
-          else
-            echo "No benchmark geometry output available."
-          fi
-          if [ -s game-core/build/benchmark/exact-cover-boards.tsv ]; then
-            python3 tools/render_generator_benchmark.py game-core/build/benchmark exact-cover-boards.tsv exact-cover-levels.pdf
-          fi
-
-      - name: Upload generator benchmark (CSV + PDF)
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: arrow-generator-benchmark
-          path: game-core/build/benchmark/
-          if-no-files-found: warn
-          retention-days: 30
-
       - name: Upload Gradle diagnostics
         if: always()
         uses: actions/upload-artifact@v6
