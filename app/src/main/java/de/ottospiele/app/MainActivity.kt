@@ -428,7 +428,7 @@ class MainActivity:ComponentActivity(){
     if(flights.isEmpty()){
      if(game.won){
       solvedSinceMini=(solvedSinceMini+1).coerceAtMost(4)
-      miniPending=progress.win().stage>progress.stage && solvedSinceMini>=4
+      miniPending=progress.stage>=10 && progress.win().stage>progress.stage && solvedSinceMini>=4
       winScreen=true
      }
      else if(game.lost){defeatMode="choice";defeatScreen=true}
