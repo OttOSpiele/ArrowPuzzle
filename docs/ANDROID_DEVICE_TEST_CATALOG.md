@@ -59,3 +59,16 @@ Keine gespeicherten Spielstände vor Update-Tests löschen. `Stufe anpassen` ist
 Für eine positive Freigabe müssen sämtliche P0-Tests auf mindestens einem kleinen Smartphone und einem Tablet bestanden sein. P0-14 bis P0-16 zusätzlich mit Updatepfad prüfen. Für P1 Generierungsdauer, Fallback-Rate und Spielerfeedback dokumentieren, keine pauschalen Qualitätsversprechen aus einzelnen Seeds ableiten.
 
 **Offen:** Die P1-10-Fallback-Erzwingung benötigt einen geeigneten Diagnosetesthook; ohne diesen kann nur ein natürlich aufgetretener Fallback geprüft werden.
+
+## Zusatztests – zeitbudgetierte Level-Vorbereitung
+
+| ID | Vorgehen | Erwartung |
+| --- | --- | --- |
+| PREP-01 | Stufe 1, 9, 17, 30, 68 und 80 einstellen; Vorratsgröße nach abgeschlossener Vorbereitung kontrollieren | Jeweils benötigte Rätsel + 2 für aktuelle Stufe (3, 4, 5, 6, 9, 10), zusätzlich zwei für nächste Stufe |
+| PREP-02 | Mehrere Rätsel innerhalb einer Stufe abschließen, Cache nach jedem Wechsel prüfen | Verwendete Seeds nicht erneut angeboten; Vorrat wird nachgefüllt |
+| PREP-03 | Ab Stufe 17 Diagnose exportieren | Erfolgreiche, ergebnislose und im Spiel nicht verwendete Generierungsversuche enthalten |
+| PREP-04 | Viele fehlgeschlagene Exact-Cover-Suchen auslösen | Nach Zeit- bzw. Versuchsbudget werden gültige markierte Legacy-Fallbacks vorbereitet |
+| PREP-05 | Budget testweise auf 0 setzen und Debug-APK neu bauen | Hintergrundvorbereitung überspringt Exact Cover und füllt mit Legacy |
+| PREP-06 | Ein sehr kleines Zeitbudget (z. B. 100 ms) einstellen | Kein dauerhaftes UI-Blockieren; einzelne Suche kann ihr Knotenlimit noch abschließen |
+| PREP-07 | Während laufender Vorbereitung das Rätsel spielen, App wechseln oder Stufe ändern | Keine doppelt konsumierten Seeds, kein Crash und korrekt fortgesetzter Stufenfortschritt |
+| PREP-08 | CSV-Export auf Stufe 17+ analysieren | Zahl und Dauer aller Kandidaten sichtbar; Rejected-Versuche nicht als App-Fehler gezählt |
