@@ -45,3 +45,7 @@ The first version deliberately fixes the 3×3 size, 1–10 number range, four an
 `app/src/test/java/de/ottospiele/app/PuzzleItModelTest.kt` tests deterministic seeds across 201 rounds, number and answer invariants, snap tolerance, disabled wrong answers, once-only completion and deferred stop. `.github/workflows/android.yml` now invokes `:app:testDebugUnitTest` before APK assembly.
 
 **Open before release:** Android Compose/instrumented tests for actual `Path` complementarity, hit regions, drags and display sizes; manual phone/tablet layout review; timing and lifecycle tests under activity recreation. CI compilation is not by itself evidence of this behavior.
+
+## Haptics and quantity guidance (23 October 2026)
+
+After the ninth piece is snapped, four quantity buttons appear and a short prompt is shown in the bottom safety row. Their appearance produces a short haptic tick. Entering a piece's snap zone changes its temporary background to green, synchronized with each entry vibration; leaving restores the original motif background and does not snap until release. An incorrect quantity answer uses the blocked-arrow impact pattern, while the correct answer uses the stage-success firework pattern. The bottom area remains reserved in both puzzle and choice phases.
