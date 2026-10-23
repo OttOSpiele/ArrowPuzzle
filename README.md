@@ -225,6 +225,17 @@ Neu sind die optionalen **harten Ergebnis-Constraints** `maxInitiallyFree` und `
 
 Die CI prüft jetzt standardmäßig zehn feste Seeds pro Größe statt zwei. Bei vier Rastergrößen und zwei Modi ergeben sich 80 Vergleichsversuche, jeweils mit 600 Knoten Suchbudget sowie bestehendem Gesamttimeout der Benchmark-Phase. Größere Stichproben sind **keine Erfolgsgarantie**; der Vergleich der Modi muss anhand von Erfolg, Suchknoten und Laufzeiten erfolgen. Der Legacy-Generator und der App-Pfad bleiben unverändert.
 
+## Verbindlicher Exact-Cover-Entwicklungsplan (Oktober 2026)
+
+Die Reihenfolge bleibt unabhängig von einzelnen Benchmark-Ergebnissen:
+
+1. **Solver-Optimierung:** (A) Kandidaten nach verbleibender mittlerer Pfeillänge priorisieren, (B) freie Regionen anhand tatsächlich möglicher Pfeilkandidaten begrenzen, (C) wiederholte Zwangsplatzierungen/Constraint-Propagation vor regulärem Backtracking.
+2. **Benchmark:** CSV-Spalten korrigieren, kontrollierten Vergleich gegen Build #221 durchführen, jeweils mehrere Seeds und zwei Suchbudgets; Fehlschläge nach Ursache differenzieren.
+3. **Schwierigkeitsprofile:** altersgerechte Stufenprofile nach anfangs freien Pfeilen und Abhängigkeitstiefe.
+4. **App-Integration:** erst nach objektiver Validierung, mit vorhandener Vorberechnung und Legacy-Fallback.
+
+**Stand Phase 1:** A und B sind im Commit 109ca24 implementiert. C ist noch offen: MRV erkennt bereits Ein-Kandidaten-Zellen, aber eine eigenständige iterative Zwangsplatzierungsphase mit gemeinsamem Rollback ist noch nicht umgesetzt. In den nächsten Arbeiten nur Phase 1 abschließen, bevor Phase 2 beginnt. Die Geometrie und der Legacy-Generator bleiben unverändert.
+
 ## Dokumentationsstand / Änderungsverlauf
 
 - **18.10.2026 – Eigenständiger Exact-Cover-Prototyp:** Neuer zellbasierter MRV-/DFS-Solver mit vollständiger Rasterbelegung und abschließender Lösbarkeitsprüfung für kleine Raster. Produktionsintegration erst nach Benchmark und regionaler Skalierung.
