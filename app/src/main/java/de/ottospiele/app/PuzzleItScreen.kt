@@ -46,6 +46,7 @@ import kotlin.math.roundToInt
 internal fun PuzzleItScreen(
  config:PuzzleItConfig,
  preparationReady:Boolean,
+ preparationProgress:Float,
  preparationFailed:Boolean,
  requiredRounds:Int,
  onCompleted:()->Unit,
@@ -228,9 +229,12 @@ internal fun PuzzleItScreen(
   if(preparationFailed) TextButton(onClick=ticked(onRetryPreparation),modifier=Modifier.align(Alignment.CenterHorizontally)){
    Text("Rätselvorbereitung wiederholen")
   }
-  if(!preparationReady) LinearProgressIndicator(modifier=Modifier.fillMaxWidth().height(3.dp),
-   color=Color.White,trackColor=Color(0xFFD1D2DD))
-  else Box(Modifier.fillMaxWidth().height(3.dp).background(Color.White))
+  // Actual number of cached ArrowPuzzle levels, including the reserved next one.
+  LinearProgressIndicator(
+   progress={preparationProgress.coerceIn(0f,1f)},
+   modifier=Modifier.fillMaxWidth().height(3.dp),
+   color=Color.White,trackColor=Color(0xFFD1D2DD)
+  )
  }
 }
 
