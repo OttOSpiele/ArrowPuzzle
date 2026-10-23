@@ -210,11 +210,10 @@ private class PuzzleItLayout(w:Float,h:Float){
 }
 
 private fun puzzlePath(round:PuzzleItRound,index:Int,t:Float):Path {
- val row=index/3;val col=index%3
- val top=if(row==0)0 else -round.edges[6+(row-1)*3+col]
- val right=if(col==2)0 else round.edges[row*2+col]
- val bottom=if(row==2)0 else round.edges[6+row*3+col]
- val left=if(col==0)0 else -round.edges[row*2+col-1]
+ val top=puzzleEdgePolarity(round,index,0)
+ val right=puzzleEdgePolarity(round,index,1)
+ val bottom=puzzleEdgePolarity(round,index,2)
+ val left=puzzleEdgePolarity(round,index,3)
  val path=Path()
  path.moveTo(0f,0f)
  fun edge(x:Float,y:Float,dx:Float,dy:Float,polarity:Int) {
