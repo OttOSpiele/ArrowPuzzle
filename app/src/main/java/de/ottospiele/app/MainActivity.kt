@@ -419,7 +419,7 @@ class MainActivity:ComponentActivity(){
   Box(Modifier.fillMaxWidth().height(4.dp)
    .background(Color(0xFFD6D9E9),RoundedCornerShape(2.dp))) {
    Box(Modifier.fillMaxWidth(
-    if(prepStage==progress.win().stage) prepDone.toFloat()/prepTotal.coerceAtLeast(1)
+    if(prepStage==progress.stage) prepDone.toFloat()/prepTotal.coerceAtLeast(1)
     else 0f
    ).fillMaxHeight().background(Color.White,RoundedCornerShape(2.dp)))
   }
