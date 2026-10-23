@@ -96,6 +96,13 @@ class MainActivity:ComponentActivity(){
  val canAdjustStage=defaults.showStageAdjustment &&
   (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0)
  val saved=remember{LocalSave.read(context)}
+ val miniPrefs=remember(context){context.getSharedPreferences("arrow_puzzle_minigames",android.content.Context.MODE_PRIVATE)}
+ val pendingStage=remember{miniPrefs.getInt("preparing_target_stage",0)}
+ val pendingDone=remember{miniPrefs.getInt("preparing_target_done",0)}
+ val restoringPreparation=pendingStage>0
+ val restoredTarget=remember(pendingStage,pendingDone){
+  if(restoringPreparation)Progress(pendingStage,pendingDone) else null
+ }
  var progress by remember{mutableStateOf(saved?.progress?:Progress())}
  var lives by remember{mutableIntStateOf(saved?.lifeSetting?:defaults.lives)}
  var hints by remember{mutableIntStateOf(saved?.hintSetting?:defaults.hints)}
@@ -105,21 +112,20 @@ class MainActivity:ComponentActivity(){
  var invalid by remember{mutableStateOf<Int?>(null)}
  var failedArrowIds by remember(game.level.seed,game.level.stage){mutableStateOf(emptySet<Int>())}
  var dialog by remember{mutableStateOf("")}
- var winScreen by remember{mutableStateOf(saved?.win?:false)}
+ var winScreen by remember{mutableStateOf(restoringPreparation || saved?.win==true)}
  var defeatScreen by remember{mutableStateOf(saved?.defeat?:false)}
  var defeatMode by remember{mutableStateOf("choice")}
  var defeatPrepared by remember{mutableStateOf<Game?>(null)}
  var defeatAttempt by remember{mutableIntStateOf(0)}
  var nextGame by remember{mutableStateOf<Game?>(null)}
  var nextProgress by remember{mutableStateOf<Progress?>(null)}
- var forcedNextProgress by remember{mutableStateOf<Progress?>(null)}
+ var forcedNextProgress by remember{mutableStateOf<Progress?>(restoredTarget)}
  var prepareError by remember{mutableStateOf(false)}
  var preparationAttempt by remember{mutableIntStateOf(0)}
  // A mini-game is offered only on a stage transition after four completed puzzles.
- val miniPrefs=remember(context){context.getSharedPreferences("arrow_puzzle_minigames",android.content.Context.MODE_PRIVATE)}
  var solvedSinceMini by rememberSaveable { mutableIntStateOf(miniPrefs.getInt("solved",0).coerceIn(0,4)) }
- var miniPending by rememberSaveable { mutableStateOf(miniPrefs.getBoolean("pending",false)) }
- var miniOpen by rememberSaveable { mutableStateOf(miniPrefs.getBoolean("open",false)) }
+ var miniPending by rememberSaveable { mutableStateOf(restoringPreparation || miniPrefs.getBoolean("pending",false)) }
+ var miniOpen by rememberSaveable { mutableStateOf(restoringPreparation || miniPrefs.getBoolean("open",false)) }
  LaunchedEffect(solvedSinceMini,miniPending,miniOpen){
   miniPrefs.edit().putInt("solved",solvedSinceMini).putBoolean("pending",miniPending)
    .putBoolean("open",miniOpen).commit()
