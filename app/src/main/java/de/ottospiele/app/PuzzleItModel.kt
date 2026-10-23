@@ -72,6 +72,18 @@ internal object PuzzleItGenerator {
  }
 }
 
+/** Clockwise sides: top=0, right=1, bottom=2, left=3. */
+internal fun puzzleEdgePolarity(round:PuzzleItRound,index:Int,side:Int):Int {
+ require(index in 0..8 && side in 0..3)
+ val row=index/3;val col=index%3
+ return when(side){
+  0 -> if(row==0)0 else -round.edges[6+(row-1)*3+col]
+  1 -> if(col==2)0 else round.edges[row*2+col]
+  2 -> if(row==2)0 else round.edges[6+row*3+col]
+  else -> if(col==0)0 else -round.edges[row*2+col-1]
+ }
+}
+
 internal class PuzzleItController(val config:PuzzleItConfig, seed:Long):MiniGameModule {
  override val id:String="puzzle-it"
  var round:PuzzleItRound=PuzzleItGenerator.generate(seed)
