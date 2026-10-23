@@ -39,7 +39,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.graphics.drawscope.DrawScope
+
+private val generationMutex=Mutex()
 
 private data class Flight(val id:Int,val plan:MovePlan,val failed:Boolean,val step:Int=0)
 
@@ -78,9 +83,14 @@ class MainActivity:ComponentActivity(){
  var prepareError by remember{mutableStateOf(false)}
  var preparationAttempt by remember{mutableIntStateOf(0)}
  // A mini-game is offered only on a stage transition after four completed puzzles.
- var solvedSinceMini by rememberSaveable { mutableIntStateOf(0) }
- var miniPending by rememberSaveable { mutableStateOf(false) }
- var miniOpen by rememberSaveable { mutableStateOf(false) }
+ val miniPrefs=remember(context){context.getSharedPreferences("arrow_puzzle_minigames",android.content.Context.MODE_PRIVATE)}
+ var solvedSinceMini by rememberSaveable { mutableIntStateOf(miniPrefs.getInt("solved",0).coerceIn(0,4)) }
+ var miniPending by rememberSaveable { mutableStateOf(miniPrefs.getBoolean("pending",false)) }
+ var miniOpen by rememberSaveable { mutableStateOf(miniPrefs.getBoolean("open",false)) }
+ LaunchedEffect(solvedSinceMini,miniPending,miniOpen){
+  miniPrefs.edit().putInt("solved",solvedSinceMini).putBoolean("pending",miniPending)
+   .putBoolean("open",miniOpen).commit()
+ }
  var prepDone by remember{mutableIntStateOf(0)}
  var prepTotal by remember{mutableIntStateOf(2)}
  var prepStage by remember{mutableIntStateOf(0)}
@@ -125,7 +135,7 @@ class MainActivity:ComponentActivity(){
    }
    prepDone=goals.takeWhile { it.first!=target }.sumOf { it.second }+cached.size
    while(cached.size<capacity) {
-    val candidate=withContext(Dispatchers.Default) {
+    val candidate=withContext(Dispatchers.Default) { generationMutex.withLock {
      var chosen:Level?=null
      if(target>=9) {
       val candidates=mutableListOf<Level>()
@@ -146,7 +156,7 @@ class MainActivity:ComponentActivity(){
       }
      }
      chosen ?: if(target<=8)TutorialLevels.level(target,Random.nextLong()) else null
-    } ?: break
+    } } ?: break
     withContext(Dispatchers.IO) {
      PreparedLevels.append(context,target,screenAspect,candidate,capacity)
     }
@@ -164,14 +174,15 @@ class MainActivity:ComponentActivity(){
   delay(450)
   try {
    val target=progress.win()
-   val ready=withContext(Dispatchers.Default){
+   val ready=withContext(Dispatchers.Default){generationMutex.withLock{
     val prepared=PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
     if(prepared!=null)Game(prepared,lives,hints)
     else fresh(target.stage,lives,hints,screenAspect,defaults.legacyEnabled)
-   }
+   }}
    nextProgress=target
    nextGame=ready
-  }catch(_:Exception){prepareError=true}
+  }catch(cancel:CancellationException){throw cancel}
+   catch(_:Exception){prepareError=true}
  }
 
  LaunchedEffect(defeatScreen,defeatMode,defeatAttempt){
@@ -409,7 +420,7 @@ class MainActivity:ComponentActivity(){
     jobs.remove(it)
     if(flights.isEmpty()){
      if(game.won){
-      solvedSinceMini++
+      solvedSinceMini=(solvedSinceMini+1).coerceAtMost(4)
       miniPending=progress.win().stage>progress.stage && solvedSinceMini>=4
       winScreen=true
      }
