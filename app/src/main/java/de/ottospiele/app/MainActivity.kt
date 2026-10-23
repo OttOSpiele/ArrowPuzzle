@@ -2,6 +2,7 @@
 package de.ottospiele.app
 
 import android.os.Bundle
+import android.util.Log
 import android.content.pm.ApplicationInfo
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -117,7 +118,7 @@ class MainActivity:ComponentActivity(){
     val candidates=(0 until 2).mapNotNull { attempt ->
      runCatching {
       val seed=target.toLong()*1000003L + progress.done*104729L + index*733L + attempt*41L
-      LevelGeneration.generate(target,seed,screenAspect)
+      generateMeasured(target,seed,screenAspect,"preparation")
      }.getOrNull()
     }
     candidates.filter { Rules.solve(it)!=null }
@@ -617,8 +618,22 @@ private fun WinScreen(
  }
 }
 
+/** Local diagnostic events; no network access or player identifiers. */
+private fun generateMeasured(stage:Int,seed:Long,aspect:Float,origin:String):Level {
+ val start=System.nanoTime()
+ return try {
+  val level=LevelGeneration.generate(stage,seed,aspect)
+  val elapsed=(System.nanoTime()-start)/1_000_000
+  Log.i("ArrowPuzzleGeneration",
+   "origin=$origin stage=$stage seed=$seed grid=${level.width}x${level.height} elapsedMs=$elapsed generator=${if(stage<=16) "legacy" else if(level.fallbackGeneration) "legacy-fallback" else "exact-cover"}")
+  level
+ } catch(error:Exception) {
+  Log.w("ArrowPuzzleGeneration","origin=$origin stage=$stage seed=$seed elapsedMs=${(System.nanoTime()-start)/1_000_000} result=error",error)
+  throw error
+ }
+}
 private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
- repeat(15){try{return Game(LevelGeneration.generate(stage,Random.nextLong(),aspect),lives,hints)}catch(_:Exception){}}
+ repeat(15){try{return Game(generateMeasured(stage,Random.nextLong(),aspect,"fresh"),lives,hints)}catch(_:Exception){}}
  error("Cannot generate a valid level")
 }
 @Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,previewHoldMillis:Long,onTap:(Int)->Unit){
