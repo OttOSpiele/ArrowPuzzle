@@ -44,7 +44,11 @@ internal fun PuzzleItScreen(
 ) {
  val snapshotKey=rememberSaveable { System.nanoTime() }
  var snapshot by rememberSaveable { mutableStateOf("") }
- val controller=remember { PuzzleItController(config,snapshotKey) }
+ val controller=remember(snapshotKey) {
+  PuzzleItController(config,snapshotKey).also { c ->
+   if(snapshot.isNotEmpty()) runCatching { decodePuzzleIt(snapshot,c) }
+  }
+ }
  var round by remember { mutableStateOf(controller.round) }
  var dragIndex by remember { mutableIntStateOf(-1) }
  var grip by remember { mutableStateOf(Offset.Zero) }
@@ -52,12 +56,6 @@ internal fun PuzzleItScreen(
  fun publish(){
   round=controller.round.copy()
   snapshot=encodePuzzleIt(controller)
- }
- LaunchedEffect(Unit) {
-  if(snapshot.isNotEmpty()) {
-   runCatching { decodePuzzleIt(snapshot,controller) }
-   round=controller.round
-  }
  }
  LaunchedEffect(preparationReady) {
   if(preparationReady) controller.requestStopAfterCurrentRound()
