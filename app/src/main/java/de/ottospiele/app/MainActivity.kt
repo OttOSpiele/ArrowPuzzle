@@ -81,6 +81,7 @@ class MainActivity:ComponentActivity(){
  var aboutOpen by remember{mutableStateOf(false)}
  var stageInput by remember{mutableStateOf("")}
  var stageLoading by remember{mutableStateOf(false)}
+  var backLoading by remember{mutableStateOf(false)}
  var stageError by remember{mutableStateOf(false)}
  var concurrent by remember{mutableStateOf(saved?.concurrent?:defaults.concurrentArrows)}
  var speed by remember{mutableIntStateOf(saved?.speed?:defaults.animationSpeed)}
@@ -98,7 +99,7 @@ class MainActivity:ComponentActivity(){
   jobs.values.forEach{it.cancel()}
   jobs.clear();flights.clear()
  }
- fun replace(stage:Int){stopFlights();game=fresh(stage,lives,hints,screenAspect);highlighted=null;invalid=null;traveledCells=emptySet();revision++}
+ fun replaceWith(ready:Game){stopFlights();game=ready;highlighted=null;invalid=null;traveledCells=emptySet();revision++}
  // Cooperative precomputation. Only saved and solver-validated levels count
  // toward the progress bar; search backtracking itself has unknown duration.
  LaunchedEffect(progress.stage,progress.done,screenAspect) {
@@ -242,7 +243,8 @@ class MainActivity:ComponentActivity(){
      Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
       horizontalArrangement=Arrangement.spacedBy(6.dp)) {
    Button(
-    onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
+    enabled=!game.won && !backLoading,
+     onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
     modifier=Modifier.weight(1f).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8),contentColor=Color.White)){
@@ -252,7 +254,8 @@ class MainActivity:ComponentActivity(){
     }
    }
    Button(
-    onClick={dialog="stufeZurueck"},
+    enabled=!game.won && !backLoading,
+     onClick={dialog="stufeZurueck"},
     modifier=Modifier.weight(1f).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7955CE),contentColor=Color.White)){
@@ -263,7 +266,7 @@ class MainActivity:ComponentActivity(){
    }
    Button(
     onClick={highlighted=game.hint();invalid=null;revision++},
-    enabled=game.hints!=0 && !game.lost && !game.won,
+    enabled=game.hints!=0 && !game.lost && !game.won && !backLoading,
     modifier=Modifier.weight(1f).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF158B65),contentColor=Color.White)){
@@ -297,7 +300,8 @@ class MainActivity:ComponentActivity(){
     Text("ARROW PUZZLE",fontSize=11.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF7E84A6),letterSpacing=2.sp,maxLines=1)
    }
    Button(
-    onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
+    enabled=!game.won && !backLoading,
+     onClick={stopFlights();game.retry();traveledCells=emptySet();revision++;highlighted=null;invalid=null},
     modifier=Modifier.width(122.dp).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8),contentColor=Color.White)){
@@ -307,7 +311,8 @@ class MainActivity:ComponentActivity(){
     }
    }
    Button(
-    onClick={dialog="stufeZurueck"},
+    enabled=!game.won && !backLoading,
+     onClick={dialog="stufeZurueck"},
     modifier=Modifier.width(136.dp).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7955CE),contentColor=Color.White)){
@@ -318,7 +323,7 @@ class MainActivity:ComponentActivity(){
    }
    Button(
     onClick={highlighted=game.hint();invalid=null;revision++},
-    enabled=game.hints!=0 && !game.lost && !game.won,
+    enabled=game.hints!=0 && !game.lost && !game.won && !backLoading,
     modifier=Modifier.width(122.dp).height(58.dp),shape=RoundedCornerShape(17.dp),
     contentPadding=PaddingValues(horizontal=4.dp),
     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF158B65),contentColor=Color.White)){
@@ -333,7 +338,7 @@ class MainActivity:ComponentActivity(){
 
   Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,invalid,
    flights.toList(),occupiedEver,traveledCells,Modifier.weight(1f).fillMaxWidth(),previewHoldMillis){
-   if(dialog.isNotEmpty() || game.lost || (!concurrent && flights.isNotEmpty()) || flights.any{f->f.id==it})return@Board
+   if(dialog.isNotEmpty() || game.won || game.lost || (!concurrent && flights.isNotEmpty()) || flights.any{f->f.id==it})return@Board
    val arrow=game.remaining.firstOrNull{a->a.id==it}?:return@Board
    val plan=Rules.plan(arrow,game.level,game.remaining.map{a->a.id}.toSet())
    val failed=!plan.canExit
@@ -440,8 +445,9 @@ class MainActivity:ComponentActivity(){
   },
   dismissButton={TextButton(enabled=!stageLoading,onClick={dialog=""}){Text("Abbrechen")}}
  )
+ if(dialog=="stufeZurueckFehler")AlertDialog(onDismissRequest={dialog=""},confirmButton={TextButton(onClick={dialog=""}){Text("OK")}},title={Text("Rätsel konnte nicht erstellt werden")},text={Text("Bitte erneut versuchen.")})
  if(dialog=="stufeZurueck")AlertDialog(
-  onDismissRequest={dialog=""},
+  onDismissRequest={if(!backLoading)dialog=""},
   title={Text("Wirklich eine Stufe zurück?",fontWeight=FontWeight.Bold)},
   text={
    Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)){
@@ -452,13 +458,24 @@ class MainActivity:ComponentActivity(){
    }
   },
   confirmButton={
-   Button(onClick={dialog=""},colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){
+   if(backLoading) CircularProgressIndicator(color=Color(0xFF7955CE))
+   else Button(onClick={dialog=""},colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){
     Text("Fortsetzen",fontWeight=FontWeight.Bold)
    }
   },
   dismissButton={
-   Button(onClick={dialog="";progress=progress.easier();replace(progress.stage)},
-    colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7955CE))){
+   if(!backLoading) Button(onClick={
+    if(!backLoading){
+     backLoading=true
+     val target=progress.easier()
+     scope.launch {
+      val ready=runCatching { withContext(Dispatchers.Default) { fresh(target.stage,lives,hints,screenAspect) } }.getOrNull()
+      if(ready!=null){ progress=target;replaceWith(ready);dialog="" }
+      else dialog="stufeZurueckFehler"
+      backLoading=false
+     }
+    }
+   },colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7955CE))){
     Text("Stufe zurück",fontWeight=FontWeight.Bold)
    }
   }
