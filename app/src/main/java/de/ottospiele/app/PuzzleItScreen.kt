@@ -64,6 +64,7 @@ internal fun PuzzleItScreen(
  val context=LocalContext.current
  val haptics=remember(context){HapticEffects(context)}
  var wasInsideSnap by remember { mutableStateOf(false) }
+ var snapHighlightIndex by remember { mutableIntStateOf(-1) }
  val lifecycleOwner=LocalContext.current as LifecycleOwner
  DisposableEffect(lifecycleOwner) {
   val observer=LifecycleEventObserver { _,event -> if(event==Lifecycle.Event.ON_PAUSE){dragIndex=-1;wasInsideSnap=false} }
@@ -82,6 +83,7 @@ internal fun PuzzleItScreen(
   publish()
  }
  LaunchedEffect(round.phase,round.seed) {
+  if(round.phase==PuzzleItPhase.CHOICE_ACTIVE)haptics.buttonTick()
   if(round.phase==PuzzleItPhase.ROUND_SUCCESS) {
    delay(config.successMs)
    controller.finishRound(preparationReady,requiredRounds)
@@ -107,10 +109,11 @@ internal fun PuzzleItScreen(
       dragIndex=index
       val p=controller.round.pieces[index]
       wasInsideSnap=false
+      snapHighlightIndex=-1
       grip=Offset(at.x-geometry.scatterX-p.left*geometry.tile,
        at.y-geometry.scatterY-p.top*geometry.tile)
      },
-     onDragCancel={dragIndex=-1;wasInsideSnap=false},
+     onDragCancel={dragIndex=-1;wasInsideSnap=false;snapHighlightIndex=-1},
      onDragEnd={
       val i=dragIndex
       if(i>=0) {
@@ -132,6 +135,7 @@ internal fun PuzzleItScreen(
       }
       dragIndex=-1
       wasInsideSnap=false
+      snapHighlightIndex=-1
      },
      onDrag=drag@{change,_->
       val i=dragIndex
@@ -153,6 +157,7 @@ internal fun PuzzleItScreen(
       val inside=dx*dx+dy*dy <= (config.snapRatio*geometry.tile)*(config.snapRatio*geometry.tile)
       if(inside && !wasInsideSnap)haptics.snapZoneEntered()
       wasInsideSnap=inside
+      snapHighlightIndex=if(inside)i else -1
       val ps=controller.round.pieces.toMutableList()
       ps[i]=next
       controller.replace(controller.round.copy(pieces=ps),controller.stopAfterCurrentRound,controller.completedRounds)
@@ -175,7 +180,7 @@ internal fun PuzzleItScreen(
      val piece=round.pieces[i]
      val x=if(piece.fixed)geometry.boardX+(i%3)*geometry.tile else geometry.scatterX+piece.left*geometry.tile
      val y=if(piece.fixed)geometry.boardY+(i/3)*geometry.tile else geometry.scatterY+piece.top*geometry.tile
-     drawPuzzlePiece(canvas,round,i,x,y,geometry.tile)
+     drawPuzzlePiece(canvas,round,i,x,y,geometry.tile,highlighted=i==snapHighlightIndex && !piece.fixed)
     }
    }
   }
@@ -187,7 +192,11 @@ internal fun PuzzleItScreen(
       repeat(2){col->
        val value=round.answers[row*2+col]
        val active=round.phase==PuzzleItPhase.CHOICE_ACTIVE && value !in round.disabled
-       Button(onClick=ticked {if(controller.choose(value))publish() else publish()},
+       Button(onClick={
+        haptics.buttonTick()
+        if(controller.choose(value))haptics.stageSuccess() else haptics.blockedArrow()
+        publish()
+       },
         enabled=active,modifier=Modifier.weight(1f).height(62.dp),
         shape=RoundedCornerShape(17.dp),
         contentPadding=PaddingValues(3.dp),
@@ -211,7 +220,11 @@ internal fun PuzzleItScreen(
    }
   }
   // Deliberate finger-safe empty row *above* Android's system navigation inset.
-  Spacer(Modifier.fillMaxWidth().height(config.bottomSafetySpacingDp.dp))
+  Box(Modifier.fillMaxWidth().height(config.bottomSafetySpacingDp.dp),contentAlignment=Alignment.Center) {
+   if(round.phase==PuzzleItPhase.CHOICE_ACTIVE || round.phase==PuzzleItPhase.ROUND_SUCCESS) {
+    Text("Wähle die passende Anzahl Punkte!",fontSize=14.sp,color=Color(0xFF586587))
+   }
+  }
   if(preparationFailed) TextButton(onClick=ticked(onRetryPreparation),modifier=Modifier.align(Alignment.CenterHorizontally)){
    Text("Rätselvorbereitung wiederholen")
   }
@@ -267,14 +280,14 @@ private fun containsPuzzlePiece(round:PuzzleItRound,i:Int,at:Offset,l:PuzzleItLa
  return region.contains((at.x-x).roundToInt(),(at.y-y).roundToInt())
 }
 
-private fun drawPuzzlePiece(canvas:android.graphics.Canvas,round:PuzzleItRound,i:Int,x:Float,y:Float,t:Float) {
+private fun drawPuzzlePiece(canvas:android.graphics.Canvas,round:PuzzleItRound,i:Int,x:Float,y:Float,t:Float,highlighted:Boolean=false) {
  val checkpoint=canvas.save()
  canvas.translate(x,y)
  val path=puzzlePath(round,i,t)
  canvas.clipPath(path)
  // Repaint exactly the same global motif under every local clip.
  canvas.translate(-(i%3)*t,-(i/3)*t)
- val base=Paint(Paint.ANTI_ALIAS_FLAG).apply { color=round.color }
+ val base=Paint(Paint.ANTI_ALIAS_FLAG).apply { color=if(highlighted)android.graphics.Color.rgb(141,227,160) else round.color }
  canvas.drawRect(0f,0f,3*t,3*t,base)
  val ink=Paint(Paint.ANTI_ALIAS_FLAG).apply {
   color=android.graphics.Color.rgb(45,54,95)
