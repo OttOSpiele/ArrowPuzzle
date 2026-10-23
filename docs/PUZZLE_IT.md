@@ -36,6 +36,7 @@ Settings reside in `app/src/main/assets/game-defaults.properties` and are loaded
 - `puzzle.minVisibleAreaRatio=0.40` (0.25–0.90; reserved for richer future scatter validation)
 - `puzzle.maxPlacementAttempts=100` (1–1000; reserved, since the bounded arrangement is used)
 - `puzzle.preventImmediateNumberRepeat=true`
+- `puzzle.bottomSafetySpacingDp=56` (24–100 dp; extra child-safe gap below buttons, additional to system navigation padding)
 
 The first version deliberately fixes the 3×3 size, 1–10 number range, four answers and nonrotating pieces. None of these rules is user-adjustable.
 
