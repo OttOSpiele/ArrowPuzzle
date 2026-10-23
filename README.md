@@ -431,3 +431,7 @@ Die Android-Integration nutzt bis einschließlich Stufe 16 den Legacy-Generator;
 Beim letzten entfernten Pfeil werden Neustart, Stufe zurück und Tipp deaktiviert. Eine bestätigte Rückstufung erzeugt das neue Rätsel im Hintergrund; solange zeigt der Dialog eine Ladeanzeige statt Aktionsbuttons. Bei einem Generierungsfehler bleibt die bisherige Stufe erhalten.
 
 Der [manuelle Android-Testkatalog](docs/ANDROID_DEVICE_TEST_CATALOG.md) umfasst P0/P1-Gerätetests einschließlich Stufenwechsel, Fallback, Persistenz und Responsivität. `IntegrationRegressionTest` prüft Stufenstaffelung, Win-/Rollback-Semantik und das frühe Legacy-Routing. Die Gerätetests stehen noch aus. Die vollständige Verifikation der Fallback-Abdeckung und des alten Spielstandformats bleibt offen.
+
+### Vorberechnung – Stabilisierung nach Build #252 (23.10.2026)
+
+Der vorbereitete Level-Cache wurde auf Formatversion 2 angehoben; alte vorbereitete Einträge werden nicht übernommen. Der aktive Spielstand (`LocalSave`) bleibt davon unberührt. Ein vorbereitetes Rätsel muss weiterhin `Rules.solve()` bestehen; eine zusätzliche vollständige Rasterbelegung wird beim Abruf nicht mehr verlangt. Abgerufene Rätsel werden aus dem Cache entfernt und die deterministischen Vorberechnungs-Seeds berücksichtigen den Fortschrittszähler. CI-Bestätigung und Android-Gerätetests für diese Änderung stehen noch aus.
