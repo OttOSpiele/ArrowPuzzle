@@ -14,6 +14,12 @@ internal object GeneratorDiagnostics {
  @Volatile private var appContext:Context?=null
  fun initialize(context:Context){appContext=context.applicationContext}
  fun record(event:Event){appContext?.let { record(it,event) }}
+ /** Lifecycle events use the same CSV columns as candidate-generation events. */
+ fun recordPreparation(outcome:String,stage:Int,origin:String,durationMs:Long){
+  record(Event(System.currentTimeMillis(),origin,stage,0L,0,0,durationMs,
+   "preparation",outcome))
+ }
+
 
  data class Event(val timeMs:Long,val origin:String,val stage:Int,val seed:Long,
   val width:Int,val height:Int,val elapsedMs:Long,val generator:String,val outcome:String)
