@@ -99,8 +99,10 @@ class MainActivity:ComponentActivity(){
  val miniPrefs=remember(context){context.getSharedPreferences("arrow_puzzle_minigames",android.content.Context.MODE_PRIVATE)}
  val pendingStage=remember{miniPrefs.getInt("preparing_target_stage",0)}
  val pendingDone=remember{miniPrefs.getInt("preparing_target_done",0)}
- val restoringPreparation=pendingStage>0
- val restoringCurrent=restoringPreparation && miniPrefs.getBoolean("preparing_resume_current",false) && saved!=null
+ // Old resume-current records came from the removed mid-stage detour.
+ // A cache deficit while playing must never open Puzzle It.
+ val restoringPreparation=pendingStage>0 && !miniPrefs.getBoolean("preparing_resume_current",false)
+ val restoringCurrent=false
  val restoredTarget=remember(pendingStage,pendingDone){
   if(restoringPreparation)Progress(pendingStage,pendingDone) else null
  }
@@ -342,7 +344,7 @@ class MainActivity:ComponentActivity(){
    onContinue={
     val next=nextGame
     val nextP=nextProgress
-    if(next!=null && nextP!=null){
+    if(next!=null && nextP!=null && !miniPending && forcedNextProgress==null){
      stopFlights()
      progress=nextP
      game=next
