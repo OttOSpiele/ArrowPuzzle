@@ -6,6 +6,9 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * Strong, brief game feedback. Respects devices without a vibrator and system
@@ -48,4 +51,11 @@ internal class HapticEffects(context:Context) {
    v.vibrate(timing,-1)
   }
  }
+}
+
+/** Adds a brief tick before executing any enabled Compose button action. */
+@Composable internal fun ticked(action:()->Unit):()->Unit {
+ val context=LocalContext.current
+ val haptics=remember(context){HapticEffects(context)}
+ return {haptics.buttonTick();action()}
 }
