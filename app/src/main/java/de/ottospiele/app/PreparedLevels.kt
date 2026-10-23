@@ -11,7 +11,7 @@ internal object PreparedLevels {
  private const val PREF="arrow_puzzle_prepared"
  private const val VERSION=2
  private fun key(stage:Int,aspect:Float)="stage_${stage}_${(aspect*100).toInt()}"
- fun read(context:Context,stage:Int,aspect:Float):List<Level> {
+ @Synchronized fun read(context:Context,stage:Int,aspect:Float):List<Level> {
   return runCatching {
    val json=context.getSharedPreferences(PREF,Context.MODE_PRIVATE)
     .getString(key(stage,aspect),null)?:return emptyList()
@@ -36,7 +36,14 @@ internal object PreparedLevels {
    }
   }.getOrElse { emptyList() }
  }
- fun write(context:Context,stage:Int,aspect:Float,levels:List<Level>) {
+ /** Claim one valid prepared puzzle and remove it before the next win can reuse it. */
+ @Synchronized fun take(context:Context,stage:Int,aspect:Float,excludeSeed:Long):Level? {
+  val cached=read(context,stage,aspect)
+  val chosen=cached.firstOrNull { it.seed!=excludeSeed } ?: return null
+  write(context,stage,aspect,cached.filterNot { it.seed==chosen.seed })
+  return chosen
+ }
+ @Synchronized fun write(context:Context,stage:Int,aspect:Float,levels:List<Level>) {
   require(levels.all { it.stage==stage && Rules.solve(it)!=null })
   val root=JSONObject().put("version",VERSION).put("stage",stage)
   val items=JSONArray()
