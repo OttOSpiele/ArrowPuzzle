@@ -464,8 +464,18 @@ class MainActivity:ComponentActivity(){
    }
    highlighted=null;invalid=null
    // Apply success to game immediately: subsequently tapped arrows see updated blockers.
-   if(!failed){haptics.arrowRemoved();game.tap(it);revision++}
-   else{game.tap(it);revision++}
+   if(!failed){
+    haptics.arrowRemoved()
+    game.tap(it)
+    // Re-evaluate only arrows previously marked red. A successfully removed
+    // blocker may have made their exit path free again.
+    val remainingIds=game.remaining.map{a->a.id}.toSet()
+    failedArrowIds=failedArrowIds.filterTo(mutableSetOf()){id->
+     val candidate=game.remaining.firstOrNull{a->a.id==id}
+     candidate!=null && !Rules.plan(candidate,game.level,remainingIds).canExit
+    }
+    revision++
+   }else{game.tap(it);revision++}
    flights.add(Flight(it,plan,failed))
    val levelAtStart=game.level
    jobs[it]=scope.launch {
