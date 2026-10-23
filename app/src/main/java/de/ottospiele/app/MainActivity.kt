@@ -306,6 +306,7 @@ class MainActivity:ComponentActivity(){
     if(miniOpen && next!=null && nextP!=null){
      haptics.arrowPuzzleReturned()
      stopFlights();progress=nextP;game=next;highlighted=null;invalid=null
+     miniPrefs.edit().remove("preparing_target_stage").remove("preparing_target_done").commit()
      traveledCells=emptySet();revision++;winScreen=false;miniOpen=false;miniPending=false;forcedNextProgress=null
      nextGame=null;nextProgress=null
     }
@@ -351,8 +352,13 @@ class MainActivity:ComponentActivity(){
     defeatScreen=false;defeatMode="choice";defeatPrepared=null
    },
    onNew={
-    defeatPrepared=null
-    defeatMode="loading"
+    val target=progress.copy(done=0)
+    miniPrefs.edit().putInt("preparing_target_stage",target.stage)
+     .putInt("preparing_target_done",target.done).commit()
+    stopFlights();defeatScreen=false;defeatPrepared=null
+    forcedNextProgress=target;nextGame=null;nextProgress=null;prepareError=false
+    solvedSinceMini=0;miniPending=true;miniOpen=true;winScreen=true
+    haptics.miniGameEntered()
    },
    onRetryGeneration={
     defeatAttempt++
@@ -613,22 +619,16 @@ class MainActivity:ComponentActivity(){
     enabled=!stageLoading && stageInput.toIntOrNull()?.let { it in 1..9999 } == true,
     onClick=ticked {
      val selected=stageInput.toIntOrNull()?:return@ticked
-     stageLoading=true;stageError=false
-     scope.launch {
-      val ready=runCatching {withContext(Dispatchers.Default){
-       generationMutex.withLock { fresh(selected,lives,hints,screenAspect,defaults.legacyEnabled) }
-      }}.getOrNull()
-      stageLoading=false
-      if(ready==null){stageError=true}else{
-       stopFlights()
-       progress=Progress(selected,0)
-       solvedSinceMini=0;miniPending=false;miniOpen=false
-       game=ready
-       highlighted=null;invalid=null;traveledCells=emptySet();revision++
-       nextGame=null;nextProgress=null;defeatPrepared=null
-       winScreen=false;defeatScreen=false;dialog=""
-      }
+     val target=Progress(selected,0)
+     if(!miniPrefs.edit().putInt("preparing_target_stage",target.stage)
+       .putInt("preparing_target_done",target.done).commit()){
+      stageError=true;return@ticked
      }
+     stopFlights();dialog="";defeatScreen=false;defeatPrepared=null
+     nextGame=null;nextProgress=null;prepareError=false
+     forcedNextProgress=target
+     solvedSinceMini=0;miniPending=true;miniOpen=true;winScreen=true
+     haptics.miniGameEntered()
     }
    ){Text("Stufe starten")}
   },
@@ -658,6 +658,8 @@ class MainActivity:ComponentActivity(){
      // A deliberate downgrade starts mandatory Puzzle It. Generate the
      // replacement puzzle while the child is playing the mini-game.
      val target=progress.easier()
+     miniPrefs.edit().putInt("preparing_target_stage",target.stage)
+      .putInt("preparing_target_done",target.done).commit()
      stopFlights();dialog=""
      forcedNextProgress=target;nextProgress=null;nextGame=null;prepareError=false
      solvedSinceMini=0;miniPending=true;miniOpen=true;winScreen=true
