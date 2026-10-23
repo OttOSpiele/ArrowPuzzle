@@ -152,61 +152,93 @@ object ExactCoverGenerator {
   }
   var nodes=0
   var best:Level?=null
-  fun search(remaining:Int) {
-   if(best!=null || nodes>=maxNodes)return
-   if(remaining==0) {
-    if(targetArrows!=null && chosen.size!=targetArrows)return
-    if(chosen.count { winding[it] }<minWindingArrows)return
-    val arrows=chosen.mapIndexed{ id,index ->
-     candidates[index].arrow.copy(id=id)
-    }
-    val trial=Level(seed,stage,width,arrows,height)
-    if(Rules.solve(trial)!=null) {
-     val q=LevelQualityAnalyzer.analyze(trial)
-     if((maxInitiallyFree==null || q.initiallyFree<=maxInitiallyFree) && q.longestChain>=minChainLength)best=trial
-    }
-    return
+
+  // Backtrack every placement, including deterministic deductions made
+  // below a decision. This restores both the occupancy and dependency graph.
+  fun rollback(mark:Int) {
+   while(chosen.size>mark) {
+    val index=chosen.removeAt(chosen.lastIndex)
+    indexedCells[index].forEach { used[it]=false }
    }
+  }
+  fun admissible(index:Int,remaining:Int):Boolean {
+   val cells=indexedCells[index]
+   if(cells.any { used[it] })return false
    if(targetArrows!=null) {
-    val missing=targetArrows-chosen.size
-    if(missing<=0 || remaining<missing*2 || remaining>missing*maxCells)return
+    val windings=chosen.count { winding[it] }
+    val slots=targetArrows-chosen.size-1
+    val left=remaining-cells.size
+    if(left<slots*2 || left>slots*maxCells)return false
+    if(windings+(if(winding[index])1 else 0)+slots<minWindingArrows)return false
    }
-   val windingCount=chosen.count { winding[it] }
-   if(targetArrows!=null && windingCount+(targetArrows-chosen.size)<minWindingArrows)return
-   var selected=-1
-   var viable:IntArray?=null
-   // Minimum-remaining-values constraint: select the hardest free cell.
-   for(cell in used.indices)if(!used[cell]) {
-    val compatible=byCell[cell].filter{candidate ->
-     candidates[candidate].cells.none{p->used[p.y*width+p.x]}
-    }.toIntArray()
-    if(compatible.isEmpty())return
-    if(viable==null || compatible.size<viable!!.size) {
-     selected=cell;viable=compatible
-     if(compatible.size==1)break
+   return true
+  }
+  fun place(index:Int):Boolean {
+   chosen.add(index)
+   indexedCells[index].forEach { used[it]=true }
+   return partialAcyclic() && regionsFeasible()
+  }
+  fun search(initialRemaining:Int) {
+   if(best!=null || nodes>=maxNodes)return
+   val mark=chosen.size
+   var remaining=initialRemaining
+   try {
+    // Iterate to a fixed point: each forced placement may create another
+    // one-candidate cell. A contradiction rejects the whole branch.
+    while(remaining>0) {
+     if(targetArrows!=null) {
+      val slots=targetArrows-chosen.size
+      if(slots<=0 || remaining<slots*2 || remaining>slots*maxCells)return
+     }
+     var forced=-1
+     for(cell in used.indices)if(!used[cell]) {
+      var only=-1
+      var multiple=false
+      for(index in byCell[cell]) {
+       if(!admissible(index,remaining))continue
+       if(only>=0) { multiple=true;break }
+       only=index
+      }
+      if(only<0)return
+      if(!multiple) { forced=only;break }
+     }
+     if(forced<0)break
+     if(!place(forced))return
+     remaining-=indexedCells[forced].size
     }
-   }
-   if(selected<0)return
-   val desired=if(targetArrows!=null)remaining.toDouble()/(targetArrows-chosen.size) else 0.0
-   val ordered=viable!!.sortedWith(compareByDescending<Int> {
-    if(minWindingArrows>0 && windingCount<minWindingArrows && winding[it])1 else 0
-   }.thenBy { if(targetArrows!=null)kotlin.math.abs(indexedCells[it].size-desired) else 0.0 })
-   for(index in ordered) {
-    if(nodes>=maxNodes)return
-    nodes++
-    val cells=indexedCells[index]
-    if(targetArrows!=null && windingCount+(if(winding[index])1 else 0)+targetArrows-chosen.size-1<minWindingArrows)continue
-    if(targetArrows!=null) {
-     val left=remaining-cells.size
-     val slots=targetArrows-chosen.size-1
-     if(left<slots*2 || left>slots*maxCells)continue
+    if(remaining==0) {
+     if(targetArrows!=null && chosen.size!=targetArrows)return
+     if(chosen.count { winding[it] }<minWindingArrows)return
+     val trial=Level(seed,stage,width,chosen.mapIndexed { id,index ->
+      candidates[index].arrow.copy(id=id)
+     },height)
+     if(Rules.solve(trial)!=null) {
+      val q=LevelQualityAnalyzer.analyze(trial)
+      if((maxInitiallyFree==null || q.initiallyFree<=maxInitiallyFree) &&
+         q.longestChain>=minChainLength)best=trial
+     }
+     return
     }
-    cells.forEach{used[it]=true}
-    chosen.add(index)
-    if(partialAcyclic() && regionsFeasible())search(remaining-cells.size)
-    chosen.removeAt(chosen.lastIndex)
-    cells.forEach{used[it]=false}
-    if(best!=null)return
+    var viable:IntArray?=null
+    for(cell in used.indices)if(!used[cell]) {
+     val compatible=byCell[cell].filter { admissible(it,remaining) }.toIntArray()
+     if(compatible.isEmpty())return
+     if(viable==null || compatible.size<viable.size)viable=compatible
+    }
+    val windingCount=chosen.count { winding[it] }
+    val desired=if(targetArrows!=null)remaining.toDouble()/(targetArrows-chosen.size) else 0.0
+    val ordered=(viable?:return).sortedWith(compareByDescending<Int> {
+     if(minWindingArrows>0 && windingCount<minWindingArrows && winding[it])1 else 0
+    }.thenBy { if(targetArrows!=null)kotlin.math.abs(indexedCells[it].size-desired) else 0.0 })
+    for(index in ordered) {
+     if(best!=null || nodes>=maxNodes)return
+     nodes++
+     val branchMark=chosen.size
+     if(place(index))search(remaining-indexedCells[index].size)
+     rollback(branchMark)
+    }
+   } finally {
+    rollback(mark)
    }
   }
   search(width*height)
