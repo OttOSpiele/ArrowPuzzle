@@ -16,6 +16,7 @@ object ExactCoverBenchmark {
   val boards=listOf(8,12,16,20)
   val lines=mutableListOf("size,seed,node_budget,visited_nodes,elapsed_ms,success,exhausted,arrows,occupancy_pct,initially_free,longest_chain,quality,error,requested_arrows,requested_windings,actual_windings,max_initially_free,min_chain_length")
   val drawings=mutableListOf<String>()
+  val profileRows=mutableListOf("board,seed,mode,profile_stage,free,chain,windings,free_fit,chain_fit,winding_fit,all_fit,fit_score")
   var success=0
   for(size in boards)for(index in 0 until seeds)for(target in listOf<Int?>(null,size*size/4).distinct()) {
    val windingGoal=if(target!=null)2 else 0
@@ -39,6 +40,13 @@ object ExactCoverBenchmark {
      drawings.add(listOf(35,seed,1f,size,size,false,
       fmt(q.occupancy*100),q.initiallyFree,q.longestChain,fmt(q.score(35)),paths)
       .joinToString("\t"))
+     for(profileStage in listOf(1,8,16,35,60,80)) {
+      val assessment=DifficultyProfiles.forStage(profileStage).assess(level)
+      profileRows.add(listOf(size,seed,if(target==null)"free" else "target",
+       profileStage,assessment.free,assessment.chain,assessment.windings,
+       assessment.freeFit,assessment.chainFit,assessment.windingFit,
+       assessment.withinAllRanges,fmt(assessment.score)).joinToString(","))
+     }
      success++
     } else {
      lines.add(listOf(size,seed,budget,result.nodes,elapsed,false,result.exhausted,"","","","","","",target?:"",windingGoal,"",freeGoal?:"",chainGoal).joinToString(","))
@@ -49,6 +57,7 @@ object ExactCoverBenchmark {
     lines.add(listOf(size,seed,budget,"",elapsed,false,false,"","","","","",message,target?:"",windingGoal,"",freeGoal?:"",chainGoal).joinToString(","))
    }
   }
+  File(directory,"exact-cover-difficulty.csv").writeText(profileRows.joinToString("\n")+"\n")
   File(directory,"exact-cover-boards.tsv").writeText(
    "stage\tseed\taspect\twidth\theight\tfallback\toccupancy_pct\tfree\tchain\tquality\tpaths\n"+
    drawings.joinToString("\n")+"\n")
