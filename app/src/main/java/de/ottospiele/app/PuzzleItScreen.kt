@@ -5,6 +5,12 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Region
 import android.graphics.Rect
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -52,6 +58,14 @@ internal fun PuzzleItScreen(
  var round by remember { mutableStateOf(controller.round) }
  var dragIndex by remember { mutableIntStateOf(-1) }
  var grip by remember { mutableStateOf(Offset.Zero) }
+ val lifecycleOwner=LocalLifecycleOwner.current
+ DisposableEffect(lifecycleOwner) {
+  val observer=LifecycleEventObserver { _,event -> if(event==Lifecycle.Event.ON_PAUSE)dragIndex=-1 }
+  lifecycleOwner.lifecycle.addObserver(observer)
+  onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+ }
+ val successScale by animateFloatAsState(if(round.phase==PuzzleItPhase.ROUND_SUCCESS)1f else .35f,
+  animationSpec=tween(config.successMs.toInt()),label="Puzzle It success")
  // The saved snapshot stores logical tile-space anchors and the current phase.
  fun publish(){
   round=controller.round.copy()
@@ -169,7 +183,9 @@ internal fun PuzzleItScreen(
   }
   if(round.phase==PuzzleItPhase.ROUND_SUCCESS) {
    Text("★",fontSize=32.sp,color=Color(0xFF8B63CA),
-    modifier=Modifier.align(Alignment.CenterHorizontally))
+    modifier=Modifier.align(Alignment.CenterHorizontally).graphicsLayer {
+     scaleX=successScale;scaleY=successScale;alpha=successScale
+    })
   }
   if(preparationFailed) TextButton(onClick=onRetryPreparation,modifier=Modifier.align(Alignment.CenterHorizontally)){
    Text("Rätselvorbereitung wiederholen")
