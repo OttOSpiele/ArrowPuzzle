@@ -435,3 +435,7 @@ Der [manuelle Android-Testkatalog](docs/ANDROID_DEVICE_TEST_CATALOG.md) umfasst 
 ### Vorberechnung – Stabilisierung nach Build #252 (23.10.2026)
 
 Der vorbereitete Level-Cache wurde auf Formatversion 2 angehoben; alte vorbereitete Einträge werden nicht übernommen. Der aktive Spielstand (`LocalSave`) bleibt davon unberührt. Ein vorbereitetes Rätsel muss weiterhin `Rules.solve()` bestehen; eine zusätzliche vollständige Rasterbelegung wird beim Abruf nicht mehr verlangt. Abgerufene Rätsel werden aus dem Cache entfernt und die deterministischen Vorberechnungs-Seeds berücksichtigen den Fortschrittszähler. CI-Bestätigung und Android-Gerätetests für diese Änderung stehen noch aus.
+
+### Lokale Generator-Diagnostik (23.10.2026)
+
+Die Android-App protokolliert Erzeugungsversuche für das aktive Rätsel und die Hintergrund-Vorbereitung unter dem Logcat-Tag `ArrowPuzzleGeneration`. Jeder erfolgreiche Eintrag enthält `origin`, `stage`, `seed`, `grid`, `elapsedMs` und `generator` (`legacy`, `exact-cover` oder `legacy-fallback`). Fehlgeschlagene Generierungsversuche werden als `result=error` protokolliert. Die Diagnose ist lokal, ohne Telemetrie oder Netzwerkübertragung; die Log-Einträge sind nicht dauerhaft garantiert. Der Fallback-Grund wird bislang nicht gesondert klassifiziert. Zum Filtern: `adb logcat -s ArrowPuzzleGeneration:I`. CI und Gerätetests für die Änderung sind noch offen.
