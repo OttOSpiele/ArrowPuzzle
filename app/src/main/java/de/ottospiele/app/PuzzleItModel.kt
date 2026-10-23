@@ -72,14 +72,23 @@ internal object PuzzleItGenerator {
  }
 }
 
-internal class PuzzleItController(val config:PuzzleItConfig, seed:Long) {
+internal class PuzzleItController(val config:PuzzleItConfig, seed:Long):MiniGameModule {
+ override val id:String="puzzle-it"
  var round:PuzzleItRound=PuzzleItGenerator.generate(seed)
   private set
  var stopAfterCurrentRound:Boolean=false
   private set
  var completedRounds:Int=0
   private set
- fun requestStopAfterCurrentRound(){stopAfterCurrentRound=true}
+ override fun begin(){
+  if(round.phase==PuzzleItPhase.EXITING){
+   round=PuzzleItGenerator.generate(round.seed+1,round.number,config)
+   stopAfterCurrentRound=false
+  }
+ }
+ override fun requestStopAfterCurrentRound(){stopAfterCurrentRound=true}
+ override fun isCurrentRoundComplete():Boolean=
+  round.phase==PuzzleItPhase.ROUND_FINISHING || round.phase==PuzzleItPhase.EXITING
  fun replace(snapshot:PuzzleItRound,stopping:Boolean,completed:Int) {
   round=snapshot;stopAfterCurrentRound=stopping;completedRounds=completed
  }
