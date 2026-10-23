@@ -803,7 +803,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f,legacyEnabled:Bo
     val down=awaitFirstDown(requireUnconsumed=false)
     val sx=size.width.toFloat()/level.width
     val sy=size.height.toFloat()/level.height
-    val selected=ArrowTouch.select(level,remaining,down.position.x/sx-.5f,down.position.y/sy-.5f)
+    val selected=ArrowTouch.select(level,remaining,down.position.x/sx-.5f,down.position.y/sy-.5f,flights.map{it.id}.toSet())
     var active=selected!=null
     val previewJob=if(selected!=null)launch {
      delay(previewHoldMillis)
@@ -882,7 +882,8 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f,legacyEnabled:Bo
     }
    }
   }
-  val allVisible=arrows.filter{a->flights.none{f->f.id==a.id}}.map{it to (it.body() to false)}+flights.mapNotNull{f->level.arrows.firstOrNull{it.id==f.id}?.let{a->a to (f.plan.frame(f.step) to f.failed)}}
+  // Draw animations underneath stationary pieces; only idle arrows own hit areas.
+  val allVisible=flights.mapNotNull{f->level.arrows.firstOrNull{it.id==f.id}?.let{a->a to (f.plan.frame(f.step) to f.failed)}}+arrows.filter{a->flights.none{f->f.id==a.id}}.map{it to (it.body() to false)}
   allVisible.forEach{(a,shape)->
    val points=shape.first
    if(points.isEmpty())return@forEach
