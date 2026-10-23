@@ -73,6 +73,7 @@ object ExactCoverGenerator {
   candidates.forEachIndexed { index,placement ->
    for(p in placement.cells)byCell[p.y*width+p.x].add(index)
   }
+  val indexedCells=Array(candidates.size) { i -> candidates[i].cells.map { it.y*width+it.x }.toIntArray() }
   val used=BooleanArray(width*height)
   val chosen=mutableListOf<Int>()
   // A cycle between already selected arrows cannot be undone by adding
@@ -118,8 +119,30 @@ object ExactCoverGenerator {
      }
     }
     if(count<2)return false
-    minimum+=(count+maxCells-1)/maxCells
-    maximum+=count/2
+    // Candidate-aware per-region bounds, not global length guesses.
+    val membership=BooleanArray(width*height)
+    val frontier=ArrayDeque<Int>()
+    frontier.add(root)
+    membership[root]=true
+    while(frontier.isNotEmpty()) {
+     val cell=frontier.removeFirst()
+     val x=cell%width
+     val y=cell/width
+     val around=intArrayOf(if(x>0)cell-1 else -1,if(x+1<width)cell+1 else -1,if(y>0)cell-width else -1,if(y+1<height)cell+width else -1)
+     for(n in around)if(n>=0 && !used[n] && !membership[n]) {
+      membership[n]=true
+      frontier.add(n)
+     }
+    }
+    var longest=0
+    var shortest=Int.MAX_VALUE
+    for(path in indexedCells)if(path.all { membership[it] }) {
+     longest=maxOf(longest,path.size)
+     shortest=minOf(shortest,path.size)
+    }
+    if(longest==0)return false
+    minimum+=(count+longest-1)/longest
+    maximum+=count/shortest
    }
    if(targetArrows!=null) {
     val slots=targetArrows-chosen.size
@@ -164,10 +187,14 @@ object ExactCoverGenerator {
     }
    }
    if(selected<0)return
-   val ordered=if(minWindingArrows>0 && windingCount<minWindingArrows)viable!!.sortedByDescending { winding[it] } else viable!!.toList()
+   val desired=if(targetArrows!=null)remaining.toDouble()/(targetArrows-chosen.size) else 0.0
+   val ordered=viable!!.sortedWith(compareByDescending<Int> {
+    if(minWindingArrows>0 && windingCount<minWindingArrows && winding[it])1 else 0
+   }.thenBy { if(targetArrows!=null)kotlin.math.abs(indexedCells[it].size-desired) else 0.0 })
    for(index in ordered) {
-    if(++nodes>maxNodes)return
-    val cells=candidates[index].cells.map{it.y*width+it.x}
+    if(nodes>=maxNodes)return
+    nodes++
+    val cells=indexedCells[index]
     if(targetArrows!=null && windingCount+(if(winding[index])1 else 0)+targetArrows-chosen.size-1<minWindingArrows)continue
     if(targetArrows!=null) {
      val left=remaining-cells.size
