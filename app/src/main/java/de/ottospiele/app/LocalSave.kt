@@ -73,7 +73,7 @@ internal object LocalSave {
     val defaults=GameDefaults.load(context)
     val life=root.optInt("lifeSetting",defaults.lives).takeIf{it in listOf(3,5,10)}?:defaults.lives
     val hint=root.optInt("hintSetting",defaults.hints).takeIf{it in listOf(0,1,3,5)}?:defaults.hints
-    val newGame=Game(Generator().generate(stage,java.util.Random().nextLong()),life,hint)
+    val newGame=Game(LevelGeneration.generate(stage,java.util.Random().nextLong()),life,hint)
     SavedSession(progress,life,hint,root.optBoolean("concurrent",defaults.concurrentArrows),
      root.optInt("speed",defaults.animationSpeed).coerceIn(0,3),newGame,false,false)
    }catch(secondary:Exception){
