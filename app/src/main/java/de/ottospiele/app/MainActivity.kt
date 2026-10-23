@@ -481,12 +481,13 @@ class MainActivity:ComponentActivity(){
      stageLoading=true;stageError=false
      scope.launch {
       val ready=runCatching {withContext(Dispatchers.Default){
-       fresh(selected,lives,hints,screenAspect,defaults.legacyEnabled)
+       generationMutex.withLock { fresh(selected,lives,hints,screenAspect,defaults.legacyEnabled) }
       }}.getOrNull()
       stageLoading=false
       if(ready==null){stageError=true}else{
        stopFlights()
        progress=Progress(selected,0)
+       solvedSinceMini=0;miniPending=false;miniOpen=false
        game=ready
        highlighted=null;invalid=null;traveledCells=emptySet();revision++
        nextGame=null;nextProgress=null;defeatPrepared=null
