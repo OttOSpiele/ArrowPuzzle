@@ -126,7 +126,7 @@ internal fun PuzzleItScreen(
       }
       dragIndex=-1
      },
-     onDrag=drag@{change,delta->
+     onDrag=drag@{change,_->
       val i=dragIndex
       if(i<0)return@drag
       change.consume()
@@ -135,8 +135,8 @@ internal fun PuzzleItScreen(
       // Keep the full shape, including outward tabs, inside the available canvas.
       val maxX=((size.width-geometry.scatterX)/geometry.tile-1.23f).coerceAtLeast(0f)
       val maxY=((size.height-geometry.scatterY)/geometry.tile-1.23f).coerceAtLeast(0f)
-      val next=p.copy(left=(p.left+delta.x/geometry.tile).coerceIn(.25f,maxX),
-       top=(p.top+delta.y/geometry.tile).coerceIn(.25f,maxY))
+      val next=p.copy(left=((change.position.x-grip.x-geometry.scatterX)/geometry.tile).coerceIn(.25f,maxX),
+       top=((change.position.y-grip.y-geometry.scatterY)/geometry.tile).coerceIn(.25f,maxY))
       val ps=controller.round.pieces.toMutableList()
       ps[i]=next
       controller.replace(controller.round.copy(pieces=ps),controller.stopAfterCurrentRound,controller.completedRounds)
