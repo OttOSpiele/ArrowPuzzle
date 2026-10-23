@@ -728,28 +728,6 @@ private fun WinScreen(
  }
 }
 
-/** Placeholder for independently pluggable mini-games. Generation continues in Puzzle's coroutine. */
-@Composable
-private fun MiniGamePlaceholder(ready:Boolean,failed:Boolean,onRetry:()->Unit,onContinue:()->Unit){
- Column(Modifier.fillMaxSize().background(Color(0xFF383838)),
-  horizontalAlignment=Alignment.CenterHorizontally){
-  Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center){
-   when {
-    ready -> Button(onClick=onContinue,modifier=Modifier.height(60.dp),
-     colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2469D8))){Text("Weiter  →",fontSize=20.sp)}
-    failed -> Column(horizontalAlignment=Alignment.CenterHorizontally){
-     Text("Rätselvorbereitung fehlgeschlagen",color=Color.White)
-     OutlinedButton(onClick=onRetry){Text("Erneut versuchen",color=Color.White)}
-    }
-   }
-  }
-  // This is a readiness indicator, not a fabricated percentage of a search algorithm.
-  if(!ready && !failed) LinearProgressIndicator(modifier=Modifier.fillMaxWidth().height(3.dp),
-   color=Color(0xFFE6E6E6),trackColor=Color(0xFF555555))
-  else Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0xFFE6E6E6)))
- }
-}
-
 /** Local diagnostic events; no network access or player identifiers. */
 private fun generateExactMeasured(stage:Int,seed:Long,aspect:Float):Level? {
  val start=System.nanoTime()
