@@ -423,3 +423,11 @@ Der Exact-Cover-Benchmark exportiert jetzt `exact-cover-difficulty.csv`: Für je
 - **Vorberechnung:** `MainActivity` verwendet den neuen `LevelGeneration`-Router und bewertet vorbereitete Kandidaten mit den weichen `DifficultyProfiles`. Veraltete Legacy-Caches auf Exact-Cover-Stufen werden nur übernommen, wenn sie ausdrücklich als Fallback markiert sind oder vollständige Rasterbelegung aufweisen. Bereits laufende Spielstände bleiben erhalten.
 - **Sicherheit:** Sowohl bevorzugte Exact-Cover-Level als auch der Legacy-Fallback werden nur verwendet, wenn sie lösbar sind. Die bestehende Persistenz von Fortschritt und Spielstand bleibt bestehen.
 
+
+## Integrations-QA (23.10.2026)
+
+Die Android-Integration nutzt bis einschließlich Stufe 16 den Legacy-Generator; ab Stufe 17 bevorzugt sie Exact Cover mit Solver-Validierung und markiertem Legacy-Fallback. Die verbindliche Rätselstaffelung beträgt 1 (Stufen 1–8), 2 (9–16), 3 (17–29), 4 (30–42), 5 (43–54), 6 (55–67), 7 (68–79), 8 (ab 80). Diese Regel ersetzt ältere, oben noch als Entwicklungshistorie aufgeführte Staffelungen.
+
+Beim letzten entfernten Pfeil werden Neustart, Stufe zurück und Tipp deaktiviert. Eine bestätigte Rückstufung erzeugt das neue Rätsel im Hintergrund; solange zeigt der Dialog eine Ladeanzeige statt Aktionsbuttons. Bei einem Generierungsfehler bleibt die bisherige Stufe erhalten.
+
+Der [manuelle Android-Testkatalog](docs/ANDROID_DEVICE_TEST_CATALOG.md) umfasst P0/P1-Gerätetests einschließlich Stufenwechsel, Fallback, Persistenz und Responsivität. `IntegrationRegressionTest` prüft Stufenstaffelung, Win-/Rollback-Semantik und das frühe Legacy-Routing. Die Gerätetests stehen noch aus. Die vollständige Verifikation der Fallback-Abdeckung und des alten Spielstandformats bleibt offen.
