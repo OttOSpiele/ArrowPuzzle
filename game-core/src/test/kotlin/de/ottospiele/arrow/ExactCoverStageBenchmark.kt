@@ -13,16 +13,19 @@ object ExactCoverStageBenchmark {
  @JvmStatic fun main(args:Array<String>) {
   val directory=File(args.getOrNull(0)?:"build/benchmark").apply{mkdirs()}
   val perStage=(args.getOrNull(1)?.toIntOrNull()?:16).coerceIn(8,100)
+  val catalogOnly=args.getOrNull(2)=="catalog"
   val selectedStages=setOf(9,10,12,16,17,20,24,30,40,50,60,70,80)
-  val csv=File(directory,"exact-cover-stages.csv")
-  val summary=File(directory,"exact-cover-stages-summary.csv")
-  val drawings=File(directory,"exact-cover-stage-catalog.tsv")
+  val stages=if(catalogOnly)selectedStages.sorted() else (9..80).toList()
+  val prefix=if(catalogOnly)"exact-cover-catalog" else "exact-cover-stages"
+  val csv=File(directory,"$prefix.csv")
+  val summary=File(directory,"$prefix-summary.csv")
+  val drawings=File(directory,"$prefix-boards.tsv")
   csv.writeText("stage,attempt,seed,aspect,width,height,target_arrows,winding_min,max_free,min_chain,node_budget,visited_nodes,elapsed_ms,success,exhausted,arrows,occupancy_pct,initially_free,longest_chain,windings,profile_score,error\n")
   summary.writeText("stage,attempts,successes,failures,success_pct,mean_ms,p50_ms,p90_ms,max_ms,mean_arrows,mean_occupancy_pct,mean_initially_free,mean_chain,mean_windings,mean_profile_score,catalog_boards\n")
   drawings.writeText("stage\tseed\taspect\twidth\theight\tfallback\toccupancy_pct\tfree\tchain\tquality\tpaths\n")
   fun dec(d:Double)=String.format(Locale.ROOT,"%.3f",d)
   fun percentile(sorted:List<Long>,p:Double):Long=if(sorted.isEmpty())0 else sorted[((sorted.size-1)*p).toInt()]
-  for(stage in 9..80) {
+  for(stage in stages) {
    var count=0
    val times=mutableListOf<Long>()
    val arrows=mutableListOf<Int>()
@@ -105,9 +108,9 @@ object ExactCoverStageBenchmark {
     dec(avg(windings)),dec(avg(scores)),catalogCount).joinToString(",")+"\n")
    println("stage=$stage exact=$count/$perStage meanMs=${dec(avg(times))} catalog=$catalogCount")
   }
-  File(directory,"exact-cover-stages-summary.txt").writeText(
-   "Stages 9..80; exact-only production-profile testing. Seeds per stage=$perStage; node budget=3000.\n"+
+  File(directory,"$prefix-summary.txt").writeText(
+   "Stages=${stages.joinToString(",")}; exact-only production-profile testing. Seeds per stage=$perStage; node budget=3000.\n"+
    "Failed searches stay in CSV. Catalog contains up to eight solver-valid puzzles per selected stage.\n"+
-   "See exact-cover-stages-summary.csv and exact-cover-stages.csv.\n")
+   "See $prefix-summary.csv and $prefix.csv.\n")
  }
 }
