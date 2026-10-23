@@ -197,14 +197,21 @@ class MainActivity:ComponentActivity(){
  }
 
  if(winScreen && miniOpen){
-  MiniGamePlaceholder(ready=nextGame!=null,failed=prepareError,onRetry={preparationAttempt++},onContinue={
-   val next=nextGame;val nextP=nextProgress
-   if(next!=null && nextP!=null){
-    stopFlights();progress=nextP;game=next;highlighted=null;invalid=null
-    traveledCells=emptySet();revision++;winScreen=false;miniOpen=false;miniPending=false
-    nextGame=null;nextProgress=null
+  PuzzleItScreen(
+   config=defaults.puzzleIt,
+   preparationReady=nextGame!=null && nextProgress!=null,
+   preparationFailed=prepareError,
+   requiredRounds=Int.MAX_VALUE,
+   onRetryPreparation={preparationAttempt++},
+   onCompleted={
+    val next=nextGame;val nextP=nextProgress
+    if(next!=null && nextP!=null){
+     stopFlights();progress=nextP;game=next;highlighted=null;invalid=null
+     traveledCells=emptySet();revision++;winScreen=false;miniOpen=false;miniPending=false
+     nextGame=null;nextProgress=null
+    }
    }
-  })
+  )
  }else if(winScreen){
   WinScreen(
    stage=progress.stage,
