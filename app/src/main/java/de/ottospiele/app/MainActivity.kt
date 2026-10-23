@@ -116,7 +116,7 @@ class MainActivity:ComponentActivity(){
     // per-slot effort budget, not an unbounded quality search.
     val candidates=(0 until 2).mapNotNull { attempt ->
      runCatching {
-      val seed=target.toLong()*1000003L + index*733L + attempt*41L
+      val seed=target.toLong()*1000003L + progress.done*104729L + index*733L + attempt*41L
       LevelGeneration.generate(target,seed,screenAspect)
      }.getOrNull()
     }
@@ -140,8 +140,7 @@ class MainActivity:ComponentActivity(){
   try {
    val target=progress.win()
    val ready=withContext(Dispatchers.Default){
-    val prepared=PreparedLevels.read(context,target.stage,screenAspect)
-     .firstOrNull { it.seed!=game.level.seed && (target.stage<=16 || it.fallbackGeneration || BoardProfile.actualOccupancy(it)>=.999f) }
+    val prepared=PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
     if(prepared!=null)Game(prepared,lives,hints)
     else fresh(target.stage,lives,hints,screenAspect)
    }
