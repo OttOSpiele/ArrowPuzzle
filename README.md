@@ -412,3 +412,14 @@ Die Planung beschreibt technische Arbeit, keine formale Releasefreigabe.
 
 Der Exact-Cover-Benchmark exportiert jetzt `exact-cover-difficulty.csv`: Für jedes erfolgreich generierte Referenzbrett werden die bevorzugten Bereiche für freie Pfeile, relative Abhängigkeitstiefe und Windungsanteil auf den Profilstufen 1, 8, 16, 35, 60 und 80 bewertet. Hinzu kommen Treffer je Merkmal, Gesamttreffer und Fit-Score. `exact-cover-difficulty-summary.txt` fasst Trefferquoten, mittlere Fit-Scores und größte Sprünge zwischen benachbarten Referenzprofilen zusammen. Wichtig: Dasselbe Brett wird unter mehreren Profilen bewertet; die Sprünge sind **keine** Messung tatsächlicher aufeinanderfolgender Spiellevel. Die Profile bleiben weich und verändern weder den Exact-Cover-Suchalgorithmus noch die Android-App. Phase 4 (App-Integration) beginnt erst nach CI-Auswertung.
 
+
+## Phase 4: Generatorintegration und Stufenprogression (Oktober 2026)
+
+- **Stufe 1–8:** jeweils ein Rätsel bis zur nächsten Stufe, ausschließlich der unveränderte Legacy-Generator als Tutorial.
+- **Stufe 9–16:** jeweils zwei Rätsel, weiterhin ausschließlich Legacy.
+- **Ab Stufe 17:** Exact Cover wird zuerst versucht; bei Suchbudgetüberschreitung, fehlender Lösung oder Fehler wird der bisherige Legacy-Generator verwendet. Dieser Ersatzweg ist über `fallbackGeneration=true` gekennzeichnet (sandfarbene Rasterpunkte).
+- **Progression:** Stufe 17 beginnt mit drei Rätseln; die Zahl steigt in Schritten bis auf acht Rätsel ab Stufe 80 und bleibt dort begrenzt. Definition zentral in `Progress.required()`.
+- **Genauigkeit:** Der Exact-Cover-Solver unterstützt bisher bis 20×20 Rasterzellen. Für größere Stufen begrenzt der Exact-Cover-Pfad die Spielfeldbreite auf 20; der Legacy-Fallback behält dessen bisherige Stufenabmessungen.
+- **Vorberechnung:** `MainActivity` verwendet den neuen `LevelGeneration`-Router und bewertet vorbereitete Kandidaten mit den weichen `DifficultyProfiles`. Veraltete Legacy-Caches auf Exact-Cover-Stufen werden nur übernommen, wenn sie ausdrücklich als Fallback markiert sind oder vollständige Rasterbelegung aufweisen. Bereits laufende Spielstände bleiben erhalten.
+- **Sicherheit:** Sowohl bevorzugte Exact-Cover-Level als auch der Legacy-Fallback werden nur verwendet, wenn sie lösbar sind. Die bestehende Persistenz von Fortschritt und Spielstand bleibt bestehen.
+
