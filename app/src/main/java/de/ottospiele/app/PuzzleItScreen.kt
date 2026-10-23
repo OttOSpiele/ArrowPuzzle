@@ -67,7 +67,7 @@ internal fun PuzzleItScreen(
  var snapHighlightIndex by remember { mutableIntStateOf(-1) }
  val lifecycleOwner=LocalContext.current as LifecycleOwner
  DisposableEffect(lifecycleOwner) {
-  val observer=LifecycleEventObserver { _,event -> if(event==Lifecycle.Event.ON_PAUSE){dragIndex=-1;wasInsideSnap=false} }
+  val observer=LifecycleEventObserver { _,event -> if(event==Lifecycle.Event.ON_PAUSE){dragIndex=-1;wasInsideSnap=false;snapHighlightIndex=-1} }
   lifecycleOwner.lifecycle.addObserver(observer)
   onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
  }
