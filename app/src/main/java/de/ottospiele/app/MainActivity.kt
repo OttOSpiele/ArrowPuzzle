@@ -57,7 +57,7 @@ class MainActivity:ComponentActivity(){
 }
 @Composable fun Puzzle(){
  val context=LocalContext.current
- val haptics=LocalHapticFeedback.current
+ val haptics=remember(context){HapticEffects(context)}
  GeneratorDiagnostics.initialize(context)
  val screenAspect=remember{
   val metrics=context.resources.displayMetrics
@@ -210,7 +210,7 @@ class MainActivity:ComponentActivity(){
    onCompleted={
     val next=nextGame;val nextP=nextProgress
     if(miniOpen && next!=null && nextP!=null){
-     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+     haptics.arrowPuzzleReturned()
      stopFlights();progress=nextP;game=next;highlighted=null;invalid=null
      traveledCells=emptySet();revision++;winScreen=false;miniOpen=false;miniPending=false
      nextGame=null;nextProgress=null
@@ -226,7 +226,7 @@ class MainActivity:ComponentActivity(){
    miniAvailable=miniPending && progress.stage>=10,
    onPlay={
     if(!miniOpen){
-     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+     haptics.miniGameEntered()
      miniOpen=true;solvedSinceMini=0
     }
    },
@@ -410,7 +410,7 @@ class MainActivity:ComponentActivity(){
    val failed=!plan.canExit
    if(failed){
     failedArrowIds=failedArrowIds+it
-    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+    haptics.blockedArrow()
    }
    highlighted=null;invalid=null
    // Apply success to game immediately: subsequently tapped arrows see updated blockers.
@@ -444,7 +444,7 @@ class MainActivity:ComponentActivity(){
       solvedSinceMini=(solvedSinceMini+1).coerceAtMost(4)
       miniPending=progress.stage>=10 && progress.win().stage>progress.stage && solvedSinceMini>=4
       if(progress.win().stage>progress.stage){
-       haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+       haptics.stageSuccess()
       }
       winScreen=true
      }
