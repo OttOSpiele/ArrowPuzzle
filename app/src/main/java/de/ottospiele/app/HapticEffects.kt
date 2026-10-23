@@ -18,6 +18,7 @@ internal class HapticEffects(context:Context) {
   @Suppress("DEPRECATION")
   (context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator)
  }
+ fun buttonTick()=pulse(14,90)
  fun arrowSelected()=pulse(12,75)
  fun arrowRemoved()=pulse(18,105)
  fun blockedArrow()=pattern(longArrayOf(0,55,22,105),intArrayOf(0,230,0,255))
