@@ -14,7 +14,7 @@ object ExactCoverBenchmark {
   val seeds=(args.getOrNull(1)?.toIntOrNull()?:2).coerceIn(1,20)
   val budget=(args.getOrNull(2)?.toIntOrNull()?:600).coerceIn(1,100000)
   val boards=listOf(8,12,16,20)
-  val lines=mutableListOf("size,seed,node_budget,visited_nodes,elapsed_ms,success,exhausted,arrows,occupancy_pct,initially_free,longest_chain,quality,error,requested_arrows,requested_windings,actual_windings")
+  val lines=mutableListOf("size,seed,node_budget,visited_nodes,elapsed_ms,success,exhausted,arrows,occupancy_pct,initially_free,longest_chain,quality,error,requested_arrows,requested_windings,actual_windings,max_initially_free,min_chain_length")
   val drawings=mutableListOf<String>()
   var success=0
   for(size in boards)for(index in 0 until seeds)for(target in listOf<Int?>(null,size*size/4).distinct()) {
