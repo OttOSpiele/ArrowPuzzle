@@ -1,0 +1,147 @@
+name: Android Debug APK
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Prevent overlapping develop builds from racing on the rolling release tag.
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Test and build Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK 35
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+
+      - name: Set up Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Test Kotlin game core
+        run: gradle --no-daemon --warning-mode all :game-core:test
+
+      - name: Build debug APK
+        run: gradle --no-daemon --warning-mode all :app:assembleDebug
+
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v6
+        with:
+          name: OttOSpiele-ArrowPuzzle-debug
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: game-core-test-reports
+          path: game-core/build/reports/tests/
+          if-no-files-found: ignore
+
+      - name: Publish rolling development APK to GitHub Releases
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp app/build/outputs/apk/debug/app-debug.apk OttOSpiele-ArrowPuzzle-debug.apk
+          if gh release view develop-preview >/dev/null 2>&1; then
+            git tag -f develop-preview "$GITHUB_SHA"
+            git push --force origin refs/tags/develop-preview
+            gh release upload develop-preview OttOSpiele-ArrowPuzzle-debug.apk --clobber
+            gh release edit develop-preview --title "Arrow Puzzle – Entwicklungs-APK" --notes "Automatischer Debug-Build von develop. Commit: ${GITHUB_SHA}. Nur für interne Tests; kein signiertes Play-Store-Release." --prerelease
+          else
+            gh release create develop-preview OttOSpiele-ArrowPuzzle-debug.apk --target "$GITHUB_SHA" --title "Arrow Puzzle – Entwicklungs-APK" --notes "Automatischer Debug-Build von develop. Commit: ${GITHUB_SHA}. Nur für interne Tests; kein signiertes Play-Store-Release." --prerelease
+          fi
+
+      - name: Generate reference Exact Cover catalog and statistics
+        if: success()
+        timeout-minutes: 18
+        run: gradle --no-daemon :game-core:benchmarkExactCoverCatalog -PexactCatalogSeeds=8
+
+      - name: Install PDF renderer
+        if: always()
+        run: python3 -m pip install --disable-pip-version-check 'reportlab>=4.2,<5'
+
+      - name: Render reference Exact Cover catalog
+        if: always()
+        run: |
+          if [ -s game-core/build/benchmark/exact-cover-catalog-boards.tsv ]; then
+            python3 tools/render_generator_benchmark.py game-core/build/benchmark exact-cover-catalog-boards.tsv exact-cover-catalog.pdf
+          fi
+
+      - name: Upload reference catalog, statistics and failure data
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: exact-cover-catalog
+          path: |
+            game-core/build/benchmark/exact-cover-catalog*
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Check catalog generation quality
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import csv
+          from pathlib import Path
+          source = Path('game-core/build/benchmark/exact-cover-catalog-summary.csv')
+          if not source.exists():
+              raise SystemExit('Catalog statistics missing')
+          rows = list(csv.DictReader(source.open(encoding='utf-8')))
+          if not rows:
+              raise SystemExit('Catalog statistics empty')
+          critical = []
+          for row in rows:
+              stage = row['stage']
+              success = int(row['successes'])
+              catalog = int(row['catalog_boards'])
+              if success == 0:
+                  critical.append(stage)
+                  print(f"::error::Stage {stage}: 0 successful Exact Cover levels")
+              elif catalog < 8:
+                  print(f"::warning::Stage {stage}: catalog only {catalog}/8 levels")
+          if critical:
+              raise SystemExit('No successful Exact Cover levels in stages: '+', '.join(critical))
+          print('Catalog statistics checked for', len(rows), 'stages')
+          PY
+
+      - name: Upload Gradle diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: gradle-problems-report
+          path: |
+            build/reports/problems/
+            app/build/reports/problems/
+            game-core/build/reports/problems/
+          if-no-files-found: ignore
+          retention-days: 7
+
