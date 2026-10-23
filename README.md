@@ -439,3 +439,9 @@ Der vorbereitete Level-Cache wurde auf Formatversion 2 angehoben; alte vorbereit
 ### Lokale Generator-Diagnostik (23.10.2026)
 
 Die Android-App protokolliert Erzeugungsversuche für das aktive Rätsel und die Hintergrund-Vorbereitung unter dem Logcat-Tag `ArrowPuzzleGeneration`. Jeder erfolgreiche Eintrag enthält `origin`, `stage`, `seed`, `grid`, `elapsedMs` und `generator` (`legacy`, `exact-cover` oder `legacy-fallback`). Fehlgeschlagene Generierungsversuche werden als `result=error` protokolliert. Die Diagnose ist lokal, ohne Telemetrie oder Netzwerkübertragung; die Log-Einträge sind nicht dauerhaft garantiert. Der Fallback-Grund wird bislang nicht gesondert klassifiziert. Zum Filtern: `adb logcat -s ArrowPuzzleGeneration:I`. CI und Gerätetests für die Änderung sind noch offen.
+
+### Generator-Diagnose direkt am Gerät (23.10.2026)
+
+Im Hamburger-Menü der Debug-APK ist **Generator-Diagnose** verfügbar (auch ohne ADB). Sie protokolliert maximal 300 lokale Versuche aus aktiver Levelgenerierung und Hintergrundvorbereitung, zeigt die Häufigkeiten von Exact Cover, Legacy und markiertem Legacy-Fallback, den Anteil an Fallbacks für Stufe 17+ sowie mittlere/maximale Erzeugungsdauer. Außerdem zeigt sie acht letzte Einträge und bietet **Aktualisieren**, **Löschen**, **CSV teilen** und **Schließen**. Die Daten werden privat im Gerät gespeichert, bei weiteren Versuchen rollierend überschrieben und niemals automatisch versendet. Der CSV-Inhalt wird über den Android-Teilen-Dialog als `text/csv`-Text übergeben (keine eigenständige Datei im Download-Ordner). Einträge enthalten Seed und Zeitstempel, aber keine Nutzerkennung.
+
+Die Anzeige ist auf debuggable Builds beschränkt. Eine tatsächliche Geräteprüfung und ein erfolgreicher CI-Build stehen noch aus.
