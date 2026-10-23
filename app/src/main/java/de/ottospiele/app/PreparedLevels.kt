@@ -9,7 +9,7 @@ import org.json.JSONObject
 /** Validated levels are stored separately from the child's active game snapshot. */
 internal object PreparedLevels {
  private const val PREF="arrow_puzzle_prepared"
- private const val VERSION=2
+ private const val VERSION=3
  private fun key(stage:Int,aspect:Float)="stage_${stage}_${(aspect*100).toInt()}"
  @Synchronized fun read(context:Context,stage:Int,aspect:Float):List<Level> {
   return runCatching {
