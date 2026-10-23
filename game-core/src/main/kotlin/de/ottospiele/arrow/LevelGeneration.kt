@@ -31,7 +31,7 @@ object TutorialLevels {
  fun level(stage:Int,seed:Long=stage.toLong()):Level {
   require(stage in 1..8)
   val width=7
-  val height=7
+  val height=10
   val count=stage+1
   val arrows=(0 until count).map { i->
    // Parallel, disjoint rows: the puzzle never requires a guessed blocker.
