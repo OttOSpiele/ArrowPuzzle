@@ -226,7 +226,7 @@ class MainActivity:ComponentActivity(){
    miniAvailable=miniPending && progress.stage>=10,
    onPlay={
     if(!miniOpen){
-     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
      miniOpen=true;solvedSinceMini=0
     }
    },
@@ -443,7 +443,9 @@ class MainActivity:ComponentActivity(){
      if(game.won){
       solvedSinceMini=(solvedSinceMini+1).coerceAtMost(4)
       miniPending=progress.stage>=10 && progress.win().stage>progress.stage && solvedSinceMini>=4
-      haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+      if(progress.win().stage>progress.stage){
+       haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+      }
       winScreen=true
      }
      else if(game.lost){defeatMode="choice";defeatScreen=true}
