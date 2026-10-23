@@ -106,7 +106,7 @@ class MainActivity:ComponentActivity(){
  }
  fun replaceWith(ready:Game){stopFlights();game=ready;highlighted=null;invalid=null;traveledCells=emptySet();revision++}
  // Keep a full current-stage reserve (+2) and a small next-stage starter reserve.
- // Exact Cover receives a cumulative cooperative time budget; fallback always remains.
+ // Each empty cache slot gets its own cooperative Exact Cover time budget.
  LaunchedEffect(progress.stage,progress.done,screenAspect) {
   val currentStage=progress.stage
   val nextStage=currentStage+1
@@ -114,7 +114,6 @@ class MainActivity:ComponentActivity(){
   prepStage=currentStage
   prepDone=0
   prepTotal=goals.sumOf { it.second }
-  val started=System.nanoTime()
   val budgetNs=defaults.preparationExactBudgetMillis*1_000_000L
   for((target,capacity) in goals) {
    var cached=withContext(Dispatchers.IO) {
@@ -122,12 +121,13 @@ class MainActivity:ComponentActivity(){
    }
    prepDone=goals.takeWhile { it.first!=target }.sumOf { it.second }+cached.size
    while(cached.size<capacity) {
+    val slotStarted=System.nanoTime()
     val candidate=withContext(Dispatchers.Default) {
      var chosen:Level?=null
      if(target>=17) {
       val candidates=mutableListOf<Level>()
       repeat(defaults.preparationExactAttemptsPerSlot) {
-       if(System.nanoTime()-started<budgetNs) {
+       if(System.nanoTime()-slotStarted<budgetNs) {
         val seed=Random.nextLong()
         if(seed!=game.level.seed && cached.none { it.seed==seed })
          generateExactMeasured(target,seed,screenAspect)?.let { candidates.add(it) }
