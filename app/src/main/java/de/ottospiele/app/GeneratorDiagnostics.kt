@@ -11,6 +11,9 @@ internal object GeneratorDiagnostics {
  private const val PREF = "arrow_generator_diagnostics"
  private const val KEY = "events_v1"
  private const val LIMIT = 300
+ @Volatile private var appContext:Context?=null
+ fun initialize(context:Context){appContext=context.applicationContext}
+ fun record(event:Event){appContext?.let { record(it,event) }}
 
  data class Event(val timeMs:Long,val origin:String,val stage:Int,val seed:Long,
   val width:Int,val height:Int,val elapsedMs:Long,val generator:String,val outcome:String)
