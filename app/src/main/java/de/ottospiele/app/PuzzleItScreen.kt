@@ -10,6 +10,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.LifecycleOwner
 import androidx.compose.foundation.Canvas
@@ -59,9 +61,11 @@ internal fun PuzzleItScreen(
  var round by remember { mutableStateOf(controller.round) }
  var dragIndex by remember { mutableIntStateOf(-1) }
  var grip by remember { mutableStateOf(Offset.Zero) }
+ val haptics=LocalHapticFeedback.current
+ var wasInsideSnap by remember { mutableStateOf(false) }
  val lifecycleOwner=LocalContext.current as LifecycleOwner
  DisposableEffect(lifecycleOwner) {
-  val observer=LifecycleEventObserver { _,event -> if(event==Lifecycle.Event.ON_PAUSE)dragIndex=-1 }
+  val observer=LifecycleEventObserver { _,event -> if(event==Lifecycle.Event.ON_PAUSE){dragIndex=-1;wasInsideSnap=false} }
   lifecycleOwner.lifecycle.addObserver(observer)
   onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
  }
@@ -101,10 +105,11 @@ internal fun PuzzleItScreen(
       } ?:return@start
       dragIndex=index
       val p=controller.round.pieces[index]
+      wasInsideSnap=false
       grip=Offset(at.x-geometry.scatterX-p.left*geometry.tile,
        at.y-geometry.scatterY-p.top*geometry.tile)
      },
-     onDragCancel={dragIndex=-1},
+     onDragCancel={dragIndex=-1;wasInsideSnap=false},
      onDragEnd={
       val i=dragIndex
       if(i>=0) {
@@ -125,6 +130,7 @@ internal fun PuzzleItScreen(
        publish()
       }
       dragIndex=-1
+      wasInsideSnap=false
      },
      onDrag=drag@{change,_->
       val i=dragIndex
@@ -137,6 +143,15 @@ internal fun PuzzleItScreen(
       val maxY=((size.height-geometry.scatterY)/geometry.tile-1.23f).coerceAtLeast(0f)
       val next=p.copy(left=((change.position.x-grip.x-geometry.scatterX)/geometry.tile).coerceIn(0f,maxX),
        top=((change.position.y-grip.y-geometry.scatterY)/geometry.tile).coerceIn(0f,maxY))
+      val absoluteX=geometry.scatterX+next.left*geometry.tile
+      val absoluteY=geometry.scatterY+next.top*geometry.tile
+      val targetX=geometry.boardX+(i%3)*geometry.tile
+      val targetY=geometry.boardY+(i/3)*geometry.tile
+      val dx=absoluteX-targetX
+      val dy=absoluteY-targetY
+      val inside=dx*dx+dy*dy <= (config.snapRatio*geometry.tile)*(config.snapRatio*geometry.tile)
+      if(inside && !wasInsideSnap)haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+      wasInsideSnap=inside
       val ps=controller.round.pieces.toMutableList()
       ps[i]=next
       controller.replace(controller.round.copy(pieces=ps),controller.stopAfterCurrentRound,controller.completedRounds)
