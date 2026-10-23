@@ -73,8 +73,8 @@ internal fun PuzzleItScreen(
   Box(Modifier.weight(1f).fillMaxWidth().padding(4.dp)) {
    Canvas(Modifier.fillMaxSize().pointerInput(round.seed,round.phase) {
     detectDragGestures(
-     onDragStart={at->
-      if(round.phase!=PuzzleItPhase.PUZZLE_ACTIVE)return@detectDragGestures
+     onDragStart=start@{at->
+      if(round.phase!=PuzzleItPhase.PUZZLE_ACTIVE)return@start
       val geometry=PuzzleItLayout(size.width.toFloat(),size.height.toFloat())
       val index=round.pieces.indices.reversed().firstOrNull { i->
        val piece=controller.round.pieces[i]
@@ -107,7 +107,7 @@ internal fun PuzzleItScreen(
       }
       dragIndex=-1
      },
-     onDrag={change,delta->
+     onDrag=drag@{change,delta->
       val i=dragIndex
       if(i<0)return@detectDragGestures
       change.consume()
@@ -242,10 +242,16 @@ private fun drawPuzzlePiece(canvas:android.graphics.Canvas,round:PuzzleItRound,i
   typeface=android.graphics.Typeface.create("sans-serif-black",android.graphics.Typeface.BOLD)
  }
  val word=round.number.toString()
- ink.textSize=if(round.number==10)2.25f*t else 2.85f*t
+ ink.textSize=3.0f*t
+ val glyph=Rect()
+ ink.getTextBounds(word,0,word.length,glyph)
+ val targetHeight=2.31f*t
  val maxWidth=2.80f*t
- if(ink.measureText(word)>maxWidth)ink.textSize*=maxWidth/ink.measureText(word)
- val baseline=2.49f*t
+ val heightScale=targetHeight/glyph.height().coerceAtLeast(1)
+ val widthScale=maxWidth/ink.measureText(word).coerceAtLeast(1f)
+ ink.textSize*=min(heightScale,widthScale)
+ ink.getTextBounds(word,0,word.length,glyph)
+ val baseline=2.52f*t-glyph.bottom
  canvas.drawText(word,1.5f*t,baseline,ink)
  val dot=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=android.graphics.Color.rgb(45,54,95)}
  val n=round.number
