@@ -106,6 +106,33 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+      - name: Check catalog generation quality
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import csv
+          from pathlib import Path
+          source = Path('game-core/build/benchmark/exact-cover-catalog-summary.csv')
+          if not source.exists():
+              raise SystemExit('Catalog statistics missing')
+          rows = list(csv.DictReader(source.open(encoding='utf-8')))
+          if not rows:
+              raise SystemExit('Catalog statistics empty')
+          critical = []
+          for row in rows:
+              stage = row['stage']
+              success = int(row['successes'])
+              catalog = int(row['catalog_boards'])
+              if success == 0:
+                  critical.append(stage)
+                  print(f"::error::Stage {stage}: 0 successful Exact Cover levels")
+              elif catalog < 8:
+                  print(f"::warning::Stage {stage}: catalog only {catalog}/8 levels")
+          if critical:
+              raise SystemExit('No successful Exact Cover levels in stages: '+', '.join(critical))
+          print('Catalog statistics checked for', len(rows), 'stages')
+          PY
+
       - name: Upload Gradle diagnostics
         if: always()
         uses: actions/upload-artifact@v6
