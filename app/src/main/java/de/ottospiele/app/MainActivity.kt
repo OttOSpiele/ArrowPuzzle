@@ -268,27 +268,34 @@ class MainActivity:ComponentActivity(){
    val target=forcedNextProgress?:progress.win()
    // Cache extraction is synchronized by PreparedLevels itself. Do not wait
    // for an unrelated generation holding generationMutex if a level is ready.
-   val prepared=withContext(Dispatchers.IO){
+   // A cache miss while the preparer is still working is not a reason to
+   // launch a second, potentially legacy-fallback generation.
+   var prepared=withContext(Dispatchers.IO){
     PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
    }
-   if(prepared!=null){
-    Log.i("ArrowPuzzlePreparation","Cache hit stage=${target.stage} seed=${prepared.seed}")
-    GeneratorDiagnostics.recordPreparation("cache_hit",target.stage,"transition",0L)
+   if(prepared==null)GeneratorDiagnostics.recordPreparation("cache_wait",target.stage,"transition",0L)
+   while(prepared==null && !prepFailed && !prepComplete){
+    delay(120)
+    prepared=withContext(Dispatchers.IO){
+     PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
+    }
    }
-   val ready=if(prepared!=null)Game(prepared,lives,hints)
-    else withContext(Dispatchers.Default){generationMutex.withLock{
-     // Background preparation may have finished while this coroutine waited.
-     val late=PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
-     if(late!=null){
-      GeneratorDiagnostics.recordPreparation("cache_hit_late",target.stage,"transition",0L)
-      Log.i("ArrowPuzzlePreparation","Late cache hit stage=${target.stage} seed=${late.seed}")
-      Game(late,lives,hints)
-     }else{
-      GeneratorDiagnostics.recordPreparation("cache_miss",target.stage,"transition",0L)
-      Log.w("ArrowPuzzlePreparation","Cache miss stage=${target.stage}; generating during win/mini-game")
-      fresh(target.stage,lives,hints,screenAspect,defaults.legacyEnabled)
-     }
-    }}
+   val ready=if(prepared!=null){
+    GeneratorDiagnostics.recordPreparation("cache_hit",target.stage,"transition",0L)
+    Log.i("ArrowPuzzlePreparation","Prepared level for stage=${target.stage}, seed=${prepared.seed}")
+    Game(prepared,lives,hints)
+   }else withContext(Dispatchers.Default){generationMutex.withLock{
+    // A genuine failure (or exhausted reserve) still permits recovery.
+    val late=PreparedLevels.take(context,target.stage,screenAspect,game.level.seed)
+    if(late!=null){
+     GeneratorDiagnostics.recordPreparation("cache_hit_late",target.stage,"transition",0L)
+     Game(late,lives,hints)
+    }else{
+     GeneratorDiagnostics.recordPreparation("cache_miss",target.stage,"transition",0L)
+     Log.w("ArrowPuzzlePreparation","No prepared level for stage=${target.stage}; recovery generation")
+     fresh(target.stage,lives,hints,screenAspect,defaults.legacyEnabled)
+    }
+   }}
    nextProgress=target
    nextGame=ready
   }catch(cancel:CancellationException){throw cancel}
