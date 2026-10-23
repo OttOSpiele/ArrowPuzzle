@@ -24,6 +24,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.input.pointer.PointerEventPass
+import kotlin.math.hypot
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
@@ -929,44 +933,89 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f,legacyEnabled:Bo
 @Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,failedArrowIds:Set<Int>,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,previewHoldMillis:Long,onPreview:()->Unit,onTap:(Int)->Unit){
  val arrows=level.arrows.filter{it.id in remaining}
  var previewId by remember(level){mutableStateOf<Int?>(null)}
+ var zoom by remember(level){mutableFloatStateOf(1f)}
+ var pan by remember(level){mutableStateOf(Offset.Zero)}
+ var lastTapAt by remember(level){mutableLongStateOf(0L)}
+ var lastTapPosition by remember(level){mutableStateOf(Offset.Zero)}
  Canvas(modifier.clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(Color.White,Color(0xFFF9FBFF))))
   .pointerInput(level,remaining,flights.map{it.id},previewHoldMillis){
    coroutineScope {
     awaitEachGesture {
-    val down=awaitFirstDown(requireUnconsumed=false)
-    val sx=size.width.toFloat()/level.width
-    val sy=size.height.toFloat()/level.height
-    val selected=ArrowTouch.select(level,remaining,down.position.x/sx-.5f,down.position.y/sy-.5f,flights.map{it.id}.toSet())
-    var active=selected!=null
-    val previewJob=if(selected!=null)launch {
-     delay(previewHoldMillis)
-     previewId=selected
-     onPreview()
-    }else null
-    var released=false
-    do {
-     val event=awaitPointerEvent()
-     val pointer=event.changes.firstOrNull{it.id==down.id}
-     if(pointer==null || !pointer.pressed){
-      released=pointer!=null && !pointer.pressed
-      break
-     }
-     if(active && selected!=null){
-      val arrow=level.arrows.first{it.id==selected}
-      val px=pointer.position.x/sx-.5f
-      val py=pointer.position.y/sy-.5f
-      val near=arrow.cells().any{p->
-       val dx=p.x-px;val dy=p.y-py
-       dx*dx+dy*dy<=1.35f*1.35f
+     val down=awaitFirstDown(requireUnconsumed=false)
+     val sx=size.width.toFloat()/level.width
+     val sy=size.height.toFloat()/level.height
+     fun gridX(x:Float)=(x-pan.x)/zoom/sx-.5f
+     fun gridY(y:Float)=(y-pan.y)/zoom/sy-.5f
+     val selected=ArrowTouch.select(level,remaining,gridX(down.position.x),gridY(down.position.y),flights.map{it.id}.toSet())
+     var active=selected!=null
+     var gestureUsed=false
+     var multiTouch=false
+     var previous=down.position
+     val touchSlop=viewConfiguration.touchSlop
+     var travelled=0f
+     val previewJob=if(selected!=null)launch {
+      delay(previewHoldMillis)
+      if(!gestureUsed){previewId=selected;onPreview()}
+     }else null
+     var released=false
+     do {
+      val event=awaitPointerEvent()
+      val pressed=event.changes.filter{it.pressed}
+      if(pressed.size>=2){
+       multiTouch=true;gestureUsed=true;active=false;previewJob?.cancel();previewId=null
+       val p=pressed[0];val q=pressed[1]
+       val oldA=p.previousPosition;val oldB=q.previousPosition
+       val oldCenter=(oldA+oldB)/2f
+       val newCenter=(p.position+q.position)/2f
+       val oldDist=(oldA-oldB).getDistance()
+       val newDist=(p.position-q.position).getDistance()
+       val nextZoom=(zoom*(if(oldDist>1f)newDist/oldDist else 1f)).coerceIn(1f,2.5f)
+       val contentAtCenter=(oldCenter-pan)/zoom
+       pan=Offset(
+        (newCenter.x-contentAtCenter.x*nextZoom).coerceIn(size.width*(1f-nextZoom),0f),
+        (newCenter.y-contentAtCenter.y*nextZoom).coerceIn(size.height*(1f-nextZoom),0f))
+       zoom=nextZoom
+       event.changes.forEach{it.consume()}
+      }else{
+       val pointer=event.changes.firstOrNull{it.id==down.id}
+       if(pointer==null || !pointer.pressed){
+        released=pointer!=null && !pointer.pressed
+        break
+       }
+       if(multiTouch){event.changes.forEach{it.consume()};continue}
+       val delta=pointer.position-previous
+       previous=pointer.position
+       travelled+=delta.getDistance()
+       if(travelled>touchSlop && !gestureUsed){
+        gestureUsed=true;active=false;previewJob?.cancel();previewId=null
+       }
+       if(gestureUsed && zoom>1f){
+        pan=Offset(
+         (pan.x+delta.x).coerceIn(size.width*(1f-zoom),0f),
+         (pan.y+delta.y).coerceIn(size.height*(1f-zoom),0f))
+        pointer.consume()
+       }
       }
-      if(!near){active=false;previewJob?.cancel();previewId=null}
+     }while(true)
+     previewJob?.cancel();previewId=null
+     if(released && !gestureUsed && !multiTouch){
+      val now=down.uptimeMillis
+      val background=selected==null
+      if(background && now-lastTapAt in 1..350 &&
+       (down.position-lastTapPosition).getDistance()<touchSlop*3f){
+       zoom=1f;pan=Offset.Zero;lastTapAt=0L
+      }else{
+       lastTapAt=if(background)now else 0L
+       lastTapPosition=down.position
+       if(active && selected!=null)onTap(selected)
+      }
      }
-    }while(true)
-    previewJob?.cancel()
-    previewId=null
-    if(active && released && selected!=null)onTap(selected)
     }
    }
+  }){
+  withTransform({
+   translate(left=pan.x,top=pan.y)
+   scale(scaleX=zoom,scaleY=zoom,pivot=Offset.Zero)
   }){
   val sx=size.width/level.width;val sy=size.height/level.height
   val cell=minOf(sx,sy)
@@ -1033,6 +1082,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f,legacyEnabled:Bo
     drawLine(color,tip,Offset(tip.x-wing*.7f,tip.y-a.dir.y*wing),stroke,cap=StrokeCap.Round)
     drawLine(color,tip,Offset(tip.x+wing*.7f,tip.y-a.dir.y*wing),stroke,cap=StrokeCap.Round)
    }
+  }
   }
  }
 }
