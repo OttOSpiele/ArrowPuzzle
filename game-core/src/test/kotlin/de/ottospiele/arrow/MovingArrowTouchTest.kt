@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 package de.ottospiele.arrow
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 
 class MovingArrowTouchTest {
  @Test fun flyingArrowDoesNotCaptureInput() {
