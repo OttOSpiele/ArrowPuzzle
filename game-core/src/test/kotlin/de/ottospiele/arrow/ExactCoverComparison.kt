@@ -45,6 +45,7 @@ object ExactCoverComparison {
       free?:"",chain,budget,false,false,"",ms,"","","","",reason).joinToString(","))
     }
    }
+   csv.writeText(rows.joinToString("\n")+"\n")
   }
   File(directory,"exact-cover-ab.csv").writeText(rows.joinToString("\n")+"\n")
   val summary=buildString {
