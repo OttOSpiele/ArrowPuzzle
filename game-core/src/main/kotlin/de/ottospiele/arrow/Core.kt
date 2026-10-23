@@ -116,8 +116,10 @@ object Rules{
 }
 /** Hit testing in grid cells: favor removable arrows within overlapping touch regions. */
 object ArrowTouch {
- fun select(level:Level,remainingIds:Set<Int>,x:Float,y:Float):Int?{
-  val arrows=level.arrows.filter{it.id in remainingIds}
+ fun select(level:Level,remainingIds:Set<Int>,x:Float,y:Float,excludedIds:Set<Int> = emptySet()):Int?{
+  // Flying or recoiling arrows are drawn but have no hit area.
+  // Keep remainingIds intact for blocker/dependency calculations.
+  val arrows=level.arrows.filter{it.id in remainingIds && it.id !in excludedIds}
   val candidates=arrows.map{arrow->
    val distance=arrow.cells().minOf{p->
     val dx=p.x-x;val dy=p.y-y;dx*dx+dy*dy
