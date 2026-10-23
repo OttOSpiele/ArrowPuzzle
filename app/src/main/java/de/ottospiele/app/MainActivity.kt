@@ -116,11 +116,11 @@ class MainActivity:ComponentActivity(){
     val candidates=(0 until 2).mapNotNull { attempt ->
      runCatching {
       val seed=target.toLong()*1000003L + index*733L + attempt*41L
-      Generator().generate(target,seed,screenAspect)
+      LevelGeneration.generate(target,seed,screenAspect)
      }.getOrNull()
     }
     candidates.filter { Rules.solve(it)!=null }
-     .maxByOrNull { LevelQualityAnalyzer.analyze(it).score(target) }
+     .let { DifficultyProfiles.choose(target,it) }
    } ?: break
    existing.add(candidate)
    withContext(Dispatchers.IO) {
@@ -602,7 +602,7 @@ private fun WinScreen(
 }
 
 private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f):Game{
- repeat(15){try{return Game(Generator().generate(stage,Random.nextLong(),aspect),lives,hints)}catch(_:Exception){}}
+ repeat(15){try{return Game(LevelGeneration.generate(stage,Random.nextLong(),aspect),lives,hints)}catch(_:Exception){}}
  error("Cannot generate a valid level")
 }
 @Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,invalid:Int?,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,previewHoldMillis:Long,onTap:(Int)->Unit){
