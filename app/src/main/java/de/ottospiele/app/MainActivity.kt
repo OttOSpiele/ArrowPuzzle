@@ -403,7 +403,7 @@ class MainActivity:ComponentActivity(){
   }
 
   Board(game.level,game.remaining.map{it.id}.toSet(),highlighted,failedArrowIds,
-   flights.toList(),occupiedEver,traveledCells,Modifier.weight(1f).fillMaxWidth(),previewHoldMillis){
+   flights.toList(),occupiedEver,traveledCells,Modifier.weight(1f).fillMaxWidth(),previewHoldMillis,onPreview={haptics.arrowSelected()}){
    if(dialog.isNotEmpty() || game.won || game.lost || (!concurrent && flights.isNotEmpty()) || flights.any{f->f.id==it})return@Board
    val arrow=game.remaining.firstOrNull{a->a.id==it}?:return@Board
    val plan=Rules.plan(arrow,game.level,game.remaining.map{a->a.id}.toSet())
@@ -414,7 +414,7 @@ class MainActivity:ComponentActivity(){
    }
    highlighted=null;invalid=null
    // Apply success to game immediately: subsequently tapped arrows see updated blockers.
-   if(!failed){game.tap(it);revision++}
+   if(!failed){haptics.arrowRemoved();game.tap(it);revision++}
    else{game.tap(it);revision++}
    flights.add(Flight(it,plan,failed))
    val levelAtStart=game.level
@@ -786,7 +786,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f,legacyEnabled:Bo
  repeat(15){try{return Game(generateMeasured(stage,Random.nextLong(),aspect,"fresh",legacyEnabled),lives,hints)}catch(_:Exception){}}
  error("Cannot generate a valid level")
 }
-@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,failedArrowIds:Set<Int>,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,previewHoldMillis:Long,onTap:(Int)->Unit){
+@Composable private fun Board(level:Level,remaining:Set<Int>,hinted:Int?,failedArrowIds:Set<Int>,flights:List<Flight>,ever:Set<Pt>,traveled:Set<Pt>,modifier:Modifier,previewHoldMillis:Long,onPreview:()->Unit,onTap:(Int)->Unit){
  val arrows=level.arrows.filter{it.id in remaining}
  var previewId by remember(level){mutableStateOf<Int?>(null)}
  Canvas(modifier.clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(Color.White,Color(0xFFF9FBFF))))
@@ -801,6 +801,7 @@ private fun fresh(stage:Int,lives:Int,hints:Int,aspect:Float=1f,legacyEnabled:Bo
     val previewJob=if(selected!=null)launch {
      delay(previewHoldMillis)
      previewId=selected
+     onPreview()
     }else null
     var released=false
     do {
