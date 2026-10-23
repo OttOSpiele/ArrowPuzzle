@@ -4,6 +4,26 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class GameTest {
+ @Test fun progressionTutorialAndLateCap() {
+  for(stage in 1..8)assertEquals(1,Progress(stage).required())
+  for(stage in 9..16)assertEquals(2,Progress(stage).required())
+  assertEquals(3,Progress(17).required())
+  assertEquals(8,Progress(80).required())
+  assertEquals(8,Progress(500).required())
+  for(stage in 17..100)assertTrue(Progress(stage+1).required()>=Progress(stage).required())
+  for(stage in listOf(1,8,9,16,17,40,80)) {
+   val p=Progress(stage,Progress(stage).required()-1)
+   assertEquals(Progress(stage+1,0),p.win())
+  }
+ }
+ @Test fun tutorialRoutingPreservesLegacyGeometry() {
+  for(stage in listOf(1,8,9,16)) {
+   val seed=617L
+   val expected=Generator().generate(stage,seed,1f)
+   assertEquals(expected,LevelGeneration.generate(stage,seed,1f))
+  }
+ }
+
  @Test fun difficultyProfilesProgressGraduallyAndAreDeterministic() {
   val early=DifficultyProfiles.forStage(1)
   val late=DifficultyProfiles.forStage(80)
