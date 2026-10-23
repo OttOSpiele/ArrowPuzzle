@@ -149,25 +149,26 @@ class MainActivity:ComponentActivity(){
  fun replaceWith(ready:Game){stopFlights();game=ready;highlighted=null;invalid=null;traveledCells=emptySet();revision++}
  // Prepare only the missing puzzles until the NEXT mini-game, across stage boundaries.
  // Replenishment happens during success screens / Puzzle It; active play only fills deficits.
- LaunchedEffect(progress.stage,progress.done,winScreen,miniOpen,miniPending,solvedSinceMini,forcedNextProgress,prepAttempt,screenAspect) {
+ LaunchedEffect(progress.stage,progress.done,winScreen,miniOpen,miniPending,solvedSinceMini,forcedNextProgress,nextGame,prepAttempt,screenAspect) {
   prepComplete=false
   prepFailed=false
   val target=if(winScreen)forcedNextProgress?:progress.win() else progress
   val count=if(winScreen && (miniOpen || miniPending || forcedNextProgress!=null))0 else solvedSinceMini
-  val goals=if(target.stage>=10)goalsUntilNextMini(target,count,!winScreen)
+  val reservedNext=winScreen && nextGame!=null
+  val goals=if(target.stage>=10)goalsUntilNextMini(target,count,!winScreen || reservedNext)
    else if(winScreen)listOf(target.stage to (target.required()-target.done))
    else listOf(target.stage to (target.required()-target.done-1).coerceAtLeast(0))
   val currentStage=target.stage
   Log.i("ArrowPuzzlePreparation","phase=${if(winScreen)"transition" else "play"} stage=$currentStage untilMini=$goals")
   prepStage=currentStage
-  prepDone=0
-  prepTotal=goals.sumOf { it.second }
+  prepDone=if(reservedNext)1 else 0
+  prepTotal=goals.sumOf { it.second }+if(reservedNext)1 else 0
   var allPrepared=true
   for((target,capacity) in goals) {
    var cached=withContext(Dispatchers.IO) {
     PreparedLevels.read(context,target,screenAspect)
    }
-   prepDone=goals.takeWhile { it.first!=target }.sumOf { it.second }+cached.size
+   prepDone=(if(reservedNext)1 else 0)+goals.takeWhile { it.first!=target }.sumOf { it.second }+cached.size
    while(cached.size<capacity) {
     val candidate=withContext(Dispatchers.Default) { generationMutex.withLock {
      var chosen:Level?=null
@@ -190,7 +191,8 @@ class MainActivity:ComponentActivity(){
       }
      }
      chosen ?: if(target<=8)TutorialLevels.level(target,Random.nextLong()) else null
-    } } ?: run { allPrepared=false; break }
+    } }
+    if(candidate==null){allPrepared=false;break}
     withContext(Dispatchers.IO) {
      PreparedLevels.append(context,target,screenAspect,candidate,capacity)
     }
