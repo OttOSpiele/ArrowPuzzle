@@ -694,8 +694,8 @@ private fun generateFallbackMeasured(stage:Int,seed:Long,aspect:Float):Level {
  val level=LevelGeneration.generateFallback(stage,seed,aspect)
  val elapsed=(System.nanoTime()-start)/1_000_000
  GeneratorDiagnostics.record(GeneratorDiagnostics.Event(System.currentTimeMillis(),"preparation",stage,seed,
-  level.width,level.height,elapsed,if(stage<=16)"legacy" else "legacy-fallback","success"))
- Log.i("ArrowPuzzleGeneration","origin=preparation stage=$stage seed=$seed elapsedMs=$elapsed generator=${if(stage<=16)"legacy" else "legacy-fallback"} outcome=success")
+  level.width,level.height,elapsed,"legacy-fallback","success"))
+ Log.i("ArrowPuzzleGeneration","origin=preparation stage=$stage seed=$seed elapsedMs=$elapsed generator=${"legacy-fallback"} outcome=success")
  return level
 }
 private fun generateMeasured(stage:Int,seed:Long,aspect:Float,origin:String,legacyEnabled:Boolean):Level {
