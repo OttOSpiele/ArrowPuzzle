@@ -46,13 +46,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.graphics.drawscope.DrawScope
 
-/** Standard touch tick for enabled controls; action-specific stronger feedback follows it. */
-@Composable private fun ticked(action:()->Unit):()->Unit {
- val context=LocalContext.current
- val haptics=remember(context){HapticEffects(context)}
- return {haptics.buttonTick();action()}
-}
-
 private val generationMutex=Mutex()
 
 private data class Flight(val id:Int,val plan:MovePlan,val failed:Boolean,val step:Int=0)
