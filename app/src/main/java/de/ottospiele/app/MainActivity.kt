@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
@@ -48,6 +49,7 @@ class MainActivity:ComponentActivity(){
 }
 @Composable fun Puzzle(){
  val context=LocalContext.current
+ GeneratorDiagnostics.initialize(context)
  val screenAspect=remember{
   val metrics=context.resources.displayMetrics
   metrics.widthPixels.toFloat()/metrics.heightPixels.coerceAtLeast(1)
@@ -80,6 +82,8 @@ class MainActivity:ComponentActivity(){
  var settings by remember{mutableStateOf(false)}
  var menuOpen by remember{mutableStateOf(false)}
  var aboutOpen by remember{mutableStateOf(false)}
+ var diagnosticsOpen by remember{mutableStateOf(false)}
+ var diagnosticEvents by remember{mutableStateOf(emptyList<GeneratorDiagnostics.Event>())}
  var stageInput by remember{mutableStateOf("")}
  var stageLoading by remember{mutableStateOf(false)}
   var backLoading by remember{mutableStateOf(false)}
@@ -232,6 +236,7 @@ class MainActivity:ComponentActivity(){
      if(canAdjustStage)DropdownMenuItem(text={Text("↕  Stufe anpassen")},onClick={
       menuOpen=false;stageInput=progress.stage.toString();stageError=false;dialog="stufeAnpassen"
      })
+     if(context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0)DropdownMenuItem(text={Text("📊  Generator-Diagnose")},onClick={menuOpen=false;diagnosticEvents=GeneratorDiagnostics.entries(context);diagnosticsOpen=true})
      DropdownMenuItem(text={Text("ⓘ  Über das Spiel")},onClick={menuOpen=false;aboutOpen=true})
     }
    }
@@ -292,6 +297,7 @@ class MainActivity:ComponentActivity(){
      if(canAdjustStage)DropdownMenuItem(text={Text("↕  Stufe anpassen")},onClick={
       menuOpen=false;stageInput=progress.stage.toString();stageError=false;dialog="stufeAnpassen"
      })
+     if(context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0)DropdownMenuItem(text={Text("📊  Generator-Diagnose")},onClick={menuOpen=false;diagnosticEvents=GeneratorDiagnostics.entries(context);diagnosticsOpen=true})
      DropdownMenuItem(text={Text("ⓘ  Über das Spiel")},onClick={menuOpen=false;aboutOpen=true})
     }
    }
@@ -480,6 +486,41 @@ class MainActivity:ComponentActivity(){
    }
   }
  )
+ if(diagnosticsOpen) {
+  val successes=diagnosticEvents.filter{it.outcome=="success"}
+  val exact=successes.count{it.generator=="exact-cover"}
+  val fallbacks=successes.count{it.generator=="legacy-fallback"}
+  val legacy=successes.count{it.generator=="legacy"}
+  val ordered=successes.map{it.elapsedMs}.sorted()
+  val mean=if(ordered.isEmpty()) 0L else ordered.sum()/ordered.size
+  val maximum=ordered.lastOrNull()?:0L
+  AlertDialog(
+   onDismissRequest={diagnosticsOpen=false},
+   title={Text("Generator-Diagnose (Debug)")},
+   text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+    Text("Gespeicherte Versuche: ${diagnosticEvents.size} / 300")
+    Text("Exact Cover: $exact   Legacy: $legacy   Fallback: $fallbacks")
+    Text("Fallback-Anteil ab Stufe 17: "+run {
+     val later=successes.count{it.stage>=17}
+     if(later==0)"–" else "${fallbacks*100/later} %"
+    })
+    Text("Generierung: Ø ${mean} ms, Maximum ${maximum} ms")
+    Text("Fehler: ${diagnosticEvents.count{it.outcome!="success"}}")
+    Text("Letzte Generierungen:")
+    Column(Modifier.heightIn(max=170.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())){
+     diagnosticEvents.takeLast(8).asReversed().forEach{event->
+      Text("Stufe ${event.stage} · ${event.width}×${event.height} · ${event.elapsedMs} ms · ${event.generator}",fontSize=12.sp)
+     }
+    }
+   }},
+   confirmButton={TextButton(onClick={GeneratorDiagnostics.share(context,diagnosticEvents)}){Text("CSV teilen")}},
+   dismissButton={Row{
+    TextButton(onClick={GeneratorDiagnostics.clear(context);diagnosticEvents=emptyList()}){Text("Löschen")}
+    TextButton(onClick={diagnosticEvents=GeneratorDiagnostics.entries(context)}){Text("Aktualisieren")}
+    TextButton(onClick={diagnosticsOpen=false}){Text("Schließen")}
+   }}
+  )
+ }
  if(aboutOpen)AlertDialog(
   onDismissRequest={aboutOpen=false},
   title={Text("Über Arrow Puzzle")},
@@ -624,10 +665,15 @@ private fun generateMeasured(stage:Int,seed:Long,aspect:Float,origin:String):Lev
  return try {
   val level=LevelGeneration.generate(stage,seed,aspect)
   val elapsed=(System.nanoTime()-start)/1_000_000
+  GeneratorDiagnostics.record(GeneratorDiagnostics.Event(System.currentTimeMillis(),origin,stage,seed,
+   level.width,level.height,elapsed,
+   if(stage<=16)"legacy" else if(level.fallbackGeneration)"legacy-fallback" else "exact-cover","success"))
   Log.i("ArrowPuzzleGeneration",
    "origin=$origin stage=$stage seed=$seed grid=${level.width}x${level.height} elapsedMs=$elapsed generator=${if(stage<=16) "legacy" else if(level.fallbackGeneration) "legacy-fallback" else "exact-cover"}")
   level
  } catch(error:Exception) {
+  GeneratorDiagnostics.record(GeneratorDiagnostics.Event(System.currentTimeMillis(),origin,stage,seed,
+   0,0,(System.nanoTime()-start)/1_000_000,"error","error"))
   Log.w("ArrowPuzzleGeneration","origin=$origin stage=$stage seed=$seed elapsedMs=${(System.nanoTime()-start)/1_000_000} result=error",error)
   throw error
  }
