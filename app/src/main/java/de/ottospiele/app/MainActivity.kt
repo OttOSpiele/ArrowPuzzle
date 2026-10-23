@@ -105,34 +105,49 @@ class MainActivity:ComponentActivity(){
   jobs.clear();flights.clear()
  }
  fun replaceWith(ready:Game){stopFlights();game=ready;highlighted=null;invalid=null;traveledCells=emptySet();revision++}
- // Cooperative precomputation. Only saved and solver-validated levels count
- // toward the progress bar; search backtracking itself has unknown duration.
+ // Keep a full current-stage reserve (+2) and a small next-stage starter reserve.
+ // Exact Cover receives a cumulative cooperative time budget; fallback always remains.
  LaunchedEffect(progress.stage,progress.done,screenAspect) {
-  val target=progress.win().stage
-  prepStage=target
-  prepTotal=2
-  val existing=withContext(Dispatchers.IO) {
-   PreparedLevels.read(context,target,screenAspect)
-  }.filter { it.seed!=game.level.seed }.take(2).toMutableList()
-  prepDone=existing.size
-  for(index in existing.size until prepTotal) {
-   val candidate=withContext(Dispatchers.Default) {
-    // Prefer the best valid level of two candidates, within a fixed
-    // per-slot effort budget, not an unbounded quality search.
-    val candidates=(0 until 2).mapNotNull { attempt ->
-     runCatching {
-      val seed=target.toLong()*1000003L + progress.done*104729L + index*733L + attempt*41L
-      generateMeasured(target,seed,screenAspect,"preparation")
-     }.getOrNull()
-    }
-    candidates.filter { Rules.solve(it)!=null }
-     .let { DifficultyProfiles.choose(target,it) }
-   } ?: break
-   existing.add(candidate)
-   withContext(Dispatchers.IO) {
-    PreparedLevels.write(context,target,screenAspect,existing)
+  val currentStage=progress.stage
+  val nextStage=currentStage+1
+  val goals=listOf(currentStage to (progress.required()+2),nextStage to 2)
+  prepStage=currentStage
+  prepTotal=goals.sumOf { it.second }
+  val started=System.nanoTime()
+  val budgetNs=defaults.preparationExactBudgetMillis*1_000_000L
+  for((target,capacity) in goals) {
+   var cached=withContext(Dispatchers.IO) {
+    PreparedLevels.read(context,target,screenAspect)
    }
-   prepDone=existing.size
+   while(cached.size<capacity) {
+    val candidate=withContext(Dispatchers.Default) {
+     var chosen:Level?=null
+     if(target>=17) {
+      repeat(defaults.preparationExactAttemptsPerSlot) {
+       if(chosen==null && System.nanoTime()-started<budgetNs) {
+        val seed=Random.nextLong()
+        if(seed!=game.level.seed && cached.none { it.seed==seed })
+         chosen=generateExactMeasured(target,seed,screenAspect)
+       }
+      }
+     }
+     if(chosen==null) {
+      repeat(3) {
+       if(chosen==null) {
+        val seed=Random.nextLong()
+        if(seed!=game.level.seed && cached.none { it.seed==seed })
+         chosen=runCatching { generateFallbackMeasured(target,seed,screenAspect) }.getOrNull()
+       }
+      }
+     }
+     chosen
+    } ?: break
+    withContext(Dispatchers.IO) {
+     PreparedLevels.append(context,target,screenAspect,candidate,capacity)
+    }
+    cached=withContext(Dispatchers.IO){PreparedLevels.read(context,target,screenAspect)}
+    prepDone=goals.takeWhile { it.first!=target }.sumOf { it.second }+cached.size
+   }
   }
  }
  LaunchedEffect(winScreen,preparationAttempt){
@@ -660,6 +675,24 @@ private fun WinScreen(
 }
 
 /** Local diagnostic events; no network access or player identifiers. */
+private fun generateExactMeasured(stage:Int,seed:Long,aspect:Float):Level? {
+ val start=System.nanoTime()
+ val level=runCatching { LevelGeneration.generateExactOrNull(stage,seed,aspect) }.getOrNull()
+ val elapsed=(System.nanoTime()-start)/1_000_000
+ GeneratorDiagnostics.record(GeneratorDiagnostics.Event(System.currentTimeMillis(),"preparation",stage,seed,
+  level?.width?:0,level?.height?:0,elapsed,"exact-cover",if(level==null)"rejected" else "success"))
+ Log.i("ArrowPuzzleGeneration","origin=preparation stage=$stage seed=$seed elapsedMs=$elapsed generator=exact-cover outcome=${if(level==null)"rejected" else "success"}")
+ return level
+}
+private fun generateFallbackMeasured(stage:Int,seed:Long,aspect:Float):Level {
+ val start=System.nanoTime()
+ val level=LevelGeneration.generateFallback(stage,seed,aspect)
+ val elapsed=(System.nanoTime()-start)/1_000_000
+ GeneratorDiagnostics.record(GeneratorDiagnostics.Event(System.currentTimeMillis(),"preparation",stage,seed,
+  level.width,level.height,elapsed,if(stage<=16)"legacy" else "legacy-fallback","success"))
+ Log.i("ArrowPuzzleGeneration","origin=preparation stage=$stage seed=$seed elapsedMs=$elapsed generator=${if(stage<=16)"legacy" else "legacy-fallback"} outcome=success")
+ return level
+}
 private fun generateMeasured(stage:Int,seed:Long,aspect:Float,origin:String):Level {
  val start=System.nanoTime()
  return try {
