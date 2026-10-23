@@ -187,6 +187,28 @@ class MainActivity:ComponentActivity(){
    }
   }
  }
+ // A missing transition reserve must never cause a blocking generator screen.
+ // Enter Puzzle It automatically and finish the current round before returning.
+ LaunchedEffect(winScreen,miniOpen,forcedNextProgress,screenAspect) {
+  if(!winScreen || miniOpen)return@LaunchedEffect
+  val target=forcedNextProgress?:progress.win()
+  val required=if(target.stage>=10)goalsUntilNextMini(target,0,false)
+   else listOf(target.stage to (target.required()-target.done))
+  val missing=withContext(Dispatchers.IO) {
+   required.any{(stage,needed)->PreparedLevels.read(context,stage,screenAspect).size<needed}
+  }
+  if(missing && winScreen && !miniOpen){
+   val persisted=miniPrefs.edit()
+    .putInt("preparing_target_stage",target.stage)
+    .putInt("preparing_target_done",target.done)
+    .remove("preparing_resume_current").commit()
+   if(persisted){
+    forcedNextProgress=target
+    miniPending=true;miniOpen=true;solvedSinceMini=0
+    haptics.miniGameEntered()
+   }
+  }
+ }
  // Prepare only the missing puzzles until the NEXT mini-game, across stage boundaries.
  // Replenishment happens during success screens / Puzzle It; active play only fills deficits.
  // Keep this effect independent of presentation-only changes (miniOpen,
