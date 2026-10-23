@@ -21,6 +21,36 @@ class PuzzleItModelTest {
    assertTrue(a.pieces.indices.any{a.pieces[it].left != (it%3).toFloat() || a.pieces[it].top != (it/3).toFloat()})
   }
  }
+ @Test fun complementaryEdgesAndStraightBoundary(){
+  for(seed in 1L..120L){
+   val r=PuzzleItGenerator.generate(seed)
+   for(i in 0..8){
+    val row=i/3;val col=i%3
+    if(row==0)assertEquals(0,puzzleEdgePolarity(r,i,0))
+    if(row==2)assertEquals(0,puzzleEdgePolarity(r,i,2))
+    if(col==0)assertEquals(0,puzzleEdgePolarity(r,i,3))
+    if(col==2)assertEquals(0,puzzleEdgePolarity(r,i,1))
+    if(col<2)assertEquals(-puzzleEdgePolarity(r,i,1),puzzleEdgePolarity(r,i+1,3))
+    if(row<2)assertEquals(-puzzleEdgePolarity(r,i,2),puzzleEdgePolarity(r,i+3,0))
+   }
+  }
+ }
+ @Test fun scatterIsFiniteEvenWithOneAttempt(){
+  val config=PuzzleItConfig(maxAttempts=1)
+  for(seed in 0L..500L){
+   val r=PuzzleItGenerator.generate(seed,config=config)
+   assertEquals(9,r.pieces.map{it.left to it.top}.toSet().size)
+   assertTrue(r.pieces.all{it.left>=0f && it.top>=0f && it.left<=2.25f && it.top<=2.25f})
+  }
+ }
+ @Test fun nineSnapsAreRequiredBeforeChoices(){
+  val c=PuzzleItController(PuzzleItConfig(),35)
+  for(i in 0..8) {
+   assertTrue(c.move(i,(i%3).toFloat(),(i/3).toFloat(),true))
+   assertEquals(if(i==8)PuzzleItPhase.CHOICE_ACTIVE else PuzzleItPhase.PUZZLE_ACTIVE,c.round.phase)
+   assertFalse(c.move(i,0f,0f,true))
+  }
+ }
  @Test fun snapIsRestrictedToItsOwnPosition(){
   val p=PuzzleItPiece(4,0f,0f)
   assertFalse(PuzzleItGenerator.attemptSnap(p,1.16f,1f,1f,1f,.15f).fixed)
