@@ -69,6 +69,14 @@ Die Mustervorlagen sollen zuerst logische Blockierungsgraphen beschreiben, ansch
 - Kein zeitlich begrenztes Belohnungssystem, keine Streaks, keine bezahlten Zusatzleben.
 - Freiwillige Spenden werden **erst für eine spätere Version** geplant; konkrete Play-Store- und Kinderschutzanforderungen sind vor Veröffentlichung gesondert zu prüfen.
 
+## Mini-Game „Puzzle It“ (23.10.2026, Entwicklungsstand)
+
+„Puzzle It“ ist als eigenständiges Compose-Modul auf `develop` integriert. Beim vorgesehenen Stufenwechsel erscheint nach mindestens vier abgeschlossenen ArrowPuzzle-Rätseln die Option zum Start. Während des Mini-Games wird das nächste ArrowPuzzle-Rätsel unabhängig vorbereitet; die laufende Puzzle-It-Runde wird erst nach Einrasten aller neun Teile, richtiger Mengenwahl und kurzer Erfolgsphase beendet.
+
+Das Modul erzeugt seed-basiert eine Zahl (1–10), gleich viele Punkte, neun klassische Puzzleformen sowie vier unterschiedliche Mengenantworten. Touch-Bewegung, Einrasten und der Rundenzustand sind getrennt von ArrowPuzzle implementiert. Parameter stehen in `app/src/main/assets/game-defaults.properties`. Zusätzlich werden Kotlin-Modelltests in `app:testDebugUnitTest` ausgeführt.
+
+Die [technische Dokumentation](docs/PUZZLE_IT.md) beschreibt Integration, Zustandsautomat, Seed-Reproduzierbarkeit, Stoppsignal und Testgrenzen. **Der Android-Praxistest (verschiedene Displaygrößen, Geometrie, kurze Unterbrechungen) steht noch aus.**
+
 ## Technische Realisierung und tatsächlicher Implementierungsstand
 
 | Bereich | Aktueller Entwicklungsstand | Noch offen |
