@@ -46,14 +46,20 @@ class IntegrationRegressionTest {
   for(stage in listOf(24,35,80))assertEquals(2,LevelGeneration.requiredWindingArrows(stage),"stage $stage")
  }
 
- @Test fun earlyStagesUseUnmodifiedLegacyGenerator() {
-  for(stage in listOf(1,8,9,16)){
-   val seed=104729L+stage
-   val expected=Generator().generate(stage,seed,1f)
-   val routed=LevelGeneration.generate(stage,seed,1f)
-   assertEquals(expected,routed,"Legacy routing stage $stage")
-   assertFalse(routed.fallbackGeneration)
-   assertNotNull(Rules.solve(routed))
+ @Test fun tutorialStagesAreDeterministicAndSolvable() {
+  for(stage in 1..8) {
+   val first=LevelGeneration.generate(stage,42L,1f,GenerationPolicy(legacyEnabled=false))
+   val again=LevelGeneration.generate(stage,42L,1f,GenerationPolicy(legacyEnabled=false))
+   assertEquals(first,again)
+   assertNotNull(Rules.solve(first),"tutorial stage $stage")
+   assertFalse(first.fallbackGeneration)
+   assertEquals(stage+1,first.arrows.size)
   }
+ }
+
+ @Test fun stageGeometryGrowsGradually() {
+  val sizes=(9..80).map{StageGenerationProfile.forStage(it).width}
+  assertTrue(sizes.zipWithNext().all{(a,b)->b>=a && b-a<=1})
+  assertTrue(sizes.first()<sizes.last())
  }
 }
