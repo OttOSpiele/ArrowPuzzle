@@ -52,3 +52,13 @@ tasks.register<JavaExec>("benchmarkExactCoverCatalog") {
  args(layout.buildDirectory.dir("benchmark").get().asFile.absolutePath,
   (project.findProperty("exactCatalogSeeds") ?: "8").toString(), "catalog")
 }
+
+tasks.register<JavaExec>("benchmarkAnts") {
+ group = "verification"
+ description = "Reproducible AntsBlockCollector choice and random-player balancing CSV"
+ dependsOn(tasks.testClasses)
+ classpath = sourceSets.test.get().runtimeClasspath
+ mainClass.set("de.ottospiele.ants.AntsBlockBenchmark")
+ args(layout.buildDirectory.dir("benchmark").get().asFile.absolutePath,
+  (project.findProperty("antsSeeds") ?: "8").toString())
+}
