@@ -76,7 +76,14 @@ object AntsBlockBalance {
                 blocked += choice.provenBlocked
                 unknown += choice.unknown
             }
-            val chosen = moves[rng.nextInt(moves.size)]
+            // Sometimes deliberately park a currently inaccessible color.
+            // This probes whether the five-slot mechanic has meaningful work.
+            val parked = moves.filter { (_, next) ->
+                next.active.count { it != null } > state.active.count { it != null }
+            }
+            val chosen = if (parked.isNotEmpty() && rng.nextBoolean())
+                parked[rng.nextInt(parked.size)]
+            else moves[rng.nextInt(moves.size)]
             state = chosen.second
             maxSlots = maxOf(maxSlots, state.active.count { it != null })
         }
