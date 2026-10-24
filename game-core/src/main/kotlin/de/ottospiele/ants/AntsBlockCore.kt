@@ -53,10 +53,17 @@ object AntsBlockGenerator {
             val possible = exposed.map { remaining[it] }.distinct()
             check(possible.isNotEmpty()) { "No accessible pixels on a nonempty board" }
             // Prefer colors with large reachable surfaces and reduce fragmentation.
-            val color = possible.maxWith(compareBy<Int> { c ->
-                exposed.count { remaining[it] == c }
-            }.thenBy { it })
-            val count = minOf(maxCapacity, exposed.count { remaining[it] == color })
+            // Preserve large contiguous regions, but vary which accessible color
+            // gets processed first. This produces layer dependencies instead
+            // of always taking the largest exposed surface.
+            val color = if (random.nextInt(4) == 0) possible[random.nextInt(possible.size)]
+                else possible.maxWith(compareBy<Int> { c ->
+                    exposed.count { remaining[it] == c }
+                }.thenBy { it })
+            // Smaller bundles mean several selections may be needed per region.
+            val exposedCount = exposed.count { remaining[it] == color }
+            val target = if (size <= 12) maxCapacity else maxOf(3, maxCapacity / 2 + random.nextInt(maxOf(1, maxCapacity / 2)))
+            val count = minOf(target, exposedCount)
             // Use the exact same per-pixel selection as the runtime engine and
             // certificate verifier. A fixed initial frontier can diverge when
             // removing one pixel exposes new matching cells.
