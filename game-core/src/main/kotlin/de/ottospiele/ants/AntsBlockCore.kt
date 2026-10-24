@@ -54,8 +54,8 @@ object AntsBlockGenerator {
                 else possible.maxWith(compareBy<Int> { c ->
                     exposed.count { remaining[it] == c }
                 }.thenBy { it })
-            val target = if (size <= 12) maxCapacity
-                else maxOf(3, maxCapacity / 2 + random.nextInt(maxOf(1, maxCapacity / 2)))
+            val low = maxOf(1, maxCapacity / 5)
+            val target = low + random.nextInt(maxCapacity - low + 1)
             val count = minOf(target, exposed.count { remaining[it] == color })
             repeat(count) {
                 val index = accessible(remaining, size, size).firstOrNull { remaining[it] == color }
