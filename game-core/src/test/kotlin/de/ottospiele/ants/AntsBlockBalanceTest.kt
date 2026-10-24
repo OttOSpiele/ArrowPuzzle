@@ -17,14 +17,11 @@ class AntsBlockBalanceTest {
         }
     }
 
-    @Test fun blockedChoicesAreDistinguishedFromUnknown() {
-        val round = AntRound(1, 1, listOf(0),
-            listOf(listOf(AntStack(1, 1)), listOf(AntStack(0, 1)), emptyList(), emptyList()),
-            listOf(1, 0))
-        val choices = AntsBlockBalance.choices(round, AntsBlockGame.initial(round), 100)
-        assertEquals(2, choices.available)
-        // Placing a wrong stack first is not necessarily fatal while another slot remains.
-        assertEquals(1, choices.provenSafe)
-        assertEquals(1, choices.provenBlocked)
+    @Test fun insufficientSearchBudgetNeverCountsAsCertainBlockage() {
+        val round = AntsBlockGenerator.generate(17L, size = 8, colors = 3)
+        val result = AntsBlockBalance.choices(round, AntsBlockGame.initial(round), 1)
+        assertEquals(result.available, result.provenSafe + result.provenBlocked + result.unknown)
+        assertEquals(0, result.provenBlocked)
+        assertTrue(result.unknown > 0)
     }
 }
