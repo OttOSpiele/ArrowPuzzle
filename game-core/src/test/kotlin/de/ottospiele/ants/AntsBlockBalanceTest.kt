@@ -13,7 +13,12 @@ class AntsBlockBalanceTest {
             assertTrue(choice.available in 1..4)
             assertEquals(choice.available, choice.provenSafe + choice.provenBlocked + choice.unknown)
             assertTrue(choice.provenSafe >= 1, "constructive first move must be safe, seed=$seed")
-            assertEquals(AntsBlockBalance.simulate(round, seed), AntsBlockBalance.simulate(round, seed))
+            val simulation = AntsBlockBalance.simulate(round, seed)
+            assertEquals(simulation, AntsBlockBalance.simulate(round, seed))
+            assertTrue(simulation.sampledDecisionPoints >= 1)
+            assertTrue(simulation.sampledSafeChoices + simulation.sampledBlockedChoices +
+                simulation.sampledUnknownChoices >= simulation.sampledDecisionPoints)
+            assertEquals(round.width * round.height, AntsBlockBenchmark.connectedRegions(round).sum())
         }
     }
 
