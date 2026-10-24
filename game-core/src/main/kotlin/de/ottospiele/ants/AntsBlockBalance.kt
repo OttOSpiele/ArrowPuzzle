@@ -16,7 +16,11 @@ data class AntSimulation(
     val outcome: AntOutcome,
     val earlySafeChoices: Int,
     val earlyChoices: Int,
-    val maxOccupiedSlots: Int
+    val maxOccupiedSlots: Int,
+    val sampledDecisionPoints: Int = 0,
+    val sampledSafeChoices: Int = 0,
+    val sampledBlockedChoices: Int = 0,
+    val sampledUnknownChoices: Int = 0
 )
 
 /** A reproducible, bounded diagnostic, NOT a certification of age suitability. */
@@ -50,21 +54,32 @@ object AntsBlockBalance {
         var state = AntsBlockGame.initial(round)
         val initial = choices(round, state, searchBudget)
         var maxSlots = 0
+        var samples = 0
+        var safe = 0
+        var blocked = 0
+        var unknown = 0
+        fun result(moves: Int, outcome: AntOutcome) = AntSimulation(
+            seed, moves, outcome, initial.provenSafe, initial.available, maxSlots,
+            samples, safe, blocked, unknown)
         for (move in 0 until maxMoves) {
-            if (AntsBlockGame.isWon(round, state)) {
-                return AntSimulation(seed, move, AntOutcome.WON,
-                    initial.provenSafe, initial.available, maxSlots)
-            }
+            if (AntsBlockGame.isWon(round, state)) return result(move, AntOutcome.WON)
             val moves = (0..3).mapNotNull { col ->
                 AntsBlockGame.place(round, state, col)?.let { col to it }
             }
-            if (moves.isEmpty()) return AntSimulation(seed, move, AntOutcome.BLOCKED,
-                initial.provenSafe, initial.available, maxSlots)
+            if (moves.isEmpty()) return result(move, AntOutcome.BLOCKED)
+            // Sample decisions along the actual trajectory rather than only
+            // at the opening. Use a strict budget to avoid exponential CI time.
+            if (move % 8 == 0) {
+                val choice = if (move == 0) initial else choices(round, state, searchBudget)
+                samples++
+                safe += choice.provenSafe
+                blocked += choice.provenBlocked
+                unknown += choice.unknown
+            }
             val chosen = moves[rng.nextInt(moves.size)]
             state = chosen.second
             maxSlots = maxOf(maxSlots, state.active.count { it != null })
         }
-        return AntSimulation(seed, maxMoves, AntOutcome.UNKNOWN,
-            initial.provenSafe, initial.available, maxSlots)
+        return result(maxMoves, AntOutcome.UNKNOWN)
     }
 }
