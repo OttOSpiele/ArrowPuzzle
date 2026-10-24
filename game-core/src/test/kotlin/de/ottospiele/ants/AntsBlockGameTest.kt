@@ -10,7 +10,7 @@ class AntsBlockGameTest {
             val round = AntsBlockGenerator.generate(seed, size = 12, colors = 4)
             var state = AntsBlockGame.initial(round)
             for (column in round.solutionColumns) {
-                state = assertNotNull(AntsBlockGame.place(round, state, column), "seed=$seed")
+                state = requireNotNull(AntsBlockGame.place(round, state, column)) { "seed=$seed" }
             }
             assertTrue(AntsBlockGame.isWon(round, state), "seed=$seed")
         }
@@ -23,7 +23,7 @@ class AntsBlockGameTest {
             emptyList())
         var state = AntsBlockGame.initial(round)
         for (column in listOf(0, 1, 2, 3, 0)) {
-            state = assertNotNull(AntsBlockGame.place(round, state, column))
+            state = requireNotNull(AntsBlockGame.place(round, state, column))
         }
         assertEquals(5, state.active.count { it != null })
         assertNull(AntsBlockGame.place(round, state, 3))
@@ -33,7 +33,7 @@ class AntsBlockGameTest {
     @Test fun anImpossibleColorIsDefinitelyBlocked() {
         val round = AntRound(1, 1, listOf(0), listOf(
             listOf(AntStack(1, 1)), emptyList(), emptyList(), emptyList()), emptyList())
-        val state = assertNotNull(AntsBlockGame.place(round, AntsBlockGame.initial(round), 0))
+        val state = requireNotNull(AntsBlockGame.place(round, AntsBlockGame.initial(round), 0))
         assertTrue(AntsBlockGame.isImmediateBlock(round, state))
         assertEquals(AntOutcome.BLOCKED, AntsBlockGame.analyze(round, state).outcome)
     }
@@ -52,7 +52,7 @@ class AntsBlockGameTest {
         val pixels = listOf(1, 1, 1, 1, 2, 1, 1, 1, 1)
         val round = AntRound(3, 3, pixels,
             listOf(listOf(AntStack(2, 1)), emptyList(), emptyList(), emptyList()), emptyList())
-        val state = assertNotNull(AntsBlockGame.place(round, AntsBlockGame.initial(round), 0))
+        val state = requireNotNull(AntsBlockGame.place(round, AntsBlockGame.initial(round), 0))
         assertEquals(2, state.pixels[4], "enclosed inner block may not be consumed")
         assertEquals(1, state.active.filterNotNull().single().capacity)
     }
