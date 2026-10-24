@@ -141,6 +141,11 @@ jobs:
         timeout-minutes: 10
         run: gradle --no-daemon :game-core:benchmarkAnts -PantsSeeds=8
 
+      - name: Benchmark timed AntsBlockCollector
+        if: success()
+        timeout-minutes: 10
+        run: gradle --no-daemon :game-core:benchmarkAntsTimed -PantsSeeds=8
+
       - name: Upload AntsBlockCollector balancing CSV
         if: always()
         uses: actions/upload-artifact@v6
@@ -149,6 +154,7 @@ jobs:
           path: |
             game-core/build/benchmark/ants-block-balance.csv
             game-core/build/benchmark/ants-block-summary.csv
+            game-core/build/benchmark/ants-block-timed.csv
           if-no-files-found: warn
           retention-days: 30
 
