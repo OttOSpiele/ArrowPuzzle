@@ -144,23 +144,17 @@ object AntsBlockGenerator {
 }
 
 object AntsBlockSolver {
-    /** Verifies stack sums, four FIFO queues and a real executable removal sequence. */
+    /** Verify exact per-color totals and execute the prescribed FIFO selections
+     * with the same settling rules used during gameplay. Partly used stacks may wait.
+     */
     fun verifyCertificate(round: AntRound): Boolean {
-        val remaining = round.pixels.toMutableList()
-        val positions = IntArray(4)
+        val counts = round.pixels.groupingBy { it }.eachCount()
+        if (round.queues.flatten().groupBy { it.color }
+                .mapValues { (_, stacks) -> stacks.sumOf { it.capacity } } != counts) return false
+        var state = AntsBlockGame.initial(round)
         for (column in round.solutionColumns) {
-            if (column !in 0..3) return false
-            val stack = round.queues[column].getOrNull(positions[column]++) ?: return false
-            repeat(stack.capacity) {
-                val accessible = AntsBlockGenerator.accessible(remaining, round.width, round.height)
-                val index = accessible.firstOrNull { remaining[it] == stack.color } ?: return false
-                remaining[index] = -1
-            }
+            state = AntsBlockGame.place(round, state, column) ?: return false
         }
-        return remaining.all { it == -1 } &&
-            round.queues.indices.all { positions[it] == round.queues[it].size } &&
-            round.pixels.groupingBy { it }.eachCount().all { (color, count) ->
-                round.queues.flatten().filter { it.color == color }.sumOf { it.capacity } == count
-            }
+        return AntsBlockGame.isWon(round, state)
     }
 }
