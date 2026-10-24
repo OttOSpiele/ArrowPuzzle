@@ -46,7 +46,7 @@ object AntsBlockBenchmark {
         val profiles = listOf(Triple("intro", 8, 2), Triple("easy", 12, 3),
             Triple("medium", 16, 4), Triple("advanced", 20, 5))
         detail.printWriter().use { writer ->
-            writer.println("profile,seed,round_seed,board,colors,stacks,moves,outcome,first_safe,first_options,first_unknown,max_slots,sampled_points,sampled_safe,sampled_blocked,sampled_unknown,connected_regions,largest_region")
+            writer.println("profile,seed,round_seed,board,colors,stacks,moves,outcome,first_safe,first_options,first_unknown,max_slots,sampled_points,sampled_safe,sampled_blocked,sampled_unknown,connected_regions,largest_region,min_stack,max_stack,distinct_sizes,repeated_colors")
             for ((name, size, colors) in profiles) for (seed in 0 until samples) {
                 val board = AntsBlockGenerator.generate(seed.toLong(), size, colors)
                 val opening = AntsBlockBalance.choices(board, AntsBlockGame.initial(board), 2000)
@@ -56,19 +56,23 @@ object AntsBlockBenchmark {
                     sim.moves,sim.outcome,opening.provenSafe,opening.available,
                     opening.unknown,sim.maxOccupiedSlots,sim.sampledDecisionPoints,
                     sim.sampledSafeChoices,sim.sampledBlockedChoices,sim.sampledUnknownChoices,
-                    components.size,components.maxOrNull() ?: 0).joinToString(","))
+                    components.size,components.maxOrNull() ?: 0,
+                    board.queues.flatten().minOf { it.capacity },
+                    board.queues.flatten().maxOf { it.capacity },
+                    board.queues.flatten().map { it.capacity }.distinct().size,
+                    board.queues.flatten().groupBy { it.color }.count { it.value.size > 1 }).joinToString(","))
             }
         }
         // Useful grouped aggregates without requiring a Python or spreadsheet dependency.
         val lines = detail.readLines().drop(1).map { it.split(",") }
         summary.printWriter().use { writer ->
-            writer.println("profile,samples,wins,blocked,unknown,average_moves,average_first_options,average_first_proven_safe,average_max_slots,average_sampled_safe,average_sampled_blocked,average_sampled_unknown,average_regions,average_largest_region")
+            writer.println("profile,samples,wins,blocked,unknown,average_moves,average_first_options,average_first_proven_safe,average_max_slots,average_sampled_safe,average_sampled_blocked,average_sampled_unknown,average_regions,average_largest_region,average_min_stack,average_max_stack,average_distinct_sizes,average_repeated_colors")
             for ((name, _, _) in profiles) {
                 val rows = lines.filter { it[0] == name }
                 fun avg(i: Int) = "%.2f".format(java.util.Locale.US, rows.map { it[i].toDouble() }.average())
                 writer.println(listOf(name,rows.size,rows.count { it[7] == "WON" },
                     rows.count { it[7] == "BLOCKED" },rows.count { it[7] == "UNKNOWN" },
-                    avg(6),avg(9),avg(8),avg(11),avg(13),avg(14),avg(15),avg(16),avg(17)).joinToString(","))
+                    avg(6),avg(9),avg(8),avg(11),avg(13),avg(14),avg(15),avg(16),avg(17),avg(18),avg(19),avg(20),avg(21)).joinToString(","))
             }
         }
         println(summary.readText())
