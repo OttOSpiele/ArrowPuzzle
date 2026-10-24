@@ -57,14 +57,15 @@ object AntsBlockGenerator {
                 exposed.count { remaining[it] == c }
             }.thenBy { it })
             val count = minOf(maxCapacity, exposed.count { remaining[it] == color })
-            var removed = 0
-            for (index in exposed) {
-                if (remaining[index] == color && removed < count) {
-                    remaining[index] = -1
-                    removed++
-                }
+            // Use the exact same per-pixel selection as the runtime engine and
+            // certificate verifier. A fixed initial frontier can diverge when
+            // removing one pixel exposes new matching cells.
+            repeat(count) {
+                val currentFrontier = accessible(remaining, size, size)
+                val index = currentFrontier.firstOrNull { remaining[it] == color }
+                    ?: error("Constructive removal became impossible")
+                remaining[index] = -1
             }
-            check(removed == count && count > 0)
             queues[nextColumn].add(AntStack(color, count))
             certificate.add(nextColumn)
             nextColumn = (nextColumn + 1) % 4
