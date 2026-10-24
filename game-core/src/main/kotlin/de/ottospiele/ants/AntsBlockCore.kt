@@ -65,26 +65,46 @@ object AntsBlockGenerator {
             planned.add(AntStack(color, count))
         }
 
-        // Queue planning is independent of painting. Introduce a bounded look-ahead:
-        // a future stack can be exposed in a different FIFO column and parked in
-        // one of the five slots, while the current frontier is cleared.
-        // Each column still preserves its own subsequence of the certified order.
-        val queues = List(4) { mutableListOf<AntStack>() }
-        val certificate = mutableListOf<Int>()
-        val lastUsed = IntArray(4) { -1 }
-        for ((index, stack) in planned.withIndex()) {
-            val column = if (size <= 12) index % 4 else {
-                val candidates = (0..3).filter { lastUsed[it] < index - 1 }
-                val preferred = (index + random.nextInt(4)) % 4
-                if (preferred in candidates) preferred else
-                    candidates.minByOrNull { queues[it].size } ?: preferred
+        // Combine nearby matching colors into one longer-lived stack. A combined
+        // stack can pause behind another color and resume when new cells open.
+        // Keep a maximum of four intervening selections so the five slots can
+        // accommodate the constructive order; verify using the runtime engine.
+        val baseline = planned.toList()
+        val merged = planned.toMutableList()
+        for (i in merged.indices.reversed()) {
+            if (i >= merged.size) continue
+            val later = merged[i]
+            val earlier = (maxOf(0, i - 4) until i).lastOrNull { j ->
+                merged[j].color == later.color &&
+                    merged[j].capacity + later.capacity <= maxCapacity
             }
-            queues[column].add(stack)
-            lastUsed[column] = index
-            certificate.add(column)
+            if (earlier != null && random.nextBoolean()) {
+                merged[earlier] = merged[earlier].copy(
+                    capacity = merged[earlier].capacity + later.capacity)
+                merged.removeAt(i)
+            }
         }
-        return AntRound(size, size, pixels, queues.map { it.toList() }, certificate)
-            .also { check(AntsBlockSolver.verifyCertificate(it)) }
+        fun makeRound(stacks: List<AntStack>): AntRound {
+            val queues = List(4) { mutableListOf<AntStack>() }
+            val certificate = mutableListOf<Int>()
+            val lastUsed = IntArray(4) { -1 }
+            for ((index, stack) in stacks.withIndex()) {
+                val column = if (size <= 12) index % 4 else {
+                    val candidates = (0..3).filter { lastUsed[it] < index - 1 }
+                    val preferred = (index + random.nextInt(4)) % 4
+                    if (preferred in candidates) preferred else
+                        candidates.minByOrNull { queues[it].size } ?: preferred
+                }
+                queues[column].add(stack)
+                lastUsed[column] = index
+                certificate.add(column)
+            }
+            return AntRound(size, size, pixels, queues.map { it.toList() }, certificate)
+        }
+        val candidate = makeRound(merged)
+        if (AntsBlockSolver.verifyCertificate(candidate)) return candidate
+        return makeRound(baseline).also { check(AntsBlockSolver.verifyCertificate(it)) }
+
     }
 
     /**
