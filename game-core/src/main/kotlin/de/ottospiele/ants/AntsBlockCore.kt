@@ -45,37 +45,43 @@ object AntsBlockGenerator {
             regions[gy * 4 + gx]
         }
         val remaining = pixels.toMutableList()
-        val queues = List(4) { mutableListOf<AntStack>() }
-        val certificate = mutableListOf<Int>()
-        var nextColumn = 0
+        val planned = mutableListOf<AntStack>()
         while (remaining.any { it >= 0 }) {
             val exposed = accessible(remaining, size, size)
             val possible = exposed.map { remaining[it] }.distinct()
-            check(possible.isNotEmpty()) { "No accessible pixels on a nonempty board" }
-            // Prefer colors with large reachable surfaces and reduce fragmentation.
-            // Preserve large contiguous regions, but vary which accessible color
-            // gets processed first. This produces layer dependencies instead
-            // of always taking the largest exposed surface.
+            check(possible.isNotEmpty())
             val color = if (random.nextInt(4) == 0) possible[random.nextInt(possible.size)]
                 else possible.maxWith(compareBy<Int> { c ->
                     exposed.count { remaining[it] == c }
                 }.thenBy { it })
-            // Smaller bundles mean several selections may be needed per region.
-            val exposedCount = exposed.count { remaining[it] == color }
-            val target = if (size <= 12) maxCapacity else maxOf(3, maxCapacity / 2 + random.nextInt(maxOf(1, maxCapacity / 2)))
-            val count = minOf(target, exposedCount)
-            // Use the exact same per-pixel selection as the runtime engine and
-            // certificate verifier. A fixed initial frontier can diverge when
-            // removing one pixel exposes new matching cells.
+            val target = if (size <= 12) maxCapacity
+                else maxOf(3, maxCapacity / 2 + random.nextInt(maxOf(1, maxCapacity / 2)))
+            val count = minOf(target, exposed.count { remaining[it] == color })
             repeat(count) {
-                val currentFrontier = accessible(remaining, size, size)
-                val index = currentFrontier.firstOrNull { remaining[it] == color }
+                val index = accessible(remaining, size, size).firstOrNull { remaining[it] == color }
                     ?: error("Constructive removal became impossible")
                 remaining[index] = -1
             }
-            queues[nextColumn].add(AntStack(color, count))
-            certificate.add(nextColumn)
-            nextColumn = (nextColumn + 1) % 4
+            planned.add(AntStack(color, count))
+        }
+
+        // Queue planning is independent of painting. Introduce a bounded look-ahead:
+        // a future stack can be exposed in a different FIFO column and parked in
+        // one of the five slots, while the current frontier is cleared.
+        // Each column still preserves its own subsequence of the certified order.
+        val queues = List(4) { mutableListOf<AntStack>() }
+        val certificate = mutableListOf<Int>()
+        val lastUsed = IntArray(4) { -1 }
+        for ((index, stack) in planned.withIndex()) {
+            val column = if (size <= 12) index % 4 else {
+                val candidates = (0..3).filter { lastUsed[it] < index - 1 }
+                val preferred = (index + random.nextInt(4)) % 4
+                if (preferred in candidates) preferred else
+                    candidates.minByOrNull { queues[it].size } ?: preferred
+            }
+            queues[column].add(stack)
+            lastUsed[column] = index
+            certificate.add(column)
         }
         return AntRound(size, size, pixels, queues.map { it.toList() }, certificate)
             .also { check(AntsBlockSolver.verifyCertificate(it)) }
